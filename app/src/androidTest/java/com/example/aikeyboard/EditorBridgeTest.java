@@ -14,7 +14,12 @@ import android.widget.EditText;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
+import com.example.aikeyboard.ai.RedactionPlan;
+import com.example.aikeyboard.core.TextEdit;
 import com.example.aikeyboard.ime.EditorBridge;
+
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -124,6 +129,46 @@ public class EditorBridgeTest {
         assertEquals("hello world", draft.text);
         assertEquals(6, draft.selectionStart);
         assertEquals(11, draft.selectionEnd);
+    }
+
+    private static final String TWO_ITEMS = "mail anna@example.hu or call 555 0100 now";
+    private static final List<TextEdit> MASK = Arrays.asList(
+            new TextEdit(5, 20, "anna@example.hu", "[EMAIL_1]"),
+            new TextEdit(29, 37, "555 0100", "[PHONE_1]"));
+
+    private boolean replaceAll(List<TextEdit> edits) {
+        boolean[] result = new boolean[1];
+        getInstrumentation().runOnMainSync(() -> result[0] = bridge.replaceRanges(edits));
+        return result[0];
+    }
+
+    @Test
+    public void replaceRanges_appliesEveryEditAsOne() {
+        given(TWO_ITEMS, TWO_ITEMS.length(), TWO_ITEMS.length());
+        assertTrue(replaceAll(MASK));
+        assertEquals("mail [EMAIL_1] or call [PHONE_1] now", text());
+        assertEquals("the cursor stays at the end", text().length(), cursor());
+    }
+
+    @Test
+    public void replaceRanges_changesNothingIfAnyRangeNoLongerMatches() {
+        String edited = "mail anna@example.hu or call 555 9999 now"; // the number was retyped
+        given(edited, edited.length(), edited.length());
+        assertFalse(replaceAll(MASK));
+        assertEquals("not even the email may be replaced", edited, text());
+    }
+
+    @Test
+    public void replaceRanges_aMaskCanBeUndoneAndTheUndoIsGuardedToo() {
+        given(TWO_ITEMS, TWO_ITEMS.length(), TWO_ITEMS.length());
+        assertTrue(replaceAll(MASK));
+        List<TextEdit> undo = RedactionPlan.undo(MASK);
+
+        assertTrue(replaceAll(undo));
+        assertEquals(TWO_ITEMS, text());
+        // A second undo finds no placeholders and must refuse.
+        assertFalse(replaceAll(undo));
+        assertEquals(TWO_ITEMS, text());
     }
 
     @Test

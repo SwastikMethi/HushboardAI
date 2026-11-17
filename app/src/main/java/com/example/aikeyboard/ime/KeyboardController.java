@@ -1,9 +1,11 @@
-// Keyboard behaviour: turns key presses into edits and keeps layer, shift, suggestions and
-// the AI controls in step with the field and the saved settings. Owned by the service, so
-// its state survives the view being re-created (rotation); the view is attached again each
-// time. Runs entirely on the main thread; model work is handed to the AI coordinator.
+// Keyboard behaviour: turns key presses into edits and keeps layer, shift, suggestions,
+// notices and the AI controls in step with the field and the saved settings. Owned by the
+// service, so its state survives the view being re-created (rotation); the view is attached
+// again each time. Runs entirely on the main thread; model work is handed to the coordinator.
 package com.example.aikeyboard.ime;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.os.SystemClock;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,8 +19,13 @@ import com.example.aikeyboard.R;
 import com.example.aikeyboard.ai.AiCoordinator;
 import com.example.aikeyboard.ai.DraftSnapshot;
 import com.example.aikeyboard.ai.InferenceScheduler;
+import com.example.aikeyboard.ai.NoticeText;
+import com.example.aikeyboard.ai.RedactionPlan;
+import com.example.aikeyboard.ai.Suggestion.Notice;
+import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
 import com.example.aikeyboard.core.InputEligibility;
 import com.example.aikeyboard.core.InputEligibility.Verdict;
+import com.example.aikeyboard.core.TextEdit;
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.databinding.ItemAiModelBinding;
 import com.example.aikeyboard.databinding.KeyboardViewBinding;
@@ -30,6 +37,7 @@ import com.example.aikeyboard.ime.view.SuggestionStripView.Kind;
 import com.example.aikeyboard.models.ModelDescriptor;
 import com.example.aikeyboard.models.ModelRegistry;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -46,7 +54,10 @@ public final class KeyboardController implements KeyGridView.Listener,
     private static final int DRAFT_BEFORE = 1000;
     private static final int DRAFT_AFTER = 200;
     // Models that act while typing, in the order the AI panel lists them.
-    private static final String[] PANEL_MODELS = {"emo"};
+    private static final String[] PANEL_MODELS = {"emo", "redact", "toxic"};
+
+    /** What the strip is showing right now, which decides what its slots do. */
+    private enum Strip { EMPTY, WORDS, UNDO, NOTICE, EMOJI, MESSAGE, SETUP }
 
     private final AiInputMethodService service;
     private final EditorBridge editor;
@@ -64,9 +75,20 @@ public final class KeyboardController implements KeyGridView.Listener,
     private boolean aiPanelShown;
     private String currentWord = "";
     private List<String> suggestions = List.of();
-    private List<String> emoji = List.of();
-    private boolean setupNeeded;
     private Verdict verdict = Verdict.AI_OFF;
+    private DraftSnapshot lastSnapshot;
+
+    // What the coordinator currently offers for the draft.
+    private List<String> emoji = List.of();
+    private Notice notice;
+    private boolean setupNeeded;
+    private Strip strip = Strip.EMPTY;
+
+    // Session-local only: gone when the field loses the keyboard, never stored.
+    private Notice reviewing;
+    private String reviewMessage;
+    private List<TextEdit> undo = List.of();
+    private String stripMessage;
 
     KeyboardController(AiInputMethodService service, EditorBridge editor,
             LocalWordSuggester suggester, AppContainer app) {
@@ -76,7 +98,8 @@ public final class KeyboardController implements KeyGridView.Listener,
         this.app = app;
         this.settings = app.settings.latest();
         coordinator = new AiCoordinator(new InferenceScheduler(app.timer, app.inference),
-                ContextCompat.getMainExecutor(service), app.emo, app.models::isReady, this);
+                ContextCompat.getMainExecutor(service), app.emo, app.redact, app.toxic,
+                app.models::isReady, this);
         coordinator.onSettings(settings);
     }
 
@@ -103,6 +126,13 @@ public final class KeyboardController implements KeyGridView.Listener,
         // Click, not checked-change: drawing the saved state must never write it back.
         views.aiPanel.aiPanelMaster.setOnClickListener(v -> app.settings.setBoolean(
                 AppSettings.AI_ENABLED, views.aiPanel.aiPanelMaster.isChecked()));
+
+        views.noticePanel.noticeBack.setOnClickListener(v -> closeReview());
+        views.noticePanel.noticeDismiss.setOnClickListener(v -> {
+            coordinator.dismissNotice();
+            closeReview();
+        });
+        views.noticePanel.noticePrimary.setOnClickListener(v -> onReviewAction());
         buildPanelRows();
         render();
     }
@@ -149,6 +179,7 @@ public final class KeyboardController implements KeyGridView.Listener,
             emojiShown = false;
             aiPanelShown = false;
             shift = new ShiftState();
+            forgetSessionState();
             rememberApp(session.editorPackage);
         }
         readEditor();
@@ -170,13 +201,25 @@ public final class KeyboardController implements KeyGridView.Listener,
     void onSelectionChanged() {
         if (session == null) return;
         session.bumpGeneration();
+        // Whatever was being reviewed was for the text as it was; it may not be applied now.
+        reviewing = null;
         readEditor();
         render();
     }
 
     void onFinishInput() {
         coordinator.onSessionEnded();
+        forgetSessionState();
         if (views != null) views.keys.cancelTouches();
+    }
+
+    // Drafts, proposals and the undo record live only as long as the field has the keyboard.
+    private void forgetSessionState() {
+        reviewing = null;
+        reviewMessage = null;
+        undo = List.of();
+        stripMessage = null;
+        lastSnapshot = null;
     }
 
     private void readEditor() {
@@ -190,12 +233,13 @@ public final class KeyboardController implements KeyGridView.Listener,
         // In a field where AI may not run, its text is not even read for AI.
         EditorBridge.Draft draft =
                 verdict == Verdict.ALLOWED ? editor.readDraft(DRAFT_BEFORE, DRAFT_AFTER) : null;
-        coordinator.onDraft(draft == null
+        lastSnapshot = draft == null
                 ? new DraftSnapshot(session.id, session.generation(), session.editorPackage,
                         "", 0, 0, -1, true)
                 : new DraftSnapshot(session.id, session.generation(), session.editorPackage,
                         draft.text, draft.selectionStart, draft.selectionEnd, draft.offset,
-                        draft.partial), verdict);
+                        draft.partial);
+        coordinator.onDraft(lastSnapshot, verdict);
     }
 
     // The run of letters that ends at the cursor: the word being typed.
@@ -206,8 +250,9 @@ public final class KeyboardController implements KeyGridView.Listener,
     }
 
     @Override
-    public void onEmojiSuggestions(List<String> latest) {
-        emoji = latest;
+    public void onSuggestions(List<String> latestEmoji, Notice latestNotice) {
+        emoji = latestEmoji;
+        notice = latestNotice;
         renderStrip();
     }
 
@@ -229,25 +274,51 @@ public final class KeyboardController implements KeyGridView.Listener,
         renderStrip();
 
         views.aiToggle.setOn(settings.aiEnabled());
-        // Likewise INVISIBLE: the typing area keeps giving the AI panel its height.
-        views.typingArea.setVisibility(aiPanelShown ? View.INVISIBLE : View.VISIBLE);
-        views.aiPanel.getRoot().setVisibility(aiPanelShown ? View.VISIBLE : View.GONE);
+        boolean reviewShown = reviewing != null;
+        boolean overlay = aiPanelShown || reviewShown;
+        // Likewise INVISIBLE: the typing area keeps giving the panels their height.
+        views.typingArea.setVisibility(overlay ? View.INVISIBLE : View.VISIBLE);
+        views.aiPanel.getRoot().setVisibility(
+                aiPanelShown && !reviewShown ? View.VISIBLE : View.GONE);
+        views.noticePanel.getRoot().setVisibility(reviewShown ? View.VISIBLE : View.GONE);
         if (aiPanelShown) renderAiPanel();
+        if (reviewShown) renderReview();
     }
 
-    // Words win while a word is being typed; emoji fill the pause after it.
+    // An undo offer or a notice outranks everything: they only appear once typing has
+    // paused, and a notice hidden behind word completions would be easy to miss. Then word
+    // completions, then emoji.
     private void renderStrip() {
         if (views == null) return;
-        if (!suggestions.isEmpty()) {
-            views.suggestions.setItems(Kind.WORDS, suggestions);
+        if (!undo.isEmpty()) {
+            show(Strip.UNDO, Kind.NOTICE, Arrays.asList(
+                    service.getResources().getQuantityString(R.plurals.masked_items,
+                            undo.size(), undo.size()),
+                    service.getString(R.string.action_undo),
+                    service.getString(R.string.action_dismiss)));
+        } else if (stripMessage != null) {
+            show(Strip.MESSAGE, Kind.NOTICE, List.of(stripMessage));
+        } else if (notice != null) {
+            show(Strip.NOTICE, Kind.NOTICE, Arrays.asList(
+                    service.getString(notice.kind == Notice.Kind.PRIVACY
+                            ? R.string.notice_privacy : R.string.notice_tone),
+                    service.getString(R.string.action_review),
+                    service.getString(R.string.action_dismiss)));
+        } else if (!suggestions.isEmpty()) {
+            show(Strip.WORDS, Kind.WORDS, suggestions);
         } else if (!emoji.isEmpty()) {
-            views.suggestions.setItems(Kind.EMOJI, emoji);
+            show(Strip.EMOJI, Kind.EMOJI, emoji);
         } else if (setupNeeded) {
-            views.suggestions.setItems(Kind.SETUP,
+            show(Strip.SETUP, Kind.SETUP,
                     List.of(service.getString(R.string.strip_setup_models)));
         } else {
-            views.suggestions.setItems(Kind.WORDS, List.of());
+            show(Strip.EMPTY, Kind.WORDS, List.of());
         }
+    }
+
+    private void show(Strip what, Kind kind, List<String> items) {
+        strip = what;
+        views.suggestions.setItems(kind, items);
     }
 
     private void renderAiPanel() {
@@ -282,6 +353,99 @@ public final class KeyboardController implements KeyGridView.Listener,
                 return R.string.ai_panel_hint;
         }
     }
+
+    // ---- Reviewing a notice ----
+
+    private void openReview() {
+        reviewing = notice;
+        reviewMessage = null;
+        render();
+    }
+
+    private void closeReview() {
+        reviewing = null;
+        reviewMessage = null;
+        render();
+    }
+
+    private boolean maskingOffered() {
+        return ModelRegistry.REDACT_MODE_MASK.equals(settings.string(
+                AppSettings.modelSettingKey("redact", ModelRegistry.REDACT_MODE),
+                ModelRegistry.REDACT_MODE_WARN));
+    }
+
+    private void renderReview() {
+        boolean privacy = reviewing.kind == Notice.Kind.PRIVACY;
+        StringBuilder detail = new StringBuilder();
+        if (privacy) {
+            for (SensitiveSpan span : reviewing.spans) {
+                if (detail.length() > 0) detail.append('\n');
+                detail.append(service.getString(R.string.review_line,
+                        service.getString(NoticeText.categoryName(span.category)),
+                        span.original, span.placeholder));
+            }
+        } else {
+            for (String tone : reviewing.tone) {
+                if (detail.length() > 0) detail.append('\n');
+                detail.append(service.getString(NoticeText.toneName(tone)));
+            }
+        }
+        // When the editor shared only part of the draft, say so: never imply a full check.
+        String note = service.getString(privacy ? R.string.review_privacy_note
+                : R.string.review_tone_note);
+        if (reviewing.partial) {
+            note = service.getString(R.string.review_scope_partial) + " " + note;
+        }
+        views.noticePanel.noticeTitle.setText(privacy ? R.string.notice_privacy
+                : R.string.notice_tone);
+        views.noticePanel.noticeDetail.setText(detail);
+        views.noticePanel.noticeNote.setText(note);
+        views.noticePanel.noticeMessage.setText(reviewMessage);
+        views.noticePanel.noticeMessage.setVisibility(
+                reviewMessage == null ? View.GONE : View.VISIBLE);
+
+        // Masking is offered only if the user chose it. Without a trustworthy position in the
+        // editor the app offers a copy of the masked text instead of editing anything.
+        boolean action = privacy && maskingOffered();
+        views.noticePanel.noticePrimary.setVisibility(action ? View.VISIBLE : View.GONE);
+        if (action) {
+            views.noticePanel.noticePrimary.setText(reviewing.draft.offset >= 0
+                    ? R.string.review_mask : R.string.review_copy);
+        }
+    }
+
+    private void onReviewAction() {
+        if (reviewing == null || session == null) return;
+        if (reviewing.draft.offset < 0) {
+            ClipboardManager clipboard = service.getSystemService(ClipboardManager.class);
+            clipboard.setPrimaryClip(ClipData.newPlainText(
+                    service.getString(R.string.review_copy),
+                    RedactionPlan.maskedText(reviewing.draft.text, reviewing.spans)));
+            reviewMessage = service.getString(R.string.review_copied);
+            render();
+            return;
+        }
+        List<TextEdit> edits = RedactionPlan.mask(reviewing.spans, reviewing.draft.offset);
+        // The bridge re-reads the field and replaces only if every span is still there.
+        if (reviewing.draft.sameMoment(lastSnapshot) && editor.replaceRanges(edits)) {
+            undo = RedactionPlan.undo(edits);
+            reviewing = null;
+            reviewMessage = null;
+        } else {
+            reviewMessage = service.getString(R.string.review_changed);
+        }
+        render();
+    }
+
+    private void undoMask() {
+        // Guarded the same way: the placeholders must still be exactly where they were put.
+        boolean restored = editor.replaceRanges(undo);
+        undo = List.of();
+        stripMessage = restored ? null : service.getString(R.string.undo_failed);
+        render();
+    }
+
+    // ---- Keys ----
 
     private void renderEnterKey(int imeOptions) {
         int description;
@@ -328,6 +492,9 @@ public final class KeyboardController implements KeyGridView.Listener,
     @Override
     public void onKey(Key key) {
         if (session == null) return;
+        // The user has moved on: the undo offer and any one-off message go away.
+        undo = List.of();
+        stripMessage = null;
         switch (key.code) {
             case KeyboardLayout.CODE_TEXT:
                 editor.commitText(shift.isUpperCase()
@@ -354,6 +521,7 @@ public final class KeyboardController implements KeyGridView.Listener,
                 layer = Layer.LETTERS;
                 break;
             case KeyboardLayout.CODE_ENTER:
+                // Enter does exactly what the key says. No notice ever blocks or delays it.
                 editor.enter(session.imeOptions);
                 break;
             case KeyboardLayout.CODE_EMOJI:
@@ -371,18 +539,10 @@ public final class KeyboardController implements KeyGridView.Listener,
     }
 
     @Override
-    public void onStripItemPicked(Kind kind, String text) {
+    public void onStripItemPicked(Kind kind, int index, String text) {
         if (session == null) return;
-        switch (kind) {
-            case EMOJI:
-                // Shown emoji always belong to the current draft: the coordinator clears
-                // them on every change and drops late results. A tap is the user's consent.
-                editor.commitText(text);
-                break;
-            case SETUP:
-                service.openCompanionApp(MainActivity.TAB_MODELS);
-                break;
-            default: {
+        switch (strip) {
+            case WORDS: {
                 int cursor = editor.cursorPosition();
                 if (cursor < 0 || currentWord.isEmpty()) return;
                 // replaceRange re-checks the text, so a suggestion for an older word
@@ -391,6 +551,32 @@ public final class KeyboardController implements KeyGridView.Listener,
                         text + " ");
                 break;
             }
+            case EMOJI:
+                // Shown emoji always belong to the current draft: the coordinator clears
+                // them on every change and drops late results. A tap is the user's consent.
+                editor.commitText(text);
+                break;
+            case NOTICE:
+                if (index == 2) coordinator.dismissNotice();
+                else openReview();
+                break;
+            case UNDO:
+                if (index == 1) {
+                    undoMask();
+                } else if (index == 2) {
+                    undo = List.of();
+                    render();
+                }
+                break;
+            case MESSAGE:
+                stripMessage = null;
+                render();
+                break;
+            case SETUP:
+                service.openCompanionApp(MainActivity.TAB_MODELS);
+                break;
+            default:
+                break;
         }
     }
 }

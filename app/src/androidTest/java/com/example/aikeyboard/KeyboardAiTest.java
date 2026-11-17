@@ -22,6 +22,7 @@ import androidx.test.uiautomator.Until;
 
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
+import com.example.aikeyboard.models.ModelRegistry;
 
 import org.junit.After;
 import org.junit.Before;
@@ -176,6 +177,124 @@ public class KeyboardAiTest {
         assertNotNull("expected a setup hint", device.wait(Until.findObject(
                 By.res(PKG, "suggestion_1").text("Set up AI models")), TIMEOUT_MS));
         assertEquals("typing must be unaffected", "pizza ", text(R.id.field_plain));
+    }
+
+    // ---- Redact and Toxic ----
+
+    private static final String WITH_EMAIL = "mail me at anna@example.hu ";
+
+    private void given(int fieldId, String text) {
+        scenario.onActivity(a -> {
+            EditText field = a.findViewById(fieldId);
+            field.setText(text);
+            field.setSelection(text.length());
+        });
+        device.waitForIdle();
+    }
+
+    private void useRedact(String mode) throws Exception {
+        TestModels.ensureInstalled("redact");
+        // ensureInstalled may have put the companion app on screen in place of the test host.
+        scenario.close();
+        scenario = ActivityScenario.launch(EditorTestActivity.class);
+        settings.setModelEnabled("redact", true);
+        String key = AppSettings.modelSettingKey("redact", ModelRegistry.REDACT_MODE);
+        settings.setString(key, mode);
+        assertTrue(TestModels.await(() -> mode.equals(settings.latest().string(key, ""))
+                && settings.latest().modelEnabled("redact"), 5000));
+    }
+
+    private UiObject2 slot(String id, String text) {
+        return device.wait(Until.findObject(By.res(PKG, id).text(text)), TIMEOUT_MS);
+    }
+
+    @Test
+    public void personalInformationCanBeReviewedMaskedAndPutBack() throws Exception {
+        useRedact(ModelRegistry.REDACT_MODE_MASK);
+        focus("field_plain");
+        given(R.id.field_plain, WITH_EMAIL);
+
+        assertNotNull("no privacy notice", slot("suggestion_1", "Personal information detected"));
+        assertEquals("a notice alone changes nothing", WITH_EMAIL, text(R.id.field_plain));
+        slot("suggestion_2", "Review").click();
+
+        UiObject2 detail = device.wait(Until.findObject(By.res(PKG, "notice_detail")), TIMEOUT_MS);
+        assertNotNull("the review panel did not open", detail);
+        assertTrue(detail.getText(), detail.getText().contains("anna@example.hu"));
+        assertTrue(detail.getText(), detail.getText().contains("[EMAIL_1]"));
+        assertEquals("opening the review changes nothing", WITH_EMAIL, text(R.id.field_plain));
+
+        device.findObject(By.res(PKG, "notice_primary").text("Mask in message")).click();
+        assertTrue("masking was not applied: " + text(R.id.field_plain), TestModels.await(
+                () -> "mail me at [EMAIL_1] ".equals(text(R.id.field_plain)), 5000));
+
+        slot("suggestion_2", "Undo").click();
+        assertTrue("undo did not restore the text: " + text(R.id.field_plain),
+                TestModels.await(() -> WITH_EMAIL.equals(text(R.id.field_plain)), 5000));
+    }
+
+    @Test
+    public void warnOnlyShowsWhatWasFoundButOffersNoChange() throws Exception {
+        useRedact(ModelRegistry.REDACT_MODE_WARN);
+        focus("field_plain");
+        given(R.id.field_plain, WITH_EMAIL);
+
+        slot("suggestion_2", "Review").click();
+        assertNotNull(device.wait(Until.findObject(
+                By.res(PKG, "notice_detail").textContains("anna@example.hu")), TIMEOUT_MS));
+        assertNull("warn-only must not offer masking",
+                device.findObject(By.res(PKG, "notice_primary")));
+        assertEquals(WITH_EMAIL, text(R.id.field_plain));
+    }
+
+    @Test
+    public void aDismissedNoticeStaysAwayUntilTheTextChanges() throws Exception {
+        useRedact(ModelRegistry.REDACT_MODE_WARN);
+        focus("field_plain");
+        given(R.id.field_plain, WITH_EMAIL);
+        assertNotNull(slot("suggestion_1", "Personal information detected"));
+
+        slot("suggestion_3", "Dismiss").click();
+        assertTrue("the notice did not go away", device.wait(Until.gone(
+                By.res(PKG, "suggestion_1").text("Personal information detected")), TIMEOUT_MS));
+        // The same text is analysed again after a moment; the notice must not come back.
+        assertNull(device.wait(Until.findObject(
+                By.res(PKG, "suggestion_1").text("Personal information detected")), 2000));
+
+        tap("o", "k", "Space");
+        assertNotNull("the text changed, so the notice applies again",
+                slot("suggestion_1", "Personal information detected"));
+    }
+
+    @Test
+    public void aThreatIsFlaggedForReviewAndSendingIsNeverBlocked() throws Exception {
+        TestModels.ensureInstalled("toxic");
+        scenario.close();
+        scenario = ActivityScenario.launch(EditorTestActivity.class);
+        settings.setModelEnabled("toxic", true);
+        settings.setModelEnabled("redact", false);
+        assertTrue(TestModels.await(() -> settings.latest().modelEnabled("toxic")
+                && !settings.latest().modelEnabled("redact"), 5000));
+        String threat = "I will find you and hurt you, you worthless idiot ";
+        EditorTestActivity.lastEditorAction = -1;
+        focus("field_send");
+        given(R.id.field_send, threat);
+
+        assertNotNull("no tone notice", slot("suggestion_1", "Wording flagged for review"));
+        slot("suggestion_2", "Review").click();
+        UiObject2 detail = device.wait(Until.findObject(By.res(PKG, "notice_detail")), TIMEOUT_MS);
+        assertNotNull(detail);
+        assertTrue(detail.getText(), detail.getText().contains("Threat")
+                || detail.getText().contains("Abusive"));
+        assertNull("a tone notice offers no edit",
+                device.findObject(By.res(PKG, "notice_primary")));
+        device.findObject(By.res(PKG, "notice_back")).click();
+
+        // The notice is information only: Send still does exactly what the user pressed.
+        tap("Send");
+        assertEquals(android.view.inputmethod.EditorInfo.IME_ACTION_SEND,
+                EditorTestActivity.lastEditorAction);
+        assertEquals(threat, text(R.id.field_send));
     }
 
     @Test

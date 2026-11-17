@@ -163,3 +163,32 @@ Unit tests (JVM): 87 passed in total. New in this milestone: `AiCoordinatorTest`
 | No typing stalls while a model loads | blocked | PHONE | Needs the physical device |
 
 Full-suite run at the end of the milestone: 60 instrumented tests; 53 passed, 6 skipped by design (offline probe, kill probe ×2, stock-app probe, screenshot tour ×2), 1 failed. The failure was the privacy-screen test, which needed to scroll now that Settings has more rows; fixed, and `CompanionAppTest` then passed 6 of 6 in its own run.
+
+## Milestone 4 — Redact and Toxic
+
+Unit tests (JVM): 120 passed in total. New or extended in this milestone: `AiCoordinatorTest` 19, `TextRangeMapperTest` 9, `ModelRulesTest` 9, `SuggestionPolicyTest` 9, `RedactionPlanTest` 4.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| A span that starts inside an emoji family or a surrogate pair starts after it; one that ends before a combining mark takes the mark | passed | host | `TextRangeMapperTest` (5 cases) |
+| A span in a partial window maps to its place in the editor; no offset means no editor range | passed | host | `TextRangeMapperTest.aSpanInAPartialWindowMapsToItsPlaceInTheEditor`, `withoutAKnownWindowOffsetThereIsNoEditorRange` |
+| Mask edits carry the text they expect; undo edits find the placeholders where they moved to | passed | host | `RedactionPlanTest` |
+| Categories map to the vendor's labels; every category off means the model is not asked | passed | host | `ModelRulesTest` |
+| Alert frequency shifts the model's own thresholds; a switched-off kind is never flagged | passed | host | `ModelRulesTest` |
+| One notice at a time: personal information first, then tone; dismissing reveals the next | passed | host | `SuggestionPolicyTest`, `AiCoordinatorTest.privacyComesFirstAndDismissingItRevealsTheToneNotice` |
+| A privacy result for an older draft is dropped | passed | host | `AiCoordinatorTest.aPrivacyResultForAnOlderDraftIsDropped` |
+| A dismissed notice stays away while the text is unchanged and returns when it changes | passed | host + EMU-37 | `AiCoordinatorTest` (two tests); `KeyboardAiTest.aDismissedNoticeStaysAwayUntilTheTextChanges` |
+| Several replacements apply as one edit, or none: nothing changes if any range no longer matches | passed | EMU-37 | `EditorBridgeTest.replaceRanges_*` (3 tests) |
+| Undo is guarded: a second undo finds no placeholders and refuses | passed | EMU-37 | `EditorBridgeTest.replaceRanges_aMaskCanBeUndoneAndTheUndoIsGuardedToo` |
+| Real Redact: notice → review (original and masked shown) → mask → undo, with nothing changed until the user chooses | passed | EMU-37 | `KeyboardAiTest.personalInformationCanBeReviewedMaskedAndPutBack`; `m4_privacy_notice.png`, `m4_review_panel.png` |
+| Warn-only shows what was found and offers no change | passed | EMU-37 | `KeyboardAiTest.warnOnlyShowsWhatWasFoundButOffersNoChange` |
+| Real Toxic: a threat is flagged for review; the notice offers no edit; Send still performs the field's action and the text is untouched | passed | EMU-37 | `KeyboardAiTest.aThreatIsFlaggedForReviewAndSendingIsNeverBlocked` |
+| "Try it" runs the real model on typed text and shows its real answer | passed | EMU-37 | `CompanionAppTest.tryItRunsTheRealModelOnWhatTheUserTyped` |
+| Copy-only preview when the editor hides where its text starts | not run | — | Implemented (`review_copy` path when the window offset is unknown); no editor here hides it, so it was not exercised |
+| Partial-context wording in the review panel | not run | — | Implemented (`review_scope_partial`); needs a draft longer than the 1,000-character window to show, not driven by a test |
+| Masking applied after the text changed under the open review panel | not run on device | — | The guard is unit- and bridge-tested (stale draft, all-or-nothing replace); the full UI race was not staged |
+| A "Try it" run that fails shows the real error | not run | — | Implemented; no failure was induced |
+| Usefulness on a consented or synthetic English set (false positives, misses) | not run | — | Only a handful of fixed sentences were used. Redact detecting something is not proof that all personal information was found; Toxic is a prompt to re-read, not a verdict. |
+| Notice latency after a pause | blocked | PHONE | Needs the physical device. Emulator: Redact about 33 ms, Toxic about 25 ms, plus the 400–450 ms pause. |
+
+Full-suite run at the end of the milestone: 69 instrumented tests, all green; 62 executed and passed, 7 skipped by design (offline probe, kill probe ×2, stock-app probe, screenshot tour ×3).

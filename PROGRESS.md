@@ -8,7 +8,7 @@ The execution plan is `~/.claude/plans/i-have-added-a-whimsical-mist.md` (approv
 | 1 — Reliable keyboard | Done (emulator). Device rows blocked | 32 unit tests, 35 instrumented tests; typing verified in the debug host and in Android Settings search. Haptics, sound, latency and third-party chat apps wait for the phone. |
 | 2 — Companion and assets | Done (emulator). Device rows blocked | 55 unit tests, 47 instrumented tests. Real downloads, a cancel that stops, pause on leaving Wi-Fi and resume, live settings sync, three-tab companion app with the privacy disclosure. |
 | 3 — First real Emo slice | Done (emulator). Device rows blocked | 87 unit tests, 60 instrumented tests. Real Emo suggestions in the keyboard, online and in airplane mode; stale results dropped; AI toggle and panel; crash breaker; per-app AI switches. Latency on a real device waits for the phone. |
-| 4 — Redact and Toxic | Not started | — |
+| 4 — Redact and Toxic | Done (emulator). Device rows blocked | 120 unit tests, 69 instrumented tests. Real Redact and Toxic in the keyboard: notice, review, guarded mask and undo, warn-only mode, dismiss; Send is never blocked. "Try it" in the companion app. |
 | 5 — Tongue and Gist | Not started | — |
 | 6 — Voice tools | Not started | — |
 | 7 — Image and drawing tools | Not started | — |
@@ -59,6 +59,13 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 27. **The master switch in the keyboard uses a solid AI-blue track rather than a drawn gradient.** The gradient identity is on the tool-row control (sparkle and border). Cost if wrong: a milestone 8 polish item.
 28. **`ModelInput`, `ModelResult`, `ActivityEvent` and `CapabilityRouter` were not created.** `ModelAdapter<I, O>` is generic over its input and output, so wrapper types add nothing yet; routing is one check in `AiCoordinator`. They are added only if the voice and image milestones show a real need. Cost if wrong: a small refactor when a second input kind arrives.
 
+29. **The app masks span by span; the SDK's own masked string is not used.** Each replacement is checked against the editor's current text and all of them apply as one edit or not at all. Cost if wrong: none; the placeholders are the SDK's own.
+30. **A span that starts inside a character begins after it** (and after the space that follows); one that ends inside a character takes the rest of it. Seen with the real model: a name span that began inside a family emoji. Cost if wrong: in the rare case where the cut character was part of the item (a decomposed first letter), that letter is left unmasked.
+31. **A notice or an undo offer outranks word completions in the strip.** They appear only after typing pauses, and a notice hidden behind completions (an email address at the end of a draft completes like a word) would be missed. Cost if wrong: completions are unavailable while a notice is showing; Dismiss brings them back.
+32. **Toxic "alert frequency" is the app's own setting.** The model runs with its shipped thresholds and returns them; the app shifts them (+0.15 for fewer, −0.10 for more) when deciding what to flag. The settings screen says this is set by the app. Only the wording labels (hateful, abusive, threat) are used; the "who is targeted" labels are not surfaced. Cost if wrong: the shifts are untuned starting values.
+33. **The undo offer lasts until the next key press.** It is guarded (the placeholders must still be exactly where they were put) and is forgotten when the field loses the keyboard. Cost if wrong: an undo wanted after more typing is not offered.
+34. **Tone notices offer no edit.** Review shows which kinds of wording were flagged and says the model is in beta; there is nothing to apply. Cost if wrong: none.
+
 ## Deviations from the handoff file list
 
 - `sdkbridge/DesertAntSuspendBridge.kt` and `sdkbridge/CancellableOperation.java`: not needed (ruling 3).
@@ -88,8 +95,11 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 - Not yet driven by a test: deleting a model from its detail screen, resetting one model's settings, low-storage failure, a double tap on Download.
 
 - The SDK's logging is switched off at process start (`DesertAntClient.silenceSdkLogs`). Done; the open item from milestone 0 is closed.
+- Whole-character span handling is done (ruling 30); that milestone 0 item is closed.
+- Added in milestone 4: `core/TextEdit.java`, `ai/RedactionPlan.java`, `ai/RedactCategories.java`, `ai/ToxicPolicy.java`, `ai/NoticeText.java`, `ui/models/TryItPreference.java`, `ui/models/ModelTryIt.java`.
+- Not exercised yet: the copy-only preview (needs an editor that hides its text offset), the partial-draft wording (needs a draft over 1,000 characters), and model usefulness on a real sample set.
 - Not yet asserted by a test: the single enable sweep and its reduced-motion skip, model release under memory pressure, the per-app switches screen.
 
 ## Next action
 
-Milestone 4: Redact and Toxic — adapters, notices with Review and Dismiss, the masking preview, guarded apply and Undo, and whole-character span handling.
+Milestone 5: Tongue (language hint, bundled) and Gist (topic tags) — read Gist's real API, capture its files, adapters, and a useful action for each.

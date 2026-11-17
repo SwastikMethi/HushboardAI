@@ -2,6 +2,8 @@
 package com.example.aikeyboard.ai;
 
 import com.example.aikeyboard.ai.Suggestion.EmojiCandidate;
+import com.example.aikeyboard.ai.Suggestion.Notice;
+import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -24,5 +26,20 @@ public final class SuggestionPolicy {
             if (!shown.contains(candidate.emoji)) shown.add(candidate.emoji);
         }
         return shown;
+    }
+
+    /**
+     * At most one notice at a time: personal information first, then tone. A notice the user
+     * dismissed for this text is skipped. Null when there is nothing to raise.
+     */
+    public static Notice notice(DraftSnapshot draft, List<SensitiveSpan> spans, List<String> tone,
+            boolean privacyDismissed, boolean toneDismissed) {
+        if (!spans.isEmpty() && !privacyDismissed) {
+            return new Notice(Notice.Kind.PRIVACY, draft, spans, List.of());
+        }
+        if (!tone.isEmpty() && !toneDismissed) {
+            return new Notice(Notice.Kind.TONE, draft, List.of(), tone);
+        }
+        return null;
     }
 }

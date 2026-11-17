@@ -43,6 +43,36 @@
     <string name="ai_model_crashed">Turned off after it stopped the keyboard</string>
     <string name="strip_setup_models">Set up AI models</string>
 
+    <!-- Keyboard: notices, review and undo. Notices are prompts to look again, never verdicts. -->
+    <string name="notice_privacy">Personal information detected</string>
+    <string name="notice_tone">Wording flagged for review</string>
+    <string name="action_review">Review</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_undo">Undo</string>
+    <string name="review_scope_partial">Only the part of your draft this app shares with the keyboard was checked.</string>
+    <string name="review_privacy_note">Detection may miss some information. Nothing is changed unless you choose to.</string>
+    <string name="review_tone_note">A prompt to re-read, not a judgement. This model is in beta and can be wrong. Nothing is changed or blocked.</string>
+    <string name="review_mask">Mask in message</string>
+    <string name="review_copy">Copy masked text</string>
+    <string name="review_copied">Masked text copied. Your message was not changed.</string>
+    <string name="review_changed">The text changed. Nothing was replaced.</string>
+    <string name="review_line">%1$s: %2$s → %3$s</string>
+    <string name="category_email">Email address</string>
+    <string name="category_phone">Phone number</string>
+    <string name="category_payment">Payment detail</string>
+    <string name="category_ids">ID number</string>
+    <string name="category_names">Name</string>
+    <string name="category_addresses">Address</string>
+    <string name="category_online">Link or IP address</string>
+    <string name="tone_hateful">Hateful wording</string>
+    <string name="tone_abusive">Abusive wording</string>
+    <string name="tone_threat">Threat</string>
+    <plurals name="masked_items">
+        <item quantity="one">Masked %d item</item>
+        <item quantity="other">Masked %d items</item>
+    </plurals>
+    <string name="undo_failed">Can\'t undo: the text changed</string>
+
     <!-- Onboarding -->
     <string name="setup_title">Set up AI Keyboard</string>
     <string name="setup_privacy">AI help works on the text in the field you are typing in, on this device. The keyboard cannot see the rest of a conversation, and it never sends a message for you.</string>
@@ -104,6 +134,15 @@
     <string name="detail_delete">Delete model files</string>
     <string name="detail_delete_confirm">Delete %1$s? It will be turned off and its files removed. You can download it again later.</string>
     <string name="detail_reset">Reset model settings</string>
+    <string name="try_title">Try it</string>
+    <string name="try_hint">Type something to test</string>
+    <string name="try_run">Run on this device</string>
+    <string name="try_needs_download">Download the model to try it</string>
+    <string name="try_running">Running…</string>
+    <string name="try_failed">The model could not run: %1$s</string>
+    <string name="try_nothing_redact">Nothing detected. Detection may miss some information.</string>
+    <string name="try_nothing_toxic">Nothing flagged.</string>
+    <string name="try_nothing_emo">No emoji suggested for this text.</string>
     <string name="action_delete">Delete</string>
 
     <!-- Settings tab -->

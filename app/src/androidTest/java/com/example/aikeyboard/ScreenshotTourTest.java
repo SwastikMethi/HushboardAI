@@ -19,6 +19,7 @@ import androidx.test.uiautomator.Until;
 
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
+import com.example.aikeyboard.models.ModelRegistry;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -93,6 +94,34 @@ public class ScreenshotTourTest {
             assertNotNull(device.wait(
                     Until.findObject(By.res(PKG, "ai_panel_master")), TIMEOUT_MS));
             shot("03_ai_panel");
+        } finally {
+            setAi(false);
+        }
+    }
+
+    @Test
+    public void noticeStates() throws Exception {
+        TestModels.ensureInstalled("redact");
+        settings.setModelEnabled("redact", true);
+        settings.setString(AppSettings.modelSettingKey("redact", ModelRegistry.REDACT_MODE),
+                ModelRegistry.REDACT_MODE_MASK);
+        setAi(true);
+        try (ActivityScenario<EditorTestActivity> host =
+                     ActivityScenario.launch(EditorTestActivity.class)) {
+            device.wait(Until.findObject(By.res(PKG, "field_plain")), TIMEOUT_MS).click();
+            String text = "Sure, mail me at anna@example.hu or call +36 30 123 4567 ";
+            host.onActivity(a -> {
+                android.widget.EditText field = a.findViewById(R.id.field_plain);
+                field.setText(text);
+                field.setSelection(text.length());
+            });
+            assertNotNull("no privacy notice", device.wait(Until.findObject(By.res(PKG,
+                    "suggestion_1").text("Personal information detected")), TIMEOUT_MS));
+            shot("08_privacy_notice");
+            device.findObject(By.res(PKG, "suggestion_2")).click();
+            assertNotNull(device.wait(
+                    Until.findObject(By.res(PKG, "notice_detail")), TIMEOUT_MS));
+            shot("09_review_panel");
         } finally {
             setAi(false);
         }

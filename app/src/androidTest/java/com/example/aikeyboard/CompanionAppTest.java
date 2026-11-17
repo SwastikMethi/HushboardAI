@@ -5,6 +5,7 @@ package com.example.aikeyboard;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.Espresso.pressBack;
 import static androidx.test.espresso.action.ViewActions.click;
+import static androidx.test.espresso.action.ViewActions.replaceText;
 import static androidx.test.espresso.action.ViewActions.scrollTo;
 import static androidx.test.espresso.action.ViewActions.swipeUp;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
@@ -146,6 +147,28 @@ public class CompanionAppTest {
         onView(withText(R.string.setting_redact_email)).check(matches(isDisplayed()));
         pressBack();
         onView(withId(R.id.models_heading)).check(matches(isDisplayed()));
+    }
+
+    @Test
+    public void tryItRunsTheRealModelOnWhatTheUserTyped() throws Exception {
+        app.close();
+        TestModels.ensureInstalled("redact");
+        app = ActivityScenario.launch(MainActivity.class);
+        openModels();
+        onView(row("redact")).perform(scrollTo(), click());
+        onView(withId(androidx.preference.R.id.recycler_view)).perform(swipeUp());
+
+        onView(withId(R.id.try_input)).perform(replaceText("Email me at alex@example.com"));
+        onView(withId(R.id.try_run)).perform(click());
+
+        // The answer comes from the model on its own thread; wait for it to be shown.
+        String[] shown = new String[1];
+        assertTrue("no result appeared: " + shown[0], TestModels.await(() -> {
+            app.onActivity(a -> shown[0] = ((android.widget.TextView)
+                    a.findViewById(R.id.try_result)).getText().toString());
+            return shown[0].contains("[EMAIL_1]");
+        }, 20_000));
+        assertTrue(shown[0], shown[0].contains("alex@example.com"));
     }
 
     @Test

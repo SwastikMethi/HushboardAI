@@ -1,5 +1,6 @@
-// The row above the keys. It offers up to three words, or emoji, or one setup hint. Always
-// the same height, so the keyboard never jumps when its content comes and goes.
+// The row above the keys. It offers up to three words, or emoji, or one notice with its two
+// actions, or one setup hint. Always the same height, so the keyboard never jumps when its
+// content comes and goes.
 package com.example.aikeyboard.ime.view;
 
 import android.content.Context;
@@ -17,10 +18,17 @@ import java.util.List;
 public final class SuggestionStripView extends LinearLayout {
 
     /** What the strip is currently offering; decides what a tap means. */
-    public enum Kind { WORDS, EMOJI, SETUP }
+    public enum Kind {
+        WORDS,
+        EMOJI,
+        /** One message followed by two actions; the message gets the most room. */
+        NOTICE,
+        SETUP
+    }
 
     public interface Listener {
-        void onStripItemPicked(Kind kind, String text);
+        /** @param index which slot was tapped, from the left, starting at 0 */
+        void onStripItemPicked(Kind kind, int index, String text);
     }
 
     private static final int[] SLOT_IDS = {R.id.suggestion_1, R.id.suggestion_2, R.id.suggestion_3};
@@ -28,6 +36,8 @@ public final class SuggestionStripView extends LinearLayout {
     private final TextView[] slots = new TextView[SLOT_IDS.length];
     private final float wordSize;
     private final float emojiSize;
+    private final int plainColor;
+    private final int actionColor;
     private Listener listener;
     private Kind kind = Kind.WORDS;
 
@@ -35,6 +45,8 @@ public final class SuggestionStripView extends LinearLayout {
         super(context, attrs);
         wordSize = getResources().getDimension(R.dimen.suggestion_text_size);
         emojiSize = getResources().getDimension(R.dimen.key_label_size);
+        plainColor = context.getColor(R.color.key_label_secondary);
+        actionColor = context.getColor(R.color.accent_blue);
         setOrientation(HORIZONTAL);
         setShowDividers(SHOW_DIVIDER_MIDDLE);
         setDividerDrawable(context.getDrawable(R.drawable.strip_divider));
@@ -44,16 +56,16 @@ public final class SuggestionStripView extends LinearLayout {
         TypedValue ripple = new TypedValue();
         context.getTheme().resolveAttribute(android.R.attr.selectableItemBackground, ripple, true);
         for (int i = 0; i < slots.length; i++) {
+            int index = i;
             TextView slot = new TextView(context);
             slot.setId(SLOT_IDS[i]);
             slot.setGravity(Gravity.CENTER);
             slot.setSingleLine(true);
             slot.setEllipsize(TextUtils.TruncateAt.END);
-            slot.setTextColor(context.getColor(R.color.key_label_secondary));
             slot.setBackgroundResource(ripple.resourceId);
             slot.setOnClickListener(v -> {
                 if (listener != null) {
-                    listener.onStripItemPicked(kind, slot.getText().toString());
+                    listener.onStripItemPicked(kind, index, slot.getText().toString());
                 }
             });
             slots[i] = slot;
@@ -70,11 +82,16 @@ public final class SuggestionStripView extends LinearLayout {
         kind = newKind;
         for (int i = 0; i < slots.length; i++) {
             boolean filled = i < items.size();
+            boolean noticeText = newKind == Kind.NOTICE && i == 0;
             slots[i].setText(filled ? items.get(i) : "");
             slots[i].setTextSize(TypedValue.COMPLEX_UNIT_PX,
-                    newKind == Kind.EMOJI ? emojiSize : wordSize);
+                    newKind == Kind.EMOJI ? emojiSize : noticeText ? wordSize * 0.9f : wordSize);
+            // In a notice, the two actions are tinted so they read as buttons.
+            slots[i].setTextColor(newKind == Kind.NOTICE && i > 0 ? actionColor : plainColor);
+            ((LayoutParams) slots[i].getLayoutParams()).weight = noticeText ? 2.4f : 1f;
             // Empty slots stay in the layout but are neither tappable nor announced.
             slots[i].setVisibility(filled ? VISIBLE : INVISIBLE);
         }
+        requestLayout();
     }
 }

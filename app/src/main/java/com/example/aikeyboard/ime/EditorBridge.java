@@ -10,6 +10,9 @@ import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.SurroundingText;
 
+import com.example.aikeyboard.core.TextEdit;
+
+import java.util.List;
 import java.util.function.Supplier;
 
 public final class EditorBridge {
@@ -136,35 +139,52 @@ public final class EditorBridge {
      * The cursor keeps its place relative to the surrounding text.
      */
     public boolean replaceRange(int start, int end, String expectedText, String newText) {
+        return replaceRanges(List.of(new TextEdit(start, end, expectedText, newText)));
+    }
+
+    /**
+     * Applies several guarded replacements as one edit, or none of them. Every range is
+     * checked against the editor's current text first; if any has changed, nothing is
+     * touched. Edits must be in document order and must not overlap.
+     */
+    public boolean replaceRanges(List<TextEdit> edits) {
         InputConnection ic = connection.get();
-        if (ic == null) return false;
+        if (ic == null || edits.isEmpty()) return false;
         ExtractedText extracted = ic.getExtractedText(new ExtractedTextRequest(), 0);
         if (extracted == null || extracted.text == null) return false;
 
-        // An editor may expose only a window of its text; offsets inside it are relative.
-        int from = start - extracted.startOffset;
-        int to = end - extracted.startOffset;
-        if (from < 0 || to > extracted.text.length() || from > to) return false;
-        if (!extracted.text.subSequence(from, to).toString().equals(expectedText)) return false;
-
+        for (TextEdit edit : edits) {
+            // An editor may expose only a window of its text; offsets inside it are relative.
+            int from = edit.start - extracted.startOffset;
+            int to = edit.end - extracted.startOffset;
+            if (from < 0 || to > extracted.text.length() || from > to) return false;
+            if (!extracted.text.subSequence(from, to).toString().equals(edit.expected)) {
+                return false;
+            }
+        }
         int selStart = extracted.startOffset + extracted.selectionStart;
         int selEnd = extracted.startOffset + extracted.selectionEnd;
-        int delta = newText.length() - (end - start);
-        int afterNewText = start + newText.length();
 
         ic.beginBatchEdit();
-        ic.setComposingRegion(start, end);
-        ic.commitText(newText, 1);
-        ic.setSelection(shift(selStart, start, end, delta, afterNewText),
-                shift(selEnd, start, end, delta, afterNewText));
+        // Last edit first, so the offsets of the earlier ones are still right.
+        for (int i = edits.size() - 1; i >= 0; i--) {
+            TextEdit edit = edits.get(i);
+            ic.setComposingRegion(edit.start, edit.end);
+            ic.commitText(edit.replacement, 1);
+        }
+        ic.setSelection(shift(selStart, edits), shift(selEnd, edits));
         ic.endBatchEdit();
         return true;
     }
 
-    // Where a cursor position lands once [start, end) has been replaced.
-    private static int shift(int position, int start, int end, int delta, int afterNewText) {
-        if (position < start) return position;
-        if (position >= end) return position + delta;
-        return afterNewText;
+    // Where a cursor position lands once every edit has been applied.
+    private static int shift(int position, List<TextEdit> edits) {
+        int moved = 0;
+        for (TextEdit edit : edits) {
+            if (position < edit.start) break;
+            if (position < edit.end) return edit.start + moved + edit.replacement.length();
+            moved += edit.replacement.length() - (edit.end - edit.start);
+        }
+        return position + moved;
     }
 }

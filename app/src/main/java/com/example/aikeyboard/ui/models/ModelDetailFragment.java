@@ -38,6 +38,7 @@ public final class ModelDetailFragment extends PreferenceFragmentCompat {
     private ModelRepository models;
     private SwitchPreferenceCompat enable;
     private Preference storage;
+    private TryItPreference tryIt;
     // Each setting's row with the action that puts it back to its default.
     private final List<Runnable> resets = new ArrayList<>();
 
@@ -86,6 +87,27 @@ public final class ModelDetailFragment extends PreferenceFragmentCompat {
             category.addPreference(reset);
         }
 
+        if (ModelTryIt.supports(model.id)) {
+            PreferenceCategory tryCategory = category(context, R.string.try_title);
+            screen.addPreference(tryCategory);
+            tryIt = new TryItPreference(context, (text, onResult) ->
+                    app.inference.execute(() -> {
+                        String shown;
+                        try {
+                            shown = ModelTryIt.run(app, context, model.id, text);
+                        } catch (Exception e) {
+                            // The real failure, in words: never a made-up success.
+                            String reason = e.getMessage() != null ? e.getMessage()
+                                    : e.getClass().getSimpleName();
+                            shown = context.getString(R.string.try_failed, reason);
+                        }
+                        String result = shown;
+                        View view = getView();
+                        if (view != null) view.post(() -> onResult.accept(result));
+                    }));
+            tryCategory.addPreference(tryIt);
+        }
+
         PreferenceCategory storageCategory = category(context, R.string.detail_storage);
         screen.addPreference(storageCategory);
         storage = plain(context);
@@ -114,6 +136,7 @@ public final class ModelDetailFragment extends PreferenceFragmentCompat {
             boolean ready = models.isReady(model.id);
             enable.setEnabled(ready);
             enable.setSummary(ready ? null : getString(R.string.detail_enable_needs_download));
+            if (tryIt != null) tryIt.setReady(ready);
             if (!model.bundled) showStorage();
         });
     }

@@ -7,6 +7,8 @@ import android.content.Context;
 
 import com.example.aikeyboard.ai.CrashBreaker;
 import com.example.aikeyboard.ai.adapters.EmoAdapter;
+import com.example.aikeyboard.ai.adapters.RedactAdapter;
+import com.example.aikeyboard.ai.adapters.ToxicAdapter;
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
 import com.example.aikeyboard.models.ModelRepository;
@@ -35,6 +37,8 @@ public final class AppContainer {
     public final CrashBreaker breaker;
     public final ModelRuntimePool runtime;
     public final EmoAdapter emo;
+    public final RedactAdapter redact;
+    public final ToxicAdapter toxic;
 
     AppContainer(Context appContext) {
         DesertAntClient.silenceSdkLogs();
@@ -43,6 +47,8 @@ public final class AppContainer {
         breaker = new CrashBreaker(new File(appContext.getNoBackupFilesDir(), "loading"));
         runtime = new ModelRuntimePool(appContext, models, breaker);
         emo = new EmoAdapter(runtime);
+        redact = new RedactAdapter(runtime);
+        toxic = new ToxicAdapter(runtime);
         // Files may only be deleted once the model using them has been closed.
         models.setRuntimeReleaser(this::releaseAndWait);
         disableModelsThatCrashed();

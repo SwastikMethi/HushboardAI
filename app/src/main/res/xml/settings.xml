@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings tab. Only choices that really exist are offered; fixed ones are shown as facts. -->
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/settings_group_keyboard">
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:selectable="false"
+            app:summary="@string/settings_theme_dark"
+            app:title="@string/settings_theme" />
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:selectable="false"
+            app:summary="@string/subtype_english"
+            app:title="@string/settings_language" />
+
+        <ListPreference
+            app:defaultValue="standard"
+            app:entries="@array/height_labels"
+            app:entryValues="@array/height_values"
+            app:iconSpaceReserved="false"
+            app:key="keyboard.height"
+            app:title="@string/settings_height"
+            app:useSimpleSummaryProvider="true" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:iconSpaceReserved="false"
+            app:key="keyboard.word_suggestions"
+            app:summary="@string/settings_word_suggestions_summary"
+            app:title="@string/settings_word_suggestions" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:iconSpaceReserved="false"
+            app:key="keyboard.haptics"
+            app:title="@string/settings_haptics" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="false"
+            app:iconSpaceReserved="false"
+            app:key="keyboard.sound"
+            app:title="@string/settings_sound" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
+        app:title="@string/settings_group_models">
+
+        <SwitchPreferenceCompat
+            app:defaultValue="true"
+            app:iconSpaceReserved="false"
+            app:key="downloads.unmetered_only"
+            app:summary="@string/settings_unmetered_summary"
+            app:title="@string/settings_unmetered" />
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="storage"
+            app:persistent="false"
+            app:title="@string/settings_storage" />
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="privacy"
+            app:persistent="false"
+            app:title="@string/settings_privacy" />
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="attribution"
+            app:persistent="false"
+            app:summary="@string/settings_attribution_summary"
+            app:title="@string/settings_attribution" />
+    </PreferenceCategory>
+</PreferenceScreen>

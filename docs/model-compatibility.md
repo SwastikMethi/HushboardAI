@@ -73,4 +73,8 @@ Revisions for the ten pending models come from vendor source research and are co
 
 ## License and attribution
 
-Desert Ant Labs Source-Available License v1.1, accepted by the project owner for this project on 17 Nov 2026. The app must show a "Powered by Desert Ant Labs" credit and disclose the License Check in its privacy text; both land with the companion app in milestone 2.
+Desert Ant Labs Source-Available License v1.1, accepted by the project owner for this project on 17 Nov 2026. The app shows a "Powered by Desert Ant Labs" credit linking to desertant.com (Settings tab) and discloses the License Check in plain words (Settings → Privacy).
+
+## How models are installed
+
+The app downloads each model's pinned files itself (`models/ModelDownloader`), from `https://huggingface.co/desert-ant-labs/<model>/resolve/<revision>/<file>`, into `<no-backup files dir>/models/<model>/<revision>/`. Each file is checked against the size and SHA-256 the vendor SDK pins for SDK 4.3.0 before it takes its final name. The SDK then adopts the directory. The SDK's own `download()` is not used in product code because it cannot be cancelled.

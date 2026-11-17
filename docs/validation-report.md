@@ -93,3 +93,41 @@ Unit tests (JVM): 32 passed — `KeyboardLayoutTest` 7, `ShiftStateTest` 8, `Loc
 | Key-handling latency (p95) | blocked | PHONE | Needs the physical device |
 
 Full-suite run at the end of the milestone: 35 instrumented tests, 31 executed and passed, 4 skipped by design in that run (offline probe, two-step kill probe, stock-app probe — each passed in its own run).
+
+## Milestone 2 — Companion app and assets
+
+Unit tests (JVM): 55 passed in total. New in this milestone: `ModelDownloaderTest` 10 (against a real local socket), `ModelRegistryTest` 8, `AppSettingsTest` 5.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| Downloader: complete transfer, progress up to the total | passed | host | `ModelDownloaderTest.downloadsEveryFileAndReportsProgressUpToTheTotal` |
+| Downloader: resumes a partial file with a `Range` request; restarts if the server ignores it | passed | host | `resumesAPartialFileWithARangeRequest`, `restartsFromZeroWhenTheServerIgnoresTheRange` |
+| An interrupted transfer never looks complete | passed | host | `anInterruptedTransferIsANetworkFailureAndNeverLooksComplete` |
+| Corrupt content is deleted and never looks complete | passed | host | `corruptContentIsDeletedAndNeverLooksComplete` |
+| Cancelling stops the transfer part way | passed | host | `cancellingStopsTheTransferPartWay` |
+| Server error, already-present files, wrong-sized file, first download into a new directory | passed | host | remaining `ModelDownloaderTest` cases |
+| Catalog: 13 models, grouped, vendor beta labels, pinned sizes add up | passed | host | `ModelRegistryTest` |
+| Settings snapshot: safe defaults (AI off), pause keeps choices, immutable | passed | host | `AppSettingsTest` |
+| A download runs through the WorkManager worker; the vendor SDK accepts the files and runs | passed | EMU-37 | `ModelDownloadDeviceTest.aDownloadGoesThroughTheWorkerAndTheVendorSdkAcceptsTheFiles` |
+| Cancel really stops the transfer and removes partial files | passed | EMU-37 | `ModelDownloadDeviceTest.cancellingReallyStopsTheTransferAndRemovesWhatItFetched` |
+| "Unmetered networks only": Wi-Fi off pauses the download (no bytes over mobile data), partial file kept; Wi-Fi on resumes to Ready | passed | EMU-37 | `ModelDownloadDeviceTest.losingTheUnmeteredNetworkPausesTheDownloadAndItResumesWhenItReturns` |
+| Readiness comes from the files: a truncated file is not Ready, and a re-download repairs it | passed | EMU-37 | `ModelDownloadDeviceTest.readinessComesFromTheFiles_…` |
+| Every settings observer sees the same snapshot and revision | passed | EMU-37 | `SettingsSyncTest.everyObserverSeesTheSameSnapshotWithTheSameRevision` |
+| The open keyboard follows a height change made elsewhere | passed | EMU-37 | `SettingsSyncTest.theKeyboardFollowsAHeightChangeWithoutBeingReopened` |
+| Three tabs show their screens | passed | EMU-37 | `CompanionAppTest.theThreeTabsShowTheirScreens` |
+| Catalog lists all 13 models with honest states (Included, Coming later) | passed | EMU-37 | `CompanionAppTest.theCatalogListsAllThirteenModelsWithHonestStates` |
+| Download from the catalog ends in Ready and the model can be switched on | passed | EMU-37 | `CompanionAppTest.downloadingFromTheCatalogEndsInReadyAndTheModelCanBeTurnedOn` (real download) |
+| Master switch pauses everything but keeps each model's choice; row says Paused | passed | EMU-37 | `CompanionAppTest.theMasterSwitchPausesEverythingButKeepsEachChoice` |
+| Model detail shows only that model's own settings | passed | EMU-37 | `CompanionAppTest.modelDetailShowsOnlyThatModelsRealSettings` |
+| Privacy screen discloses the vendor License Check | passed | EMU-37 | `CompanionAppTest.thePrivacyScreenDisclosesTheLicenseCheck`; `docs/evidence/screenshots/m2_privacy.png` |
+| Appearance against the companion mockup | passed (reviewed) | EMU-37 | `m2_models.png`, `m2_settings.png`. Model rows show an initial instead of a drawn icon; grouped settings are flat lists rather than rounded cards. Both are milestone 8 items. |
+| Two taps on Download start only one transfer | not run | — | Guaranteed by WorkManager unique work with `KEEP`; no test drives it |
+| Low storage reported as its own failure | not run | — | The code path exists (`Failure.STORAGE`); filling a disk was not simulated |
+| Model delete from the detail screen, reset of one model's settings | not run | — | Implemented; not yet driven by a test |
+| Download speed and behaviour on a real mobile network | blocked | PHONE | Needs the physical device |
+
+Two findings from running on the device, both fixed and covered by tests:
+- The downloader checked free space before the model folder existed and read zero. `ModelDownloaderTest.createsTheModelDirectoryOnAFirstDownload` reproduces it.
+- Android defers background jobs for apps that are not on screen, sometimes by minutes. Downloads are only started from the companion app while it is visible, and the device tests now do the same.
+
+Full-suite run at the end of the milestone: 47 instrumented tests; 43 executed and passed, 4 skipped by design (offline probe, two-step kill probe, stock-app probe).

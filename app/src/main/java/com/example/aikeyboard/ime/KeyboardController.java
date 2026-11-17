@@ -7,7 +7,9 @@ import android.os.SystemClock;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 
+import com.example.aikeyboard.MainActivity;
 import com.example.aikeyboard.R;
+import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.databinding.KeyboardViewBinding;
 import com.example.aikeyboard.ime.KeyboardLayout.Key;
 import com.example.aikeyboard.ime.KeyboardLayout.Layer;
@@ -27,6 +29,7 @@ public final class KeyboardController
     private final EditorBridge editor;
     private final LocalWordSuggester suggester;
 
+    private AppSettings settings;
     private KeyboardViewBinding views;
     private InputSession session;
     private ShiftState shift = new ShiftState();
@@ -36,10 +39,18 @@ public final class KeyboardController
     private List<String> suggestions = List.of();
 
     KeyboardController(AiInputMethodService service, EditorBridge editor,
-            LocalWordSuggester suggester) {
+            LocalWordSuggester suggester, AppSettings settings) {
         this.service = service;
         this.editor = editor;
         this.suggester = suggester;
+        this.settings = settings;
+    }
+
+    /** Saved preferences changed, here or in the companion app. */
+    void onSettings(AppSettings latest) {
+        settings = latest;
+        if (session != null) readEditor();
+        render();
     }
 
     /** Called for every new keyboard view; the controller's state is drawn onto it. */
@@ -48,7 +59,8 @@ public final class KeyboardController
         views.keys.setListener(this);
         views.keys.setSpaceLabel(service.getString(R.string.subtype_english));
         views.suggestions.setListener(this);
-        views.toolSettings.setOnClickListener(v -> service.openCompanionApp());
+        views.toolSettings.setOnClickListener(
+                v -> service.openCompanionApp(MainActivity.TAB_SETTINGS));
         views.emojiPicker.setOnEmojiPickedListener(item -> editor.commitText(item.getEmoji()));
         views.emojiLetters.setOnClickListener(v -> {
             emojiShown = false;
@@ -84,7 +96,7 @@ public final class KeyboardController
 
     private void readEditor() {
         shift.onAutoCaps(editor.wantsCapital(session.inputType));
-        currentWord = session.wordSuggestions
+        currentWord = session.wordSuggestions && settings.wordSuggestions()
                 ? trailingWord(editor.textBeforeCursor(WORD_LOOKBEHIND)) : "";
         suggestions = currentWord.isEmpty()
                 ? List.of() : suggester.suggest(currentWord, MAX_SUGGESTIONS);
@@ -100,6 +112,7 @@ public final class KeyboardController
     private void render() {
         if (views == null) return;
         views.keys.setRows(KeyboardLayout.rows(layer));
+        views.keys.setHeightScale(settings.heightScale());
         views.keys.setShiftMode(shift.mode());
         views.suggestions.setSuggestions(suggestions);
         // INVISIBLE, not GONE: the key grid keeps giving the emoji panel its height.

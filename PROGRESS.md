@@ -6,7 +6,7 @@ The execution plan is `~/.claude/plans/i-have-added-a-whimsical-mist.md` (approv
 |---|---|---|
 | 0 — Compatibility spike | Done (emulator). Device rows blocked | 17 instrumented tests on the Android 17 emulator; see validation report. Peak memory and a physical-device smoke run wait for the phone. |
 | 1 — Reliable keyboard | Done (emulator). Device rows blocked | 32 unit tests, 35 instrumented tests; typing verified in the debug host and in Android Settings search. Haptics, sound, latency and third-party chat apps wait for the phone. |
-| 2 — Companion and assets | Not started | — |
+| 2 — Companion and assets | Done (emulator). Device rows blocked | 55 unit tests, 47 instrumented tests. Real downloads, a cancel that stops, pause on leaving Wi-Fi and resume, live settings sync, three-tab companion app with the privacy disclosure. |
 | 3 — First real Emo slice | Not started | — |
 | 4 — Redact and Toxic | Not started | — |
 | 5 — Tongue and Gist | Not started | — |
@@ -45,6 +45,13 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 15. **Haptics default on, key sound off, height standard.** The mechanics exist in milestone 1; the saved settings that control them arrive with the settings store in milestone 2.
 16. **The tool row shows only the settings button until there is something real to add** — the AI control in milestone 3, the microphone in milestone 6. The mockup's clipboard and grid icons have no specified behaviour and stay out.
 
+17. **Readiness is file-based, and the SDK's `isDownloaded()` is checked when a model is first loaded, not when it finishes downloading.** Every file is verified against the size and SHA-256 the SDK itself pins, so loading the 56 MB native library just to ask again at download time would cost memory for nothing. If the SDK ever disagrees at load time, the model is marked Unavailable on this device and is never called — which also keeps the rule that typing can never start a download. Cost if wrong: a device needing a different file set finds out at first use instead of at download.
+18. **No foreground service for downloads.** The app's downloader resumes, so when WorkManager's 10-minute limit or a network change stops a transfer it continues later from where it stopped (proved by the Wi-Fi test). Cost if wrong: very large models on slow links take several runs to finish.
+19. **Cancel removes the partial download; a failure or a pause keeps it.** Cancel is the user saying "not now", so storage is given back. Cost if wrong: a cancelled large download starts again from zero.
+20. **Settings and model-detail screens use `androidx.preference`** backed by the shared settings store, rather than hand-built rows. One new dependency replaces a lot of UI code and gives the detail screen its "render any model from its definition" behaviour. Cost if wrong: less visual control; the mockup's rounded group cards are deferred to milestone 8.
+21. **Models without a captured file list show "Coming later"** and offer no download. That is nine of the thirteen today; each flips to downloadable when its adapter lands. Cost if wrong: none — the alternative is a button that does nothing.
+22. **Android glue (repository, worker, settings store) was written together with its device tests**, not strictly after a failing test. Their decision logic lives in classes that were test-first (`ModelDownloader`, `AppSettings`, `ModelRegistry`), and each device test was watched failing before the wiring that makes it pass. Cost if wrong: thinner unit coverage of the glue itself.
+
 ## Deviations from the handoff file list
 
 - `sdkbridge/DesertAntSuspendBridge.kt` and `sdkbridge/CancellableOperation.java`: not needed (ruling 3).
@@ -52,6 +59,10 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 - Added: `src/debug/AndroidManifest.xml`, `docs/evidence/`, `ime/ShiftState.java` (the shift state machine, split out so it is unit-tested without Android).
 - `ime/view/KeyboardRootView.java`: folded into `res/layout/keyboard_view.xml` plus `KeyboardController`; a class that only held child views had no job.
 - `ui/onboarding/SetupViewModel.java`: not created; the screen re-reads system state on every return, so there is nothing to hold.
+- `ui/models/ModelsViewModel.java`, `ui/settings/SettingsViewModel.java`: not created; screens observe the app-wide repositories directly.
+- `data/PreferenceKeys.java` → constants in `AppSettings`. `core/AppExecutors.java` → `AppContainer`. `models/ModelStorage.java` → `ModelRepository`. `assets/models/catalog.json` → `ModelRegistry` (one source for the 13 entries). `ui/AppNavigator.java` → `MainActivity`. `ui/components/ModelRowViewHolder.java` → `ModelLibraryFragment` (a fixed list of 13 rows needs no recycler). `ui/keyboard/KeyboardPreviewFragment.java` → the practice field in `SetupFragment`.
+- Added: `models/ModelDownloader.java` (the app's own downloader, ruling 4), `ui/settings/SettingsStore.java`, `ui/settings/PrivacyFragment.java`.
+- `ui/settings/AppPreferencesFragment.java`: arrives in milestone 3, when the keyboard starts recording which apps it has been used in.
 
 ## Open items carried forward
 
@@ -63,6 +74,10 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 - Reinstalling the app makes Android switch away from the keyboard (it stays enabled). Onboarding reports this correctly; tests re-select it in their own setup.
 - TalkBack has not been driven yet; keys are exposed as labelled nodes. Milestone 8.
 
+- Android defers background jobs for apps that are not on screen. A download started and then immediately left may sit at "Waiting to start" for some minutes.
+- Model rows show an initial rather than a drawn icon, and settings groups are flat lists rather than rounded cards. Milestone 8.
+- Not yet driven by a test: deleting a model from its detail screen, resetting one model's settings, low-storage failure, a double tap on Download.
+
 ## Next action
 
-Milestone 2: three-tab companion app, the shared settings store, the model catalog, and the app's own cancellable, resumable model downloader.
+Milestone 3: the first real AI slice — Emo suggestions in the keyboard, the AI toggle and panel, stale-result suppression, the crash breaker, and per-app AI preferences.

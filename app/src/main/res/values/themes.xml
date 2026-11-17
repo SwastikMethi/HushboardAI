@@ -14,5 +14,18 @@
         <item name="android:colorBackground">@color/canvas</item>
         <item name="android:statusBarColor">@color/canvas</item>
         <item name="android:navigationBarColor">@color/canvas</item>
+        <item name="switchPreferenceCompatStyle">@style/SettingsSwitchRow</item>
+    </style>
+
+    <!-- Settings rows use the app's Material switch instead of the older default one. -->
+    <style name="SettingsSwitchRow" parent="Preference.SwitchPreferenceCompat.Material">
+        <item name="widgetLayout">@layout/preference_switch</item>
+    </style>
+
+    <style name="PrivacyParagraph">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:textAppearance">?attr/textAppearanceBodyLarge</item>
     </style>
 </resources>

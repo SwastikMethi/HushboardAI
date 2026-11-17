@@ -18,6 +18,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import com.example.aikeyboard.MainActivity;
 import com.example.aikeyboard.R;
 import com.example.aikeyboard.databinding.FragmentSetupBinding;
 import com.example.aikeyboard.ime.AiInputMethodService;
@@ -48,6 +49,8 @@ public final class SetupFragment extends Fragment {
         views.setupEnable.setOnClickListener(v ->
                 startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)));
         views.setupChoose.setOnClickListener(v -> inputMethodManager().showInputMethodPicker());
+        views.setupModels.setOnClickListener(
+                v -> ((MainActivity) requireActivity()).selectTab(R.id.tab_models));
         views.getRoot().getViewTreeObserver().addOnWindowFocusChangeListener(onFocus);
         return views.getRoot();
     }

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plain-language account of what the keyboard and its models do with what you type. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:defaultFocusHighlightEnabled="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:accessibilityHeading="true"
+            android:text="@string/privacy_title"
+            android:textAppearance="?attr/textAppearanceHeadlineMedium" />
+
+        <TextView
+            style="@style/PrivacyParagraph"
+            android:text="@string/privacy_on_device" />
+
+        <TextView
+            style="@style/PrivacyParagraph"
+            android:text="@string/privacy_scope" />
+
+        <TextView
+            style="@style/PrivacyParagraph"
+            android:text="@string/privacy_drafts" />
+
+        <TextView
+            style="@style/PrivacyParagraph"
+            android:text="@string/privacy_fields" />
+
+        <TextView
+            style="@style/PrivacyParagraph"
+            android:text="@string/privacy_downloads" />
+
+        <TextView
+            style="@style/PrivacyParagraph"
+            android:text="@string/privacy_license_check" />
+
+        <TextView
+            style="@style/PrivacyParagraph"
+            android:text="@string/privacy_caution" />
+    </LinearLayout>
+</ScrollView>

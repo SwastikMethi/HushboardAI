@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Backup (Android 11 and older). Settings are backed up. The vendor SDK's install
+     identifier is not: it must not be copied to another device. Model files live in the
+     no-backup directory and are never backed up. -->
+<full-backup-content>
+    <exclude
+        domain="sharedpref"
+        path="desert-ant.xml" />
+</full-backup-content>

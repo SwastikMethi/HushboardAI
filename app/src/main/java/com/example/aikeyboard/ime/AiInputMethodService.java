@@ -16,28 +16,49 @@ import android.view.inputmethod.InputMethodManager;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import com.example.aikeyboard.AppContainer;
 import com.example.aikeyboard.MainActivity;
 import com.example.aikeyboard.R;
+import com.example.aikeyboard.data.AppSettings;
+import com.example.aikeyboard.data.SettingsRepository;
 import com.example.aikeyboard.databinding.KeyboardViewBinding;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
+import io.reactivex.rxjava3.disposables.Disposable;
+
 public class AiInputMethodService extends InputMethodService {
 
     private static final String WORD_LIST = "dictionaries/en_common.txt";
 
     private KeyboardController controller;
-    // Wired to the saved settings in M2.
-    private boolean hapticsEnabled = true;
-    private boolean soundEnabled = false;
+    private AppSettings settings;
+    private Disposable settingsSubscription;
 
     @Override
     public void onCreate() {
         super.onCreate();
+        SettingsRepository repository = AppContainer.from(this).settings;
+        settings = repository.latest();
         EditorBridge editor = new EditorBridge(this::getCurrentInputConnection);
-        controller = new KeyboardController(this, editor, loadWordList());
+        controller = new KeyboardController(this, editor, loadWordList(), settings);
+        // The service owns this subscription and ends it in onDestroy. Changes made in the
+        // companion app arrive here while the keyboard is open.
+        settingsSubscription = repository.observe()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(latest -> {
+                    settings = latest;
+                    controller.onSettings(latest);
+                });
+    }
+
+    @Override
+    public void onDestroy() {
+        settingsSubscription.dispose();
+        super.onDestroy();
     }
 
     private LocalWordSuggester loadWordList() {
@@ -98,14 +119,16 @@ public class AiInputMethodService extends InputMethodService {
         getSystemService(InputMethodManager.class).showInputMethodPicker();
     }
 
-    void openCompanionApp() {
+    /** Opens the companion app on the given tab (MainActivity.TAB_MODELS or TAB_SETTINGS). */
+    void openCompanionApp(String tab) {
         startActivity(new Intent(this, MainActivity.class)
+                .putExtra(MainActivity.EXTRA_TAB, tab)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
     void keyFeedback(View view) {
-        if (hapticsEnabled) view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
-        if (soundEnabled) {
+        if (settings.haptics()) view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        if (settings.keySound()) {
             getSystemService(AudioManager.class)
                     .playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD);
         }

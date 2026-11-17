@@ -17,6 +17,7 @@ import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
+import com.example.aikeyboard.models.ModelRegistry;
 import com.example.aikeyboard.sdkbridge.DesertAntClient;
 
 import org.junit.Before;
@@ -95,16 +96,10 @@ public class ModelSmokeTest {
     }
 
     @Test
-    public void emo_downloadsIntoOurDirectoryThenSuggestsEmoji() throws Exception {
-        File dir = modelDir("emo");
+    public void emo_runsFromTheAppsOwnDownloadAndSuggestsEmoji() throws Exception {
+        File dir = TestModels.installedDir("emo");
         try (Emo emo = new Emo(context, dir.getAbsolutePath())) {
-            if (!emo.isDownloaded()) {
-                assumeTrue("needs network for the first download", online(context));
-                long t = SystemClock.elapsedRealtime();
-                DesertAntClient.run(emo::download).get(10, TimeUnit.MINUTES);
-                Log.i(TAG, "emo download ms=" + (SystemClock.elapsedRealtime() - t));
-            }
-            assertTrue(emo.isDownloaded());
+            assertTrue("the SDK must accept the files the app downloaded", emo.isDownloaded());
             Log.i(TAG, "emo total bytes=" + logFiles("emo", dir));
 
             long t0 = SystemClock.elapsedRealtime();
@@ -142,15 +137,10 @@ public class ModelSmokeTest {
         // before and after the spans, so any non-UTF-16 offset unit would shift them.
         String text = "👨‍👩‍👧 Zoë, email "
                 + "anna@example.hu or call +36 30 123 4567 😀 thanks";
-        File dir = modelDir("redact");
+        File dir = TestModels.installedDir("redact");
         try (Redact redact = new Redact(context, dir.getAbsolutePath())) {
-            if (!redact.isDownloaded()) {
-                assumeTrue("needs network for the first download", online(context));
-                long t = SystemClock.elapsedRealtime();
-                DesertAntClient.run(redact::download).get(10, TimeUnit.MINUTES);
-                Log.i(TAG, "redact download ms=" + (SystemClock.elapsedRealtime() - t));
-            }
-            assertTrue(redact.isDownloaded());
+            assertTrue("the SDK must accept the files the app downloaded",
+                    redact.isDownloaded());
             Log.i(TAG, "redact total bytes=" + logFiles("redact", dir));
 
             long t0 = SystemClock.elapsedRealtime();
@@ -178,15 +168,9 @@ public class ModelSmokeTest {
 
     @Test
     public void toxic_scoresAThreat() throws Exception {
-        File dir = modelDir("toxic");
+        File dir = TestModels.installedDir("toxic");
         try (Toxic toxic = new Toxic(context, dir.getAbsolutePath())) {
-            if (!toxic.isDownloaded()) {
-                assumeTrue("needs network for the first download", online(context));
-                long t = SystemClock.elapsedRealtime();
-                DesertAntClient.run(toxic::download).get(15, TimeUnit.MINUTES);
-                Log.i(TAG, "toxic download ms=" + (SystemClock.elapsedRealtime() - t));
-            }
-            assertTrue(toxic.isDownloaded());
+            assertTrue("the SDK must accept the files the app downloaded", toxic.isDownloaded());
             Log.i(TAG, "toxic total bytes=" + logFiles("toxic", dir));
 
             long t0 = SystemClock.elapsedRealtime();
@@ -324,7 +308,8 @@ public class ModelSmokeTest {
     public void offline_installedModelsRunAndMissingModelFailsVisibly() throws Exception {
         assumeTrue("run with the network off", !online(context));
 
-        try (Emo emo = new Emo(context, modelDir("emo").getAbsolutePath())) {
+        File installed = TestModels.container().models.directory(ModelRegistry.find("emo"));
+        try (Emo emo = new Emo(context, installed.getAbsolutePath())) {
             assumeTrue("emo must already be downloaded", emo.isDownloaded());
             List<EmoSuggestion> s = DesertAntClient.<List<EmoSuggestion>>run(
                     c -> emo.suggestions("Coffee tomorrow morning?", 3, EmojiSkinTone.DEFAULT, c))
@@ -338,8 +323,7 @@ public class ModelSmokeTest {
         deleteRecursively(prefilled);
         prefilled.mkdirs();
         for (String name : new String[] {"emo.tflite", "emo_meta.json", "emo_tokenizer.bin"}) {
-            Files.copy(new File(modelDir("emo"), name).toPath(),
-                    new File(prefilled, name).toPath());
+            Files.copy(new File(installed, name).toPath(), new File(prefilled, name).toPath());
         }
         try (Emo adopted = new Emo(context, prefilled.getAbsolutePath())) {
             assertTrue("a self-filled directory should count as downloaded",

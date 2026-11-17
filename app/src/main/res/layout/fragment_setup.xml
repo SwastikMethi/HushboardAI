@@ -65,5 +65,14 @@
                 android:inputType="textMultiLine|textCapSentences"
                 android:minLines="2" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/setup_models"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:minHeight="48dp"
+            android:text="@string/setup_models" />
     </LinearLayout>
 </ScrollView>

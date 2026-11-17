@@ -207,7 +207,8 @@
     <string name="privacy_drafts">Drafts are kept in memory only while you type. They are not saved to storage, logs or analytics.</string>
     <string name="privacy_fields">AI help turns itself off in password fields and in fields that ask keyboards not to learn from them.</string>
     <string name="privacy_downloads">Model files are downloaded from Hugging Face only when you tap Download.</string>
-    <string name="privacy_license_check">License check: the models come from Desert Ant Labs. Each time a model is loaded, their software contacts Desert Ant\'s server with a random install identifier, this app\'s package name, the model and software version, and the platform. It does not send what you type or any results. The model license requires this check and it cannot be turned off.</string>
+    <string name="privacy_license_check">License check: the models come from Desert Ant Labs. The first time a model is used, and again from time to time (about once a month for each model), their software contacts Desert Ant\'s server with a random install identifier, this app\'s package name, the model and software version, and the platform, and keeps a license record on this device. It does not send what you type, record, pick or draw, or any results. The model license requires this check and it cannot be turned off.</string>
+    <string name="privacy_media">Recordings, pictures and drawings you give the app are processed on this device and kept only while their screen is open. The microphone is used only after you tap to record. Nothing leaves the app unless you tap Share or Insert.</string>
     <string name="privacy_caution">Any keyboard handles everything you type with it, including sensitive text. Only use a keyboard you trust.</string>
 
     <!-- Model catalog: one line per model -->

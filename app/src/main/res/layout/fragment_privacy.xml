@@ -36,6 +36,10 @@
 
         <TextView
             style="@style/PrivacyParagraph"
+            android:text="@string/privacy_media" />
+
+        <TextView
+            style="@style/PrivacyParagraph"
             android:text="@string/privacy_downloads" />
 
         <TextView

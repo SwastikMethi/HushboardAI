@@ -84,6 +84,16 @@ public class ModelDownloaderTest {
     }
 
     @Test
+    public void aModelThatCannotFitOnTheDeviceIsRefusedBeforeAnythingIsFetched() {
+        // Larger than any disk: the free-space check must stop it before the first byte.
+        List<ModelFile> huge = List.of(new ModelFile("huge.bin", Long.MAX_VALUE / 4,
+                "0000000000000000000000000000000000000000000000000000000000000000"));
+
+        assertEquals(Failure.STORAGE, failureOf(huge));
+        assertEquals("nothing may be left behind", 0, dir.list().length);
+    }
+
+    @Test
     public void downloadsEveryFileAndReportsProgressUpToTheTotal() throws Exception {
         AtomicLong lastDone = new AtomicLong();
         AtomicLong lastTotal = new AtomicLong();

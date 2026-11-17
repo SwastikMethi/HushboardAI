@@ -99,8 +99,9 @@ public final class SuggestionStripView extends LinearLayout {
     public void setItems(Kind newKind, List<String> items) {
         kind = newKind;
         boolean chips = newKind == Kind.EMOJI;
-        // Words and notices are separated by thin lines; emoji sit on chips instead.
-        setShowDividers(chips ? SHOW_DIVIDER_NONE : SHOW_DIVIDER_MIDDLE);
+        // Words and notices are separated by thin lines; emoji sit on chips instead. With
+        // fewer than two things to separate there are no lines at all.
+        setShowDividers(chips || items.size() < 2 ? SHOW_DIVIDER_NONE : SHOW_DIVIDER_MIDDLE);
         source.setVisibility(chips && !items.isEmpty() ? VISIBLE : GONE);
         for (int i = 0; i < slots.length; i++) {
             boolean filled = i < items.size();

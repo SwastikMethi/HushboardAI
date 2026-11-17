@@ -1,6 +1,6 @@
 # Model compatibility report
 
-Status of each Desert Ant model in this app, with the evidence behind it. A row says **verified** only when a real adapter call ran on a device or emulator; otherwise it says what is still missing. Last updated at milestone 7.
+Status of each Desert Ant model in this app, with the evidence behind it. A row says **verified** only when a real adapter call ran on a device or emulator; otherwise it says what is still missing. Last updated at milestone 9.
 
 ## Pinned toolchain
 
@@ -30,7 +30,7 @@ Status of each Desert Ant model in this app, with the evidence behind it. A row 
 | **`download()` cannot be cancelled.** Cancelling releases the caller, but the native transfer keeps running to completion and holds the model's lock (`isDownloaded()` blocked ~10 s) | `ModelSmokeTest.sdkDownload_cancelReleasesCallerButTransferRunsOn` |
 | A download killed with the process does not report ready afterwards | `killProbe_*` tests with an `adb shell am force-stop` between them |
 | Whether the SDK resumes its own partial file after a kill | Inconclusive (sample taken too early). Not needed: the app's own downloader resumes with `Range`. |
-| License Check on model load | Not observed on the wire yet. The SDK created its install-ID store (`shared_prefs/desert-ant.xml`). Network capture is a milestone 9 item. |
+| License Check | Made the first time a model is loaded in a calendar month, not on every load. The SDK keeps one signed license record per model with the month it covers, plus a device identifier, in `shared_prefs/desert-ant.xml` (excluded from backup). Reloading four models whose records were current sent 40 bytes and received none; 125 model runs sent and received none (`HardeningTest`). The request itself was not captured: forcing one would register another activation with the vendor. |
 
 ## APK size (debug, `arm64-v8a` only)
 
@@ -39,7 +39,7 @@ Status of each Desert Ant model in this app, with the evidence behind it. A row 
 | Emo only | 76.3 MB |
 | Emo, Redact, Toxic, Tongue | 192.4 MB |
 | Emo, Redact, Toxic, Tongue, Gist and the five voice models | about 587 MB |
-| All 13 (the shipped build) | 703.2 MB from a clean build; about 756 MB from an incremental one |
+| All 13 (the shipped build) | 700.1 MB from a clean build at milestone 9 (700,096,566 bytes; 686.6 MB of it is the 15 native libraries). No model weights are inside |
 
 Each native model library is about 56 MB uncompressed because a Swift runtime is compiled into every one. Models are therefore added to the build as their adapters land. A store release would need compressed native libraries or per-model feature delivery; neither is in this plan.
 
@@ -69,7 +69,7 @@ Each revision above is the one compiled into that model's native library (a `vN.
 
 1. **Redact spans can cut through a character.** In the smoke test the GIVEN_NAME span started inside a family emoji (after its second joiner). Offsets are valid UTF-16, but masking must widen a span to whole grapheme clusters before editing.
 2. **Toxic ships its own default thresholds** (HATEFUL 0.46, ABUSIVE 0.44, THREAT 0.35, and one per target group). The result carries them, so sensitivity presets can be defined relative to these.
-3. **Tongue has its own telemetry switch** (`ai.desertant.tongue.DesertAnt.setSendsDeviceContext`, `Tongue.flushTelemetry`). What it sends is not established yet; decided in milestone 5.
+3. **Tongue has its own telemetry switch** (`ai.desertant.tongue.DesertAnt.setSendsDeviceContext`, `Tongue.flushTelemetry`). It is left at the vendor's default (ruling 36). In the network test, 25 Tongue runs followed by a five-second wait sent nothing; whether anything is sent later, in batches, was not established.
 4. **The SDK exposes a logger hook** (`ai.desertant.core.DesertAnt.setLogger` / `setLogLevel`). It must be kept quiet so no input text can reach logs.
 5. **Voz needs about 3.9 GB of memory.** Its 1.2 GB encoder is held in memory, not mapped from disk. The Android emulator's default 2–3 GB is not enough: the system killed the app at about 2.3 GB while the model was still loading. The app therefore refuses Voz on devices under 5 GiB and unloads it soon after use (see `ModelRegistry.VOZ_MIN_RAM_BYTES`, `AppContainer.VOZ_IDLE_SECONDS`). The threshold comes from one emulator measurement and needs checking on phones.
 6. **Clear depends on a working GPU delegate.** With the emulator's software renderer the model's creation crashes natively; with the host GPU it runs. There is no CPU fallback option in its API.
@@ -91,6 +91,15 @@ Each revision above is the one compiled into that model's native library (a `vN.
 - Shared files are deleted once they are an hour old. The check runs each time something is shared and each time the app starts.
 - Transcripts are never stored. A dictated transcript is typed into the field only when the user taps Insert.
 - The microphone is opened only by a tap on Record or on the keyboard's microphone button, and the permission is requested at that tap.
+
+## What every row has in common
+
+- **Platform:** `arm64-v8a` only in this build (the SDK also ships `x86_64`; there is no 32-bit build). minSdk is 26; the SDK needs 24.
+- **Offline:** installed models run with the network off, from a cold start. That was checked in airplane mode for Emo, Redact and Shapes (in the keyboard and directly); the other models load the same way and were not separately run offline.
+- **Network while working:** none. Model runs send and receive nothing; the only vendor traffic is the license check above and the downloads the user asks for.
+- **Where a model cannot run:** a model that needs more memory than the device has is refused before download (Voz under 5 GiB, Eye under 2 GiB). A model that takes the app down while loading is switched off at the next start, with the reason shown, and its files are kept.
+- **Languages:** only Redact's coverage is documented precisely by the vendor (European languages) and only that is acted on. Nothing is claimed about which languages Emo, Toxic, Gist, Voz, Ear, Uhm or Who handle well; Ear and Tongue report a language, they do not gate anything except Redact.
+- **Evidence level:** everything here is from Android emulators on an Apple Silicon Mac. No model has been run on a physical phone yet.
 
 ## License and attribution
 

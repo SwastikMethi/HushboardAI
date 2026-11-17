@@ -355,3 +355,102 @@ Still different from the references, on purpose or for later: no clipboard or gr
 | Rotation does not replay the enable sweep | not run | — | The sweep is only ever started by the off-to-on change in `KeyboardController.onSettings`; not driven on a rotating device |
 
 Full-suite run at the end of the milestone (EMU-37B, with `-e clear true`): 151 instrumented tests; 137 passed, 13 skipped by design (opt-in probes), 1 failed. The failure was a catalog test that assumed Tongue was switched off when an earlier test had left it on (the screen rightly said "Paused"); the test now sets its own starting state, and the two classes involved then passed together, 23 of 23. After two lint-driven renames the affected screens were run again: 19 of 19. Unit tests: 160. Lint: 0 errors, 37 warnings (version notices and style hints).
+
+## Milestone 9 — Hardening and reports
+
+Unit tests (JVM): 161 passed. Added: `ModelDownloaderTest.aModelThatCannotFitOnTheDeviceIsRefusedBeforeAnythingIsFetched`.
+
+No physical phone was connected, so every row that needs one is **blocked**, not passed.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| Clean build: metadata check, debug APK, unit tests, lint | passed | host | `./gradlew clean`, then `:app:checkDebugAarMetadata assembleDebug testDebugUnitTest lintDebug`: 161 tests, lint 0 errors and 37 warnings, `app/build/outputs/apk/debug/app-debug.apk` 700,096,566 bytes |
+| Running the installed text models sends and receives nothing | passed | EMU-37B | `HardeningTest.runningInstalledModelsOnTextSendsAndReceivesNothing`: 125 runs across Emo, Redact, Toxic, Gist and Tongue, 0 bytes each way for the app's own network identity. The test first proves the meter moves with one small request |
+| What the license check does | observed in part | EMU-37B | The SDK's own record shows one signed license per model per calendar month and a device identifier. Reloading four models with current records sent 40 bytes and received none. The request itself was not captured (see the compatibility report) |
+| What is typed is not written to the app's storage or the system log | passed | EMU-37B | `HardeningTest.whatIsTypedIsNotWrittenToTheAppsStorageOrToTheLog`: a unique word typed with Emo, Redact, Toxic and Tongue on; every file in the app's data directory except model weights, and `logcat`, searched for it |
+| Deleting a model waits for a run in progress, then leaves nothing behind and switches it off | passed | EMU-37B | `HardeningTest.deletingAModelWaitsForARunInProgressAndLeavesNothingBehind` |
+| Asking for a download twice starts one transfer | passed | EMU-37B | `HardeningTest.askingForADownloadTwiceStartsOneTransfer` (one WorkManager job) |
+| Deleting from a model's own screen asks first; Cancel keeps it | passed | EMU-37B | `HardeningTest.deletingFromAModelsScreenAsksFirstAndCancelKeepsIt` |
+| Resetting one model's settings leaves other models' settings alone | passed | EMU-37B | `HardeningTest.resettingOneModelsSettingsLeavesTheOthersAlone` |
+| Models dropped under memory pressure load again on their next use | passed | EMU-37B | `HardeningTest.modelsDroppedUnderMemoryPressureLoadAgainOnTheirNextUse` (the app's own release call; Android was not actually starved of memory) |
+| A model that cannot fit on the disk is refused before anything is fetched | passed | host | `ModelDownloaderTest` (unit) |
+| The same on a device whose storage is nearly full | not run | — | The emulator has 13 GB free; the rule is unit-tested |
+| The keyboard's process is killed while typing in another app, and typing carries on | passed | EMU-37B | By hand over adb in Android's Settings search: typed "q", killed the process (`run-as … kill -9`, pid 27710 → 28239), Android restarted the keyboard, typed "w"; the field read "qw". `docs/evidence/screenshots/m9_process_death_settings_search.png` |
+| Typing works after the device sleeps and is woken | passed | EMU-37B | `input keyevent KEYCODE_SLEEP`, `KEYCODE_WAKEUP`, `wm dismiss-keyguard`, then two `KeyboardImeTest` tests |
+| Cold start with the network off: emoji suggestions, privacy review with mask and undo, and shape recognition all work | passed | EMU-37B | Airplane mode on, app force-stopped, then `ModelSmokeTest#offline_…`, two `KeyboardAiTest` tests and `VisionModelsTest#shapes_recognisesACircleALineAndARectangle`: 4 of 4 |
+| The keyboard keeps working after rotation | passed | EMU-37B | `KeyboardImeTest.keyboardKeepsWorkingAfterRotation` |
+| Typing in WhatsApp, Telegram, Discord, a browser field and a notes app | blocked | PHONE | Needs the owner's phone and accounts. On the emulator only Android's Settings search and the debug host were used |
+| Key handling time (p95) and time from last key to suggestion | blocked | PHONE | Emulator timings are not device evidence and were not collected as such |
+| Peak memory on a constrained phone; Voz on 6, 8 and 12 GB phones; Clear on a phone GPU | blocked | PHONE | Emulator figures are in the compatibility report |
+| Battery and heat during long typing with AI on | blocked | PHONE | — |
+| Haptics and key sound felt and heard | blocked | PHONE | The settings exist and reach the service; an emulator cannot show the result |
+| Dictation with a real voice; a recording with fillers and several speakers | blocked | PHONE | The emulator's microphone is silent |
+| A pass with TalkBack switched on | blocked | PHONE | — |
+| A release-signed build | not run | — | Needs the owner's keystore; the deliverable is the debug-signed APK |
+
+Full-suite run at the end of the milestone, on the clean build (EMU-37B, with `-e clear true`): 158 instrumented tests; 145 passed, 13 skipped by design (opt-in probes, each run separately as listed), none failed. Unit tests: 161. Lint: 0 errors, 37 warnings.
+
+## The handoff checklist, item by item
+
+Each line of `docs/BUILD_AND_TEST_CHECKLIST.md`, with where it stands. "Emulator" means it ran and passed on an emulator only; the phone rows above still apply.
+
+### Environment and compatibility
+
+| Item | Status | Where |
+|---|---|---|
+| OS, JDK, SDK, Gradle/AGP and ABIs recorded | passed | `PROGRESS.md` (Environment), compatibility report (Pinned toolchain) |
+| Dependencies pinned; working wrapper; a clean checkout builds from the README | passed | `gradle/libs.versions.toml`; clean clone built at the end of milestone 9 (below) |
+| minSdk and Java configuration against vendor needs | passed | minSdk 26 (SDK needs 24), Java 17, no desugaring needed |
+| Real Desert Ant artifacts resolved; Java-callable; Kotlin bridge documented | passed | All 13 at 4.3.0; called from Java through `DesertAntClient` with no Kotlin source (ruling 3) |
+| SDK download, revisions, offline loading, cleanup and options verified | passed (emulator) | Milestones 0, 2 and the per-model rows; the SDK's own download is not used because it cannot be cancelled (ruling 4) |
+| License and attribution recorded | passed | Compatibility report; Privacy screen and Settings credit in the app |
+
+### Editor and inference correctness
+
+| Item | Status | Where |
+|---|---|---|
+| No AI in password and no-learning fields; typing still works | passed (emulator) | `InputEligibilityTest`, `KeyboardAiTest` (2), `KeyboardVoiceTest`, `DrawingTest` |
+| Empty, long, partial or unavailable editor context | passed in part | Unit-tested (`TextRangeMapperTest`, `AiCoordinatorTest`); a draft over 1,000 characters and an editor that hides its offsets were not driven on a device |
+| Fast typing, paste, selection moves, app switches and settings changes drop stale work | passed | `AiCoordinatorTest` (26), `InferenceSchedulerTest`; on device through the notice and topics tests |
+| Main thread never waits on a model; p95 key handling and suggestion latency measured on a named device | design passed; measurement blocked | One inference thread (ruling 23); numbers need the phone |
+| One call at a time per model; late results suppressed | passed | `InferenceSchedulerTest`, `AiCoordinatorTest`, `ShapeRecognizer`, dictation and voice-tools cancel tests |
+| Redaction offsets: UTF-16, surrogate pairs, emoji families, combining marks, partial windows | passed | `TextRangeMapperTest` (9), `ModelSmokeTest.redact_offsetsAreUtf16CodeUnits` |
+| Apply and Undo both re-check the text; acceptance required; never auto-send | passed (emulator) | `EditorBridgeTest` (15), `KeyboardAiTest` mask/undo, Enter test |
+| Model failure, timeout, missing files and low memory leave typing working | passed (emulator) | Not-installed, crashed-model and memory-pressure tests; two real crash recoveries (Voz, Clear) |
+
+### Settings, assets and lifecycle
+
+| Item | Status | Where |
+|---|---|---|
+| One settings store; subscriptions and executors owned and disposed | passed | `SettingsSyncTest` (3) |
+| Pausing AI keeps choices and files, clears suggestions, cancels pending work | passed (emulator) | `CompanionAppTest` master-switch test, `KeyboardAiTest`, `AiCoordinatorTest` |
+| Work unique per model revision; duplicate requests harmless | passed | `HardeningTest.askingForADownloadTwiceStartsOneTransfer` |
+| Interrupted or corrupt downloads never Ready; retry, low storage and incompatible device are distinct | passed | `ModelDownloaderTest` (11), `ModelDownloadDeviceTest` (4), `ModelMemoryGuardTest` |
+| Installed inference works offline; typing never starts a download or uploads text | passed (emulator) | Offline cold start; network test (0 bytes); models are only constructed from verified files |
+| Release, deletion and revision replacement respect work in progress | passed in part | Delete-during-run test. Replacing a model with a newer revision was not exercised: there is only one revision |
+| Drafts and redaction maps absent from logs and backups; model files excluded from backup | passed (emulator) | `HardeningTest.whatIsTyped…`; models live in the no-backup directory; the SDK's identifier is excluded by both backup rule files. An actual backup was not taken and inspected |
+| Configuration change, keyboard reconnect, process death, offline start, lock/unlock | passed (emulator) | Rows above in milestone 9 |
+
+### Media and interface
+
+| Item | Status | Where |
+|---|---|---|
+| Microphone refusal and revocation, interrupted capture, invalid formats | passed (emulator) | `MicPermissionFlowTest`, `AudioCaptureTest`, `AudioImportTest`; a microphone taken by another app mid-recording was not driven |
+| Audio chaining: sample rate, channels, language, timestamps, stream or batch | passed | Compatibility report finding 9; `VoicePipelineTest`, `VoiceModelsTest` |
+| Picker cancel, malformed and large pictures, unclear strokes, sharing refused | passed (emulator) | `ImageToolsScreenTest`, `DrawingTest`; a host that refuses an insert was not available |
+| Temporary media policy documented; exports need a tap | passed | Compatibility report ("what is kept"); `AudioImportTest` |
+| Every control works or says it is unavailable; no placeholder responses | passed | Milestone 8 audit; catalog test |
+| Reference composition, dark theme, muted panel, gradient icon, single 600 ms enable sweep | passed (by eye and test) | Milestone 8 |
+| Animations off, larger fonts, TalkBack, contrast, touch targets | passed except TalkBack | Milestone 8; TalkBack waits for the phone |
+
+### Final delivery
+
+| Item | Status | Where |
+|---|---|---|
+| Runnable project, pinned dependencies, wrapper, build instructions | passed | `README.md` |
+| Debug APK with its real location | passed | `app/build/outputs/apk/debug/app-debug.apk`, 700.1 MB |
+| Compatibility report, validation report, progress file | passed | `docs/` and `PROGRESS.md` |
+| Passed, failed, blocked and not-run kept apart, with commands and targets | passed | This file |
+| Unsupported features and device-only gaps explicit; no whole-app completion claim | passed | The blocked rows above; `PROGRESS.md` open items |
+
+**Not complete.** Everything that can be shown on an emulator has been. The app has not been run on a physical phone, so the device gates in the handoff (chat apps, latency, memory, battery, a real voice, TalkBack) are open.

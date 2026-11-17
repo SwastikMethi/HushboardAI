@@ -63,3 +63,33 @@ adb shell am instrument -w -e killProbe true -e class 'com.example.aikeyboard.Mo
 | License Check observed on the wire | not run | — | Planned with the milestone 9 network capture |
 
 Full-suite run at the end of the milestone: 17 instrumented tests, 14 executed and passed, 3 skipped by design in that run (the offline probe and the two-step kill probe, each passed in its own run above).
+
+## Milestone 1 — Reliable keyboard (AI off)
+
+Unit tests (JVM): 32 passed — `KeyboardLayoutTest` 7, `ShiftStateTest` 8, `LocalWordSuggesterTest` 9, `InputSessionTest` 4, `SetupStepTest` 4.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| Letters, space and punctuation typed through the real IME window | passed | EMU-37 | `KeyboardImeTest.typesLettersSpaceAndPunctuation` |
+| Shift capitalises one letter | passed | EMU-37 | `KeyboardImeTest.shiftCapitalisesOnlyTheNextLetter` |
+| Caps lock by double tap; manual shift beats auto-caps | passed | host (logic only) | `ShiftStateTest`. Not driven end to end: automated taps are too slow for the double-tap window. |
+| Sentence starts capitalised where the field asks for it | passed | EMU-37 | `KeyboardImeTest.sentenceStartsAreCapitalisedWhereTheFieldAsksForIt` |
+| Symbol layers and return to letters | passed | EMU-37 | `KeyboardImeTest.symbolLayersTypeDigitsAndReturnToLetters` |
+| Backspace: one character per tap; a whole emoji family at once; repeat while held | passed | EMU-37 | `KeyboardImeTest.backspace*`, `holdingBackspaceKeepsDeleting` |
+| Enter performs the field's own action and edits nothing; newline in multi-line fields | passed | EMU-37 | `KeyboardImeTest.enterPerformsTheFieldsOwnAction`, `enterInsertsANewLineInAMultiLineField` |
+| Emoji panel inserts an emoji and returns to letters | passed | EMU-37 | `KeyboardImeTest.emojiPanelInsertsAnEmojiAndReturnsToLetters` |
+| A word suggestion replaces the word being typed (validated replace) | passed | EMU-37 | `KeyboardImeTest.aWordSuggestionReplacesTheWordBeingTyped` |
+| Password fields get no word suggestions | passed | EMU-37 | `KeyboardImeTest.passwordFieldsGetNoWordSuggestions` |
+| Keyboard keeps working across rotation | passed | EMU-37 | `KeyboardImeTest.keyboardKeepsWorkingAfterRotation` |
+| Keys sit above the navigation area | passed | EMU-37 | `KeyboardImeTest.keysSitAboveTheNavigationArea` |
+| Editor reads and guarded replace against a real `EditText` connection | passed | EMU-37 | `EditorBridgeTest` (9 tests) |
+| Onboarding reflects the real enabled/selected state and updates on return | passed | EMU-37 | `SetupScreenTest` (2 tests) |
+| Types into another app's field (Android Settings search) | passed | EMU-37 | `StockAppTypingTest` with `-e stockApps true` |
+| Keyboard recovers after its process is killed | passed | EMU-37 | `am force-stop`, then `KeyboardImeTest.typesLettersSpaceAndPunctuation` passes |
+| Appearance against the approved mockup | passed (reviewed) | EMU-37 | `docs/evidence/screenshots/m1_keyboard_typing.png`, `m1_onboarding.png`. Tool row is intentionally sparse until the AI control (M3) and microphone (M6) exist. |
+| TalkBack reading and activating keys by voice-over | not run | — | Each key is exposed as its own labelled node (the tests find keys that way), but TalkBack itself has not been driven. Milestone 8. |
+| Haptics felt, key sound heard | blocked | PHONE | An emulator cannot show either |
+| Typing in WhatsApp, Telegram, Discord, a browser, a notes app | blocked | PHONE | Needs the phone and the owner's signed-in apps |
+| Key-handling latency (p95) | blocked | PHONE | Needs the physical device |
+
+Full-suite run at the end of the milestone: 35 instrumented tests, 31 executed and passed, 4 skipped by design in that run (offline probe, two-step kill probe, stock-app probe — each passed in its own run).

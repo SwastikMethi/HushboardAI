@@ -72,6 +72,26 @@ public class EditorBridgeTest {
     }
 
     @Test
+    public void textBeforeCursor_isBoundedAndStopsAtTheCursor() {
+        given("hello world", 5, 5);
+        String[] result = new String[2];
+        getInstrumentation().runOnMainSync(() -> {
+            result[0] = bridge.textBeforeCursor(100);
+            result[1] = bridge.textBeforeCursor(3);
+        });
+        assertEquals("hello", result[0]);
+        assertEquals("llo", result[1]);
+    }
+
+    @Test
+    public void cursorPosition_isTheAbsoluteOffset() {
+        given(FAMILY + " ok", FAMILY.length() + 1, FAMILY.length() + 1);
+        int[] result = new int[1];
+        getInstrumentation().runOnMainSync(() -> result[0] = bridge.cursorPosition());
+        assertEquals(9, result[0]);
+    }
+
+    @Test
     public void replaceRange_swapsTheExpectedTextAndKeepsTheCursorAfterIt() {
         given("helo world", 10, 10);
         assertTrue(replace(0, 4, "helo", "hello"));

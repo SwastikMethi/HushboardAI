@@ -1,12 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Companion app root. A placeholder until the three-tab navigation lands in M2. -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Companion app root: one screen container. The three-tab navigation lands in M2. -->
+<androidx.fragment.app.FragmentContainerView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/screen"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="@string/app_name" />
-</FrameLayout>
+    android:layout_height="match_parent" />

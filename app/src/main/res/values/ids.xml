@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ids for views that are created in code. -->
+<resources>
+    <item name="suggestion_1" type="id" />
+    <item name="suggestion_2" type="id" />
+    <item name="suggestion_3" type="id" />
+</resources>

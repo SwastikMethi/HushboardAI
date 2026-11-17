@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- One fixed dark theme shared by the companion app and the keyboard. -->
 <resources>
-    <style name="Theme.AiKeyboard" parent="Theme.Material3.Dark.NoActionBar" />
+    <style name="Theme.AiKeyboard" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="colorPrimary">@color/accent_blue</item>
+        <item name="colorOnPrimary">@color/on_accent_blue</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="colorOnSurfaceVariant">@color/text_secondary</item>
+        <item name="colorOutlineVariant">@color/divider</item>
+        <!-- Tonal buttons and containers stay neutral charcoal, not the default purple tint. -->
+        <item name="colorSecondaryContainer">@color/surface_raised</item>
+        <item name="colorOnSecondaryContainer">@color/text_primary</item>
+        <item name="android:colorBackground">@color/canvas</item>
+        <item name="android:statusBarColor">@color/canvas</item>
+        <item name="android:navigationBarColor">@color/canvas</item>
+    </style>
 </resources>

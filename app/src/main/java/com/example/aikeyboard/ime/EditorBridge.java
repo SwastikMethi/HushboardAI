@@ -3,6 +3,7 @@
 package com.example.aikeyboard.ime;
 
 import android.view.KeyEvent;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
@@ -33,6 +34,47 @@ public final class EditorBridge {
         if (ic == null) return;
         ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
         ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
+    }
+
+    /**
+     * Presses Enter the way the field asked for: its own action (Send, Search, Next…) when it
+     * declared one, otherwise a plain Enter key so the host decides between newline and submit.
+     * The keyboard never performs an action the user did not press.
+     */
+    public void enter(int imeOptions) {
+        InputConnection ic = connection.get();
+        if (ic == null) return;
+        int action = imeOptions & EditorInfo.IME_MASK_ACTION;
+        boolean plainEnter = (imeOptions & EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0
+                || action == EditorInfo.IME_ACTION_NONE
+                || action == EditorInfo.IME_ACTION_UNSPECIFIED;
+        if (plainEnter) {
+            ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
+            ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+        } else {
+            ic.performEditorAction(action);
+        }
+    }
+
+    /** Up to maxChars of text before the cursor; empty when the editor exposes none. */
+    public String textBeforeCursor(int maxChars) {
+        InputConnection ic = connection.get();
+        CharSequence text = ic == null ? null : ic.getTextBeforeCursor(maxChars, 0);
+        return text == null ? "" : text.toString();
+    }
+
+    /** The cursor's absolute UTF-16 offset, or -1 when the editor does not report it. */
+    public int cursorPosition() {
+        InputConnection ic = connection.get();
+        ExtractedText extracted =
+                ic == null ? null : ic.getExtractedText(new ExtractedTextRequest(), 0);
+        return extracted == null ? -1 : extracted.startOffset + extracted.selectionEnd;
+    }
+
+    /** Whether the field wants the next character capitalised (e.g. a new sentence). */
+    public boolean wantsCapital(int inputType) {
+        InputConnection ic = connection.get();
+        return ic != null && ic.getCursorCapsMode(inputType) != 0;
     }
 
     /**

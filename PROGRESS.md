@@ -5,7 +5,7 @@ The execution plan is `~/.claude/plans/i-have-added-a-whimsical-mist.md` (approv
 | Milestone | Status | Evidence / blocker |
 |---|---|---|
 | 0 — Compatibility spike | Done (emulator). Device rows blocked | 17 instrumented tests on the Android 17 emulator; see validation report. Peak memory and a physical-device smoke run wait for the phone. |
-| 1 — Reliable keyboard | Not started | — |
+| 1 — Reliable keyboard | Done (emulator). Device rows blocked | 32 unit tests, 35 instrumented tests; typing verified in the debug host and in Android Settings search. Haptics, sound, latency and third-party chat apps wait for the phone. |
 | 2 — Companion and assets | Not started | — |
 | 3 — First real Emo slice | Not started | — |
 | 4 — Redact and Toxic | Not started | — |
@@ -37,11 +37,21 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 8. **Backspace is a `KEYCODE_DEL` key event** so the host editor applies its own grapheme rules. Cost if wrong: an editor that ignores key events needs a `deleteSurroundingText` fallback.
 9. **The kill and offline probes are opt-in tests.** They need an adb step between or before them, so they skip in a plain run. Cost if wrong: none; commands are in the validation report.
 
+10. **The bundled word list is written for this project** (`assets/dictionaries/en_common.txt`, about 900 common English words in rough frequency order), so it carries no third-party license. Ceiling: single-word completion and one-edit repair only, small vocabulary, no next-word prediction. Upgrade path: AOSP LatinIME's Apache-2.0 word list, which needs the owner's go-ahead to download. Cost if wrong: suggestions are sparse; typing is unaffected.
+11. **No composing region.** Characters are committed directly and a picked suggestion replaces the current word through the guarded `replaceRange`. Cost if wrong: none seen; revisit only if an editor mishandles `setComposingRegion`.
+12. **A restart of the same field keeps the current layer and shift state.** Some apps restart input on every change; resetting to letters each time would make symbols untypeable. Cost if wrong: a stale layer after a programmatic text change.
+13. **Long-press on space opens Android's keyboard picker.** The system already shows its own switch button in the navigation area; this is the in-keyboard route. Cost if wrong: add a dedicated globe key.
+14. **Key glyphs are text characters for now** (shift, backspace, enter, the emoji key). The mockup's drawn icons are a milestone 8 item. Cost if wrong: a device font missing a glyph shows a blank key; the audit checks this on the phone.
+15. **Haptics default on, key sound off, height standard.** The mechanics exist in milestone 1; the saved settings that control them arrive with the settings store in milestone 2.
+16. **The tool row shows only the settings button until there is something real to add** — the AI control in milestone 3, the microphone in milestone 6. The mockup's clipboard and grid icons have no specified behaviour and stay out.
+
 ## Deviations from the handoff file list
 
 - `sdkbridge/DesertAntSuspendBridge.kt` and `sdkbridge/CancellableOperation.java`: not needed (ruling 3).
 - `app/proguard-rules.pro`: not created (ruling 6).
-- Added: `src/debug/AndroidManifest.xml`, `docs/evidence/`.
+- Added: `src/debug/AndroidManifest.xml`, `docs/evidence/`, `ime/ShiftState.java` (the shift state machine, split out so it is unit-tested without Android).
+- `ime/view/KeyboardRootView.java`: folded into `res/layout/keyboard_view.xml` plus `KeyboardController`; a class that only held child views had no job.
+- `ui/onboarding/SetupViewModel.java`: not created; the screen re-reads system state on every return, so there is nothing to hold.
 
 ## Open items carried forward
 
@@ -50,6 +60,9 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 - Keep the SDK logger quiet so input text cannot reach logs (milestone 3, when the first model loads in the keyboard).
 - All-models APK is 703 MB. Reported to the owner; needs a packaging decision before any store release.
 
+- Reinstalling the app makes Android switch away from the keyboard (it stays enabled). Onboarding reports this correctly; tests re-select it in their own setup.
+- TalkBack has not been driven yet; keys are exposed as labelled nodes. Milestone 8.
+
 ## Next action
 
-Milestone 1: replace the spike keyboard with the real QWERTY keyboard (AI off), onboarding, and the debug editor host checks.
+Milestone 2: three-tab companion app, the shared settings store, the model catalog, and the app's own cancellable, resumable model downloader.

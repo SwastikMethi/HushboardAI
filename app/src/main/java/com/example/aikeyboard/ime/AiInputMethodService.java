@@ -1,109 +1,113 @@
-// The system keyboard service: owns the keyboard view and the connection to the focused field.
-// M0 spike version: a handful of keys plus the platform probes; M1 replaces the view.
+// The system keyboard service: Android lifecycle, the keyboard view and the connection to the
+// focused field. Behaviour lives in KeyboardController; text access in EditorBridge.
 package com.example.aikeyboard.ime;
 
-import android.Manifest;
 import android.content.Context;
-import android.content.pm.PackageManager;
+import android.content.Intent;
 import android.inputmethodservice.InputMethodService;
-import android.media.AudioFormat;
-import android.media.AudioRecord;
-import android.media.AudioRecordingConfiguration;
-import android.media.MediaRecorder;
-import android.os.Build;
-import android.util.Log;
+import android.media.AudioManager;
 import android.view.ContextThemeWrapper;
+import android.view.HapticFeedbackConstants;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.TextView;
+import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputMethodManager;
 
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
-import androidx.emoji2.emojipicker.EmojiPickerView;
 
+import com.example.aikeyboard.MainActivity;
 import com.example.aikeyboard.R;
+import com.example.aikeyboard.databinding.KeyboardViewBinding;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.List;
 
 public class AiInputMethodService extends InputMethodService {
 
-    private static final String TAG = "AiKeyboard";
+    private static final String WORD_LIST = "dictionaries/en_common.txt";
 
-    private EditorBridge editor;
+    private KeyboardController controller;
+    // Wired to the saved settings in M2.
+    private boolean hapticsEnabled = true;
+    private boolean soundEnabled = false;
 
     @Override
     public void onCreate() {
         super.onCreate();
-        editor = new EditorBridge(this::getCurrentInputConnection);
+        EditorBridge editor = new EditorBridge(this::getCurrentInputConnection);
+        controller = new KeyboardController(this, editor, loadWordList());
+    }
+
+    private LocalWordSuggester loadWordList() {
+        try (InputStream in = getAssets().open(WORD_LIST)) {
+            return LocalWordSuggester.load(in);
+        } catch (IOException e) {
+            // Typing must work without suggestions; the strip simply stays empty.
+            return new LocalWordSuggester(List.of());
+        }
     }
 
     @Override
     public View onCreateInputView() {
         // A service has no Material theme of its own; Material widgets need one to inflate.
         Context themed = new ContextThemeWrapper(this, R.style.Theme_AiKeyboard);
-        View root = LayoutInflater.from(themed).inflate(R.layout.keyboard_spike, null);
-
-        root.findViewById(R.id.key_a).setOnClickListener(v -> editor.commitText("a"));
-        root.findViewById(R.id.key_b).setOnClickListener(v -> editor.commitText("b"));
-        root.findViewById(R.id.key_space).setOnClickListener(v -> editor.commitText(" "));
-        root.findViewById(R.id.key_backspace).setOnClickListener(v -> editor.backspace());
-
-        EmojiPickerView picker = root.findViewById(R.id.emoji_picker);
-        picker.setOnEmojiPickedListener(item -> editor.commitText(item.getEmoji()));
-        root.findViewById(R.id.key_emoji).setOnClickListener(v -> picker.setVisibility(
-                picker.getVisibility() == View.VISIBLE ? View.GONE : View.VISIBLE));
-
-        TextView status = root.findViewById(R.id.probe_status);
-        root.findViewById(R.id.key_mic).setOnClickListener(v -> probeMicrophone(status));
+        KeyboardViewBinding binding = KeyboardViewBinding.inflate(LayoutInflater.from(themed));
 
         // From targetSdk 35 the IME window is edge-to-edge, so the keyboard pads itself clear
         // of the navigation area instead of relying on the system to do it.
-        TextView insetLabel = root.findViewById(R.id.probe_inset);
-        ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
-            // (InputMethodService has its own inner Insets class, so the type is not named here.)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (view, insets) -> {
+            // (InputMethodService has its own inner Insets class, so the type is not named.)
             int bottom = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom;
-            v.setPadding(0, 0, 0, bottom);
-            insetLabel.setText("inset bottom=" + bottom);
+            view.setPadding(0, 0, 0, bottom);
             return insets;
         });
-        return root;
+        controller.attach(binding);
+        return binding.getRoot();
     }
 
-    // Spike probe: can the service really record while the keyboard is on screen?
-    private void probeMicrophone(TextView status) {
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
-            status.setText("mic: no permission");
-            return;
+    @Override
+    public void onStartInputView(EditorInfo info, boolean restarting) {
+        super.onStartInputView(info, restarting);
+        controller.onStartInput(info, restarting);
+    }
+
+    @Override
+    public void onUpdateSelection(int oldSelStart, int oldSelEnd, int newSelStart, int newSelEnd,
+            int candidatesStart, int candidatesEnd) {
+        super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
+                candidatesStart, candidatesEnd);
+        controller.onSelectionChanged();
+    }
+
+    @Override
+    public void onFinishInputView(boolean finishingInput) {
+        // Stop any held-key repeat before the view goes away.
+        controller.onFinishInput();
+        super.onFinishInputView(finishingInput);
+    }
+
+    @Override
+    public boolean onEvaluateFullscreenMode() {
+        // Never the full-screen "extract" editor: the user keeps seeing the app they type in.
+        return false;
+    }
+
+    void showKeyboardPicker() {
+        getSystemService(InputMethodManager.class).showInputMethodPicker();
+    }
+
+    void openCompanionApp() {
+        startActivity(new Intent(this, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+
+    void keyFeedback(View view) {
+        if (hapticsEnabled) view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+        if (soundEnabled) {
+            getSystemService(AudioManager.class)
+                    .playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD);
         }
-        new Thread(() -> {
-            int rate = 16000;
-            int minBuffer = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_IN_MONO,
-                    AudioFormat.ENCODING_PCM_16BIT);
-            String result;
-            AudioRecord record = null;
-            try {
-                record = new AudioRecord(MediaRecorder.AudioSource.MIC, rate,
-                        AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT,
-                        Math.max(minBuffer, rate));
-                record.startRecording();
-                short[] buffer = new short[rate / 2];
-                int read = record.read(buffer, 0, buffer.length);
-                // The platform hands a blocked app silence rather than an error, so the
-                // recording configuration is the only honest signal of real access.
-                boolean silenced = false;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    AudioRecordingConfiguration config = record.getActiveRecordingConfiguration();
-                    silenced = config == null || config.isClientSilenced();
-                }
-                result = "mic: state=" + record.getRecordingState() + " read=" + read
-                        + " silenced=" + silenced;
-            } catch (RuntimeException e) {
-                result = "mic: error " + e.getClass().getSimpleName();
-            } finally {
-                if (record != null) record.release();
-            }
-            String message = result;
-            Log.i(TAG, message);
-            status.post(() -> status.setText(message));
-        }).start();
     }
 }

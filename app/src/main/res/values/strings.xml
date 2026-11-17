@@ -3,4 +3,35 @@
 <resources>
     <string name="app_name">AI Keyboard</string>
     <string name="subtype_english">English</string>
+
+    <!-- Keyboard: what TalkBack says for each key -->
+    <string name="key_space">Space</string>
+    <string name="key_backspace">Backspace</string>
+    <string name="key_shift">Shift</string>
+    <string name="key_shift_off">Off</string>
+    <string name="key_shift_on">On</string>
+    <string name="key_shift_locked">Caps lock</string>
+    <string name="key_symbols">Symbols</string>
+    <string name="key_more_symbols">More symbols</string>
+    <string name="key_letters">Letters</string>
+    <string name="key_emoji">Emoji</string>
+    <string name="key_enter">Enter</string>
+    <string name="key_new_line">New line</string>
+    <string name="key_go">Go</string>
+    <string name="key_search">Search</string>
+    <string name="key_send">Send</string>
+    <string name="key_next">Next</string>
+    <string name="key_done">Done</string>
+    <string name="key_previous">Previous</string>
+    <string name="open_keyboard_settings">Keyboard settings</string>
+
+    <!-- Onboarding -->
+    <string name="setup_title">Set up AI Keyboard</string>
+    <string name="setup_privacy">AI help works on the text in the field you are typing in, on this device. The keyboard cannot see the rest of a conversation, and it never sends a message for you.</string>
+    <string name="setup_status_enable">Step 1 of 2: turn on AI Keyboard in Android settings</string>
+    <string name="setup_status_select">Step 2 of 2: choose AI Keyboard as your keyboard</string>
+    <string name="setup_status_done">AI Keyboard is your keyboard</string>
+    <string name="setup_enable">Open keyboard settings</string>
+    <string name="setup_choose">Choose keyboard</string>
+    <string name="setup_practice_hint">Try it here</string>
 </resources>

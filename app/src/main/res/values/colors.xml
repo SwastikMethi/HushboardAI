@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colour tokens shared by the keyboard and the companion app (docs/UI_SPEC.md). -->
+<resources>
+    <!-- Neutral charcoal surfaces -->
+    <color name="canvas">#0E0F12</color>
+    <color name="surface">#1B1C20</color>
+    <color name="surface_raised">#25262B</color>
+    <color name="divider">#34353A</color>
+    <color name="text_primary">#FFFFFF</color>
+    <color name="text_secondary">#A9ABB3</color>
+    <color name="control_disabled">#6B6D75</color>
+
+    <!-- Keyboard -->
+    <color name="keyboard_background">#1E1F23</color>
+    <color name="key_letter">#3A3B40</color>
+    <color name="key_function">#2B2C31</color>
+    <color name="key_pressed">#5A5C64</color>
+    <color name="key_label">#FFFFFF</color>
+    <color name="key_label_secondary">#C9CAD1</color>
+
+    <!-- Ordinary enabled controls and the enter key: pale blue -->
+    <color name="accent_blue">#9EC1FA</color>
+    <color name="on_accent_blue">#0B1B33</color>
+
+    <!-- AI identity: used only for the AI control and its panel -->
+    <color name="ai_gradient_start">#A970FF</color>
+    <color name="ai_gradient_end">#568DFF</color>
+    <color name="ai_panel_top">#392847</color>
+    <color name="ai_panel_middle">#272230</color>
+    <color name="ai_panel_bottom">#181B25</color>
+</resources>

@@ -86,6 +86,11 @@ public class EditorReadsTest {
 
     @Test
     public void aPasswordTypedWithTheKeyboardHiddenIsNeverRead() throws Exception {
+        // The on-screen keyboard only stays away where there are hardware keys to type on,
+        // as an emulator has and a phone on its own does not.
+        org.junit.Assume.assumeTrue("needs a hardware keyboard", getInstrumentation()
+                .getTargetContext().getResources().getConfiguration().keyboard
+                != android.content.res.Configuration.KEYBOARD_NOKEYS);
         // An ordinary field first, with the keyboard up and AI running in it.
         device.wait(Until.findObject(By.res(PKG, "field_plain")), TIMEOUT_MS).click();
         assertNotNull(device.wait(Until.findObject(By.res(PKG, "keys")), TIMEOUT_MS));

@@ -61,8 +61,7 @@ public class VoiceToolsScreenTest {
                 TestSpeech.english() != null);
         TestModels.ensureInstalled("voz");
         TestModels.ensureInstalled("ear");
-        getInstrumentation().getUiAutomation().grantRuntimePermission(
-                "com.example.aikeyboard", Manifest.permission.RECORD_AUDIO);
+        TestModels.allowMicrophone();
         settings.setBoolean(AppSettings.AI_ENABLED, true);
         assertTrue(TestModels.await(() -> settings.latest().aiEnabled(), 5000));
         use(true, "voz", "ear");

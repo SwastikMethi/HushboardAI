@@ -100,8 +100,15 @@ public class LatencyProbeTest {
 
         scenario = ActivityScenario.launch(EditorTestActivity.class);
         device.wait(Until.findObject(By.res(PKG, "field_plain")), TIMEOUT_MS).click();
-        assertNotNull("keyboard did not appear",
-                device.wait(Until.findObject(By.res(PKG, "keys")), TIMEOUT_MS));
+        // Starting the tests stopped the keyboard's process. Without the "ime set" other tests
+        // use, a phone (seen on a OnePlus) can leave the first tap unanswered: tap again.
+        long asked = SystemClock.uptimeMillis();
+        while (device.wait(Until.findObject(By.res(PKG, "keys")), TIMEOUT_MS) == null) {
+            assertTrue("keyboard did not appear within a minute",
+                    SystemClock.uptimeMillis() - asked < 60_000);
+            device.findObject(By.res(PKG, "field_plain")).click();
+        }
+        report("keyboard_shown_after_tests_started", List.of(SystemClock.uptimeMillis() - asked));
         for (char letter = 'a'; letter <= 'z'; letter++) {
             keys.put(letter, centreOf(String.valueOf(letter)));
         }

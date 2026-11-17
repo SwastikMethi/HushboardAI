@@ -31,6 +31,21 @@ final class TestModels {
         return context.getSystemService(ConnectivityManager.class).getActiveNetwork() != null;
     }
 
+    /**
+     * Lets the app use the microphone. Where the device's owner has already allowed it nothing
+     * is done: a phone may refuse a grant from a test, and it is the owner's to give.
+     */
+    static void allowMicrophone() {
+        Context context = ApplicationProvider.getApplicationContext();
+        if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().getUiAutomation()
+                .grantRuntimePermission(context.getPackageName(),
+                        android.Manifest.permission.RECORD_AUDIO);
+    }
+
     /** Polls until the condition holds; returns whether it did within the timeout. */
     static boolean await(BooleanSupplier condition, long timeoutMs) throws InterruptedException {
         long deadline = System.currentTimeMillis() + timeoutMs;

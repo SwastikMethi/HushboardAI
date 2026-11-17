@@ -38,14 +38,13 @@ public class AudioCaptureTest {
 
     @Before
     public void setUp() {
-        getInstrumentation().getUiAutomation().grantRuntimePermission(
-                context.getPackageName(), Manifest.permission.RECORD_AUDIO);
+        TestModels.allowMicrophone();
         capture = new AudioCaptureController(context);
     }
 
     @After
     public void tearDown() {
-        capture.cancel();
+        if (capture != null) capture.cancel(); // setUp may not have got that far
     }
 
     @Test

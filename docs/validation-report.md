@@ -448,10 +448,34 @@ Part 1 needed nothing from the owner: the debug APK was installed over adb (40 s
 | A finished download leaves no connection open | passed | PHONE | `HardeningTest.aFinishedDownloadLeavesNoConnectionOpen` |
 | A model loaded twice leaves no crash mark; models dropped under memory pressure load again; a delete waits for a run | passed | PHONE | Three `HardeningTest` methods |
 | How much the license check sends | not captured | PHONE | Each model's first load on this phone made the vendor's check. The traffic around Clear's first load was logged, but the phone's log had rolled over before it was read. Not repeated: it would cost a second activation |
-| Typing in WhatsApp, Telegram, Discord, a browser and a notes app | blocked | PHONE | Needs the owner to enable and select the keyboard |
-| Key handling time and time from last key to suggestion | blocked | PHONE | `LatencyProbeTest` is written and runs on the emulator; it needs the keyboard selected on the phone |
-| The keyboard's own automated tests on the phone | blocked | PHONE | They select the keyboard through adb, which is the owner's step to take first |
-| Dictation with a real voice; haptics and key sound; a pass with TalkBack | blocked | PHONE | Needs the owner |
+
+Part 2 followed the owner's steps on the phone: they approved OnePlus's install prompt, enabled and selected the keyboard with the app's own two setup buttons, and granted the microphone from Voice tools. Do Not Disturb was asked for and was off during the run; the owner said to go ahead.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| The app's setup screen gets the keyboard enabled and selected on OxygenOS | passed | PHONE | Done by the owner by hand; Android then named AI Keyboard as the selected keyboard |
+| Key press to the character being in the field | measured | PHONE | `LatencyProbeTest`, 200 keys each, about ten keys a second, in the debug host. AI off: median 9 ms, 95th percentile 12 ms, longest 13 ms. AI on (Emo, Redact, Toxic, Tongue): 11 ms, 13 ms, 14 ms. Measured from the finger leaving the key (an injected touch) to the field's text changing. The debug host shares the keyboard's process, so the hop to another app is not in these figures |
+| Last key to an emoji suggestion | measured | PHONE | 30 words with the models loaded: median 175 ms, 95th percentile 200 ms, longest 419 ms, of which 150 ms is the pause before a model is run. With no model loaded yet: 453 ms (one trial) |
+| The longest the main thread was held up | measured | PHONE | 13 ms while typing with AI on; 29 ms while the models were being loaded in the background. A model never ran on it |
+| How long each typing model takes (median / 95th percentile) | measured | PHONE | 57-character draft: Emo 9 / 11 ms, Redact 50 / 60, Toxic 53 / 65, Gist 25 / 30, Tongue 1 / 2. 944-character draft: Emo 11 / 13, Redact 512 / 552, Toxic 102 / 125, Gist 67 / 72, Tongue 2 / 5. 40 runs each |
+| Memory while typing with AI on | measured | PHONE | The app's total was about 550 MB, 673 MB at most, with the four typing models loaded |
+| Typing, shift, symbols, backspace over an emoji family, Enter actions, rotation | passed | PHONE | `KeyboardImeTest` 15 of 15 |
+| Emoji, privacy notice, review, mask and undo, tone notice, tag, AI off in password and no-learning fields | passed | PHONE | `KeyboardAiTest` 16 of 16; `EditorReadsTest` 2 of 3 (the third does not apply, below) |
+| The drawing panel, the keyboard's fixed footprint, the image tools screen | passed | PHONE | `DrawingTest` 8, `KeyboardFootprintTest` 3, `ImageToolsScreenTest` 8 |
+| The companion app, settings reaching the keyboard, downloads through the worker, the accessibility checks | passed | PHONE | `CompanionAppTest` 8, `SettingsSyncTest` 4, `ModelDownloadDeviceTest` 3 of 3 run, `AccessibilityAuditTest` 5 of 5 run, `SetupScreenTest` 1 of 1 run |
+| Hardening: network silence, nothing typed kept, downloads and deletes overlapping | passed | PHONE | `HardeningTest` 11 of 11 |
+| All model tests again, with Clear | passed | PHONE | `ModelSmokeTest` 7, `VisionModelsTest` 6 of 6, `VoiceModelsTest` 11 of 11. The screenshot test that failed in part 1 passed here: the app was on screen this time, not the phone's home screen |
+| Recording from the microphone; dictation in the keyboard; the Voice tools screen | **failed in the tests, not yet re-run** | PHONE | `AudioCaptureTest` 5, `KeyboardVoiceTest` 7 and `VoiceToolsScreenTest` 10 all stopped before they began: each test tried to grant the microphone itself and the phone refused (`SecurityException: Error granting runtime permission`), although the owner had already granted it. The tests now leave an existing grant alone; they pass on the emulator; the re-run waits for the owner to approve the install of the corrected test package |
+| A password typed with the on-screen keyboard hidden | does not apply | PHONE | The test hides the keyboard the way a hardware keyboard does; this phone has none, so the keyboard stayed up. The test now skips where there are no hardware keys. The same guarantee with the keyboard shown passed |
+| Typing into Android's Settings search (another app's field) | failed in the test | PHONE | `StockAppTypingTest` looks for a plain text field; OxygenOS's Settings search did not offer one within eight seconds. Not a keyboard fault as far as is known; typing in other apps is still to be shown |
+| The keyboard appears when a field is tapped just after the app has been force-stopped | **failed, under investigation** | PHONE | Run on its own, `LatencyProbeTest` (which does not re-select the keyboard through adb) waited eight seconds after tapping a field and no keyboard came, three times out of three. A second attempt seconds later worked. Whether this is Android's reconnect delay, OxygenOS holding a stopped app back, or a fault here is not yet known |
+| Peak memory over the whole run | measured | PHONE | 6.1 GB, with Voz, Clear and the other voice models loaded together |
+| Battery temperature over the 12-minute run | observed | PHONE | 31.5 °C before, 34.2 °C after, on USB power. Not a battery or heat test |
+| Left out on the phone on purpose | not run | PHONE | The tests that switch Wi-Fi off, turn animations off, or disable the keyboard (ruling 91). `show_ime_with_hard_keyboard`, which the tests set to 1, was put back to 0 |
+| Typing in WhatsApp, Telegram, Discord, a browser and a notes app | blocked | PHONE | Needs the owner at the phone; their chats are not to be read or captured |
+| Dictation with a real voice; haptics and key sound; a pass with TalkBack | blocked | PHONE | Needs the owner at the phone |
+
+Totals for the suite on the phone (`-e clear true -e stockApps true`, three tests left out): 171 run, 132 passed, 15 skipped, 24 failed. 22 of the 24 are the microphone-grant fault in the tests.
 
 ## The handoff checklist, item by item
 

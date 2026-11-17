@@ -133,6 +133,8 @@ Rulings from the phone session:
 90. **Phone: Voz is refused on devices that report under 6.5 GiB of memory, up from 5 GiB (replaces the line in ruling 39).** On the owner's 12 GB phone the app held about 5 GB with Voz loaded (5.2 GB at the peak; 5.9 GB with Clear and the other voice models loaded too), against 3.9 GB on the emulator. A phone sold as 6 GB reports under 6 GiB and cannot hold that; one sold as 8 GB reports about 7 GiB and is still admitted. Cost if wrong: an 8 GB phone may be closed once on first use of Voz (then Voz is switched off with the reason shown); nothing between 6 and 12 GB has been tried.
 91. **Phone: the automated tests that select the keyboard, switch Wi-Fi off or change a system setting were held back until the owner had enabled the keyboard, and the Wi-Fi and animation tests are left out on the phone altogether.** They are the owner's phone and the owner's settings. Cost if wrong: pausing a download on leaving Wi-Fi, and the no-sweep-with-animations-off rule, are proved on the emulator only.
 92. **Phone: `eye_describesARealScreenshot` failed and nothing was changed.** Eye called a capture of the phone's screen "illustration or art". The app shows the model's own words (ruling 56), so this is the model's answer on a real screen, not an app fault. Cost if wrong: the Image tools screen mislabels some screenshots; the test stays red on this phone as a record.
+93. **Phone: the tests no longer grant the microphone where it is already granted.** The phone refused a grant from a test (`SecurityException`), which stopped 22 tests before they began although the owner had granted it by hand. Cost if wrong: on a device where it is not granted and a test's grant is refused, those tests fail in their setup with the phone's own message.
+94. **Phone: the suite was run with Do Not Disturb off.** It was asked for; the owner said to go ahead. A notification popping up under a test's tap could have opened another app. Nothing of the kind showed in the results. Cost if wrong: a chat marked as read.
 
 ## Final review
 
@@ -236,13 +238,14 @@ What is still open at the end of the emulator work, in one place. Items from ear
 
 ## Next action
 
-**The phone session is under way and waiting on the owner** (OnePlus CPH2423, serial `(serial omitted)`). Part 1 is done and recorded in the validation report under "Phone session".
+**The phone session is under way and waiting on the owner** (OnePlus CPH2423, serial `(serial omitted)`). Parts 1 and 2 are recorded in the validation report under "Phone session": models, Clear, memory, network silence, latency, and the keyboard's own suite (132 passed, 24 failed, 22 of them one fault in the tests).
 
-Waiting for, on the phone, by the owner:
+Waiting for, on the phone, by the owner: approve OnePlus's install prompt for the corrected test package (`adb install` is held on it; it appears on most reinstalls).
 
-1. Approve OnePlus's install prompt (it appeared on the second `adb install`; the first went through without it).
-2. Open AI Keyboard and use its two setup buttons to enable and select the keyboard.
-3. Grant the microphone when Voice tools asks.
-4. Do Not Disturb on, phone unlocked and left alone for the automated run.
+Then, in this order:
 
-Then, in this order: `LatencyProbeTest` with `-e latency true`; the keyboard's own tests, leaving out the ones that switch Wi-Fi off or turn animations off (ruling 91), and putting `show_ime_with_hard_keyboard` back to `0` afterwards (it was `0` on this phone); memory while typing; then with the owner at the phone: a browser, a notes app and whichever chat apps they choose, dictation with a real voice, haptics and sound, and TalkBack. The owner's chat apps are not to be screenshotted or read; they type and say what they see. Never use Gradle's `install*` tasks while the phone is connected (they install on every device); use `adb -s`.
+1. Re-run on the phone the classes that were stopped by the microphone-grant fault: `AudioCaptureTest`, `KeyboardVoiceTest`, `VoiceToolsScreenTest`, and `EditorReadsTest`. Put `show_ime_with_hard_keyboard` back to `0` afterwards (the tests set it to 1; it was 0 on this phone and is 0 now).
+2. Find out why the keyboard did not appear on the first tap after the app had been force-stopped (validation report, part 2). Try it without the test harness: a field in Settings or the debug host, `kill -9` of the keyboard's process and separately a force-stop, and time how long the keyboard takes to return.
+3. With the owner at the phone: a browser, a notes app and whichever chat apps they choose; dictation with a real voice; haptics and key sound; TalkBack; and swiping AI Keyboard away from recents, then tapping a field in another app. Their chat apps are not to be screenshotted or read; they type and say what they see.
+
+Never use Gradle's `install*` tasks while the phone is connected (they install on every device); use `adb -s`. Leave out on the phone the tests that switch Wi-Fi off, turn animations off or disable the keyboard (ruling 91).

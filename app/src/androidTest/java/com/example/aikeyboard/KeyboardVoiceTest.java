@@ -52,8 +52,7 @@ public class KeyboardVoiceTest {
         AudioClip speech = TestSpeech.english();
         assumeTrue("this device has no usable speech synthesiser", speech != null);
         TestModels.ensureInstalled("voz");
-        getInstrumentation().getUiAutomation().grantRuntimePermission(
-                PKG, Manifest.permission.RECORD_AUDIO);
+        TestModels.allowMicrophone();
         device = UiDevice.getInstance(getInstrumentation());
         device.executeShellCommand("ime enable " + IME_ID);
         device.executeShellCommand("ime set " + IME_ID);

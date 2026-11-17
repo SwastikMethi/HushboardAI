@@ -1,0 +1,1891 @@
+######## ai.desertant:emo:4.3.0
+public final class ai.desertant.emo.Emo$Companion {
+  private ai.desertant.emo.Emo$Companion();
+}
+public final class ai.desertant.emo.Emo implements java.lang.AutoCloseable {
+  public static final ai.desertant.emo.Emo$Companion Companion;
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.emo.Emo(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object suggestions(java.lang.String, int, ai.desertant.emo.EmojiSkinTone, kotlin.coroutines.Continuation<? super java.util.List<ai.desertant.emo.EmoSuggestion>>);
+  public static java.lang.Object suggestions$default(ai.desertant.emo.Emo, java.lang.String, int, ai.desertant.emo.EmojiSkinTone, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public synchronized void close();
+}
+public final class ai.desertant.emo.EmoException extends java.lang.Exception {
+  public ai.desertant.emo.EmoException(java.lang.String);
+}
+public final class ai.desertant.emo.EmoSuggestion {
+  private final java.lang.String emoji;
+  private final double confidence;
+  public ai.desertant.emo.EmoSuggestion(java.lang.String, double);
+  public final java.lang.String getEmoji();
+  public final double getConfidence();
+}
+public final class ai.desertant.emo.EmojiSkinTone extends java.lang.Enum<ai.desertant.emo.EmojiSkinTone> {
+  private final int nativeValue;
+  public static final ai.desertant.emo.EmojiSkinTone DEFAULT;
+  public static final ai.desertant.emo.EmojiSkinTone LIGHT;
+  public static final ai.desertant.emo.EmojiSkinTone MEDIUM_LIGHT;
+  public static final ai.desertant.emo.EmojiSkinTone MEDIUM;
+  public static final ai.desertant.emo.EmojiSkinTone MEDIUM_DARK;
+  public static final ai.desertant.emo.EmojiSkinTone DARK;
+  private ai.desertant.emo.EmojiSkinTone(int);
+  public final int getNativeValue$emo_release();
+  public static ai.desertant.emo.EmojiSkinTone[] values();
+  public static ai.desertant.emo.EmojiSkinTone valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.emo.EmojiSkinTone> getEntries();
+}
+######## ai.desertant:redact:4.3.0
+public final class ai.desertant.redact.Labels {
+  public static final ai.desertant.redact.Labels INSTANCE;
+  private static final java.util.Set<java.lang.String> ALL;
+  private static final java.util.Set<java.lang.String> DEFAULT;
+  private ai.desertant.redact.Labels();
+  public final java.util.Set<java.lang.String> getALL();
+  public final java.util.Set<java.lang.String> getDEFAULT();
+}
+public final class ai.desertant.redact.Options {
+  private final double minimumConfidence;
+  private final java.util.Set<java.lang.String> labels;
+  public ai.desertant.redact.Options(double, java.util.Set<java.lang.String>);
+  public final double getMinimumConfidence();
+  public final java.util.Set<java.lang.String> getLabels();
+  public ai.desertant.redact.Options();
+}
+public final class ai.desertant.redact.Redact$Companion {
+  private ai.desertant.redact.Redact$Companion();
+}
+public final class ai.desertant.redact.Redact implements java.lang.AutoCloseable {
+  public static final ai.desertant.redact.Redact$Companion Companion;
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.redact.Redact(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object redaction(java.lang.String, ai.desertant.redact.Options, kotlin.coroutines.Continuation<? super ai.desertant.redact.Redaction>);
+  public static java.lang.Object redaction$default(ai.desertant.redact.Redact, java.lang.String, ai.desertant.redact.Options, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public synchronized void close();
+}
+public final class ai.desertant.redact.RedactException extends java.lang.Exception {
+  public ai.desertant.redact.RedactException(java.lang.String);
+}
+public final class ai.desertant.redact.Redaction {
+  private final java.lang.String redactedText;
+  private final java.util.List<ai.desertant.redact.RedactionItem> items;
+  public ai.desertant.redact.Redaction(java.lang.String, java.util.List<ai.desertant.redact.RedactionItem>);
+  public final java.lang.String getRedactedText();
+  public final java.util.List<ai.desertant.redact.RedactionItem> getItems();
+  public final java.lang.String restore(java.lang.String);
+}
+public final class ai.desertant.redact.RedactionItem {
+  private final java.lang.String label;
+  private final java.lang.String original;
+  private final java.lang.String placeholder;
+  private final double confidence;
+  private final int start;
+  private final int end;
+  public ai.desertant.redact.RedactionItem(java.lang.String, java.lang.String, java.lang.String, double, int, int);
+  public final java.lang.String getLabel();
+  public final java.lang.String getOriginal();
+  public final java.lang.String getPlaceholder();
+  public final double getConfidence();
+  public final int getStart();
+  public final int getEnd();
+}
+######## ai.desertant:toxic:4.3.0
+public final class ai.desertant.toxic.Analysis {
+  private final java.util.Map<ai.desertant.toxic.Label, java.lang.Double> scores;
+  private final java.util.Map<ai.desertant.toxic.Label, java.lang.Double> thresholds;
+  private final java.util.Set<ai.desertant.toxic.Label> flagged;
+  public ai.desertant.toxic.Analysis(java.util.Map<ai.desertant.toxic.Label, java.lang.Double>, java.util.Map<ai.desertant.toxic.Label, java.lang.Double>, java.util.Set<? extends ai.desertant.toxic.Label>);
+  public final java.util.Map<ai.desertant.toxic.Label, java.lang.Double> getScores();
+  public final java.util.Map<ai.desertant.toxic.Label, java.lang.Double> getThresholds();
+  public final java.util.Set<ai.desertant.toxic.Label> getFlagged();
+  public final boolean isToxic();
+  public final java.util.List<ai.desertant.toxic.Label> getContent();
+  public final java.util.List<ai.desertant.toxic.Label> getTargets();
+  public final double score(ai.desertant.toxic.Label);
+}
+public final class ai.desertant.toxic.Label$Companion {
+  private ai.desertant.toxic.Label$Companion();
+  public final java.util.List<ai.desertant.toxic.Label> getCONTENT();
+  public final java.util.List<ai.desertant.toxic.Label> getTARGETS();
+  public final ai.desertant.toxic.Label byId$toxic_release(java.lang.String);
+}
+public final class ai.desertant.toxic.Label extends java.lang.Enum<ai.desertant.toxic.Label> {
+  public static final ai.desertant.toxic.Label$Companion Companion;
+  private final java.lang.String id;
+  private final boolean isTarget;
+  private static final java.util.List<ai.desertant.toxic.Label> CONTENT;
+  private static final java.util.List<ai.desertant.toxic.Label> TARGETS;
+  public static final ai.desertant.toxic.Label HATEFUL;
+  public static final ai.desertant.toxic.Label ABUSIVE;
+  public static final ai.desertant.toxic.Label THREAT;
+  public static final ai.desertant.toxic.Label RACE;
+  public static final ai.desertant.toxic.Label RELIGION;
+  public static final ai.desertant.toxic.Label NATIONAL_ETHNIC_ORIGIN;
+  public static final ai.desertant.toxic.Label SEXUAL_ORIENTATION;
+  public static final ai.desertant.toxic.Label GENDER;
+  public static final ai.desertant.toxic.Label DISABILITY;
+  public static final ai.desertant.toxic.Label AGE;
+  public static final ai.desertant.toxic.Label OTHER;
+  private ai.desertant.toxic.Label(java.lang.String, boolean);
+  public final java.lang.String getId();
+  public final boolean isTarget();
+  public static ai.desertant.toxic.Label[] values();
+  public static ai.desertant.toxic.Label valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.toxic.Label> getEntries();
+}
+public final class ai.desertant.toxic.Options {
+  private final java.util.Map<ai.desertant.toxic.Label, java.lang.Double> thresholds;
+  public ai.desertant.toxic.Options(java.util.Map<ai.desertant.toxic.Label, java.lang.Double>);
+  public final java.util.Map<ai.desertant.toxic.Label, java.lang.Double> getThresholds();
+  public ai.desertant.toxic.Options();
+}
+public final class ai.desertant.toxic.Toxic implements java.lang.AutoCloseable {
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.toxic.Toxic(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object analyze(java.lang.String, ai.desertant.toxic.Options, kotlin.coroutines.Continuation<? super ai.desertant.toxic.Analysis>);
+  public static java.lang.Object analyze$default(ai.desertant.toxic.Toxic, java.lang.String, ai.desertant.toxic.Options, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public synchronized void close();
+}
+public final class ai.desertant.toxic.ToxicException extends java.lang.Exception {
+  public ai.desertant.toxic.ToxicException(java.lang.String);
+}
+######## ai.desertant:gist:4.3.0
+public final class ai.desertant.gist.ChannelTopic {
+  private final java.lang.String slug;
+  private final double share;
+  private final int postCount;
+  public ai.desertant.gist.ChannelTopic(java.lang.String, double, int);
+  public final java.lang.String getSlug();
+  public final double getShare();
+  public final int getPostCount();
+}
+public final class ai.desertant.gist.Gist$Companion {
+  private ai.desertant.gist.Gist$Companion();
+}
+final class ai.desertant.gist.Gist$Tagged {
+  private final double threshold;
+  private final java.util.Map<java.lang.String, java.lang.Double> scores;
+  private final java.util.Map<java.lang.String, java.lang.String> names;
+  public ai.desertant.gist.Gist$Tagged(double, java.util.Map<java.lang.String, java.lang.Double>, java.util.Map<java.lang.String, java.lang.String>);
+  public final double getThreshold();
+  public final java.util.Map<java.lang.String, java.lang.Double> getScores();
+  public final java.util.Map<java.lang.String, java.lang.String> getNames();
+}
+public final class ai.desertant.gist.Gist implements java.lang.AutoCloseable {
+  public static final ai.desertant.gist.Gist$Companion Companion;
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.gist.Gist(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object scores(java.lang.String, kotlin.coroutines.Continuation<? super java.util.Map<java.lang.String, java.lang.Double>>);
+  public final java.lang.Object classify(java.lang.String, int, java.lang.Double, kotlin.coroutines.Continuation<? super java.util.List<ai.desertant.gist.Topic>>);
+  public static java.lang.Object classify$default(ai.desertant.gist.Gist, java.lang.String, int, java.lang.Double, kotlin.coroutines.Continuation, int, java.lang.Object);
+  private final java.lang.Object tagged(java.lang.String, kotlin.coroutines.Continuation<? super ai.desertant.gist.Gist$Tagged>);
+  public synchronized void close();
+}
+public final class ai.desertant.gist.GistException extends java.lang.Exception {
+  public ai.desertant.gist.GistException(java.lang.String);
+}
+public final class ai.desertant.gist.PostTopics {
+  private final java.util.Map<java.lang.String, java.lang.Double> topics;
+  private final java.lang.Double timestampMillis;
+  public ai.desertant.gist.PostTopics(java.util.Map<java.lang.String, java.lang.Double>, java.lang.Double);
+  public final java.util.Map<java.lang.String, java.lang.Double> getTopics();
+  public final java.lang.Double getTimestampMillis();
+}
+public final class ai.desertant.gist.RollupOptions {
+  private final int topN;
+  private final double floor;
+  private final int minPosts;
+  private final double halfLifeDays;
+  private final double touch;
+  private final double nowMillis;
+  public ai.desertant.gist.RollupOptions(int, double, int, double, double, double);
+  public final int getTopN();
+  public final double getFloor();
+  public final int getMinPosts();
+  public final double getHalfLifeDays();
+  public final double getTouch();
+  public final double getNowMillis();
+  public ai.desertant.gist.RollupOptions();
+}
+public final class ai.desertant.gist.Topic {
+  private final java.lang.String slug;
+  private final java.lang.String name;
+  private final double score;
+  public ai.desertant.gist.Topic(java.lang.String, java.lang.String, double);
+  public final java.lang.String getSlug();
+  public final java.lang.String getName();
+  public final double getScore();
+}
+######## ai.desertant:voz:4.3.0
+public final class ai.desertant.voz.Transcription {
+  private final java.lang.String text;
+  private final java.util.List<ai.desertant.voz.Word> words;
+  private final double duration;
+  public ai.desertant.voz.Transcription(java.lang.String, java.util.List<ai.desertant.voz.Word>, double);
+  public final java.lang.String getText();
+  public final java.util.List<ai.desertant.voz.Word> getWords();
+  public final double getDuration();
+}
+public final class ai.desertant.voz.Voz$Companion {
+  private ai.desertant.voz.Voz$Companion();
+}
+public final class ai.desertant.voz.Voz implements java.lang.AutoCloseable {
+  public static final ai.desertant.voz.Voz$Companion Companion;
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.voz.Voz(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object transcribe(float[], double, kotlin.coroutines.Continuation<? super ai.desertant.voz.Transcription>);
+  public static java.lang.Object transcribe$default(ai.desertant.voz.Voz, float[], double, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public void close();
+}
+public final class ai.desertant.voz.VozException extends java.lang.Exception {
+  public ai.desertant.voz.VozException(java.lang.String);
+}
+public final class ai.desertant.voz.Word {
+  private final java.lang.String text;
+  private final double start;
+  private final double end;
+  public ai.desertant.voz.Word(java.lang.String, double, double);
+  public final java.lang.String getText();
+  public final double getStart();
+  public final double getEnd();
+}
+######## ai.desertant:clear:4.3.0
+public final class ai.desertant.clear.ChannelMode extends java.lang.Enum<ai.desertant.clear.ChannelMode> {
+  public static final ai.desertant.clear.ChannelMode MONO;
+  public static final ai.desertant.clear.ChannelMode PRESERVE;
+  private ai.desertant.clear.ChannelMode();
+  public static ai.desertant.clear.ChannelMode[] values();
+  public static ai.desertant.clear.ChannelMode valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.clear.ChannelMode> getEntries();
+}
+public final class ai.desertant.clear.Clear$Companion {
+  private ai.desertant.clear.Clear$Companion();
+}
+public final class ai.desertant.clear.Clear implements java.lang.AutoCloseable {
+  public static final ai.desertant.clear.Clear$Companion Companion;
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.clear.Clear(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object enhance(float[], double, ai.desertant.clear.Options, kotlin.coroutines.Continuation<? super ai.desertant.clear.Result>);
+  public static java.lang.Object enhance$default(ai.desertant.clear.Clear, float[], double, ai.desertant.clear.Options, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public final java.lang.Object enhance(java.util.List<float[]>, double, ai.desertant.clear.Options, kotlin.coroutines.Continuation<? super ai.desertant.clear.Result>);
+  public static java.lang.Object enhance$default(ai.desertant.clear.Clear, java.util.List, double, ai.desertant.clear.Options, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public synchronized void close();
+}
+public final class ai.desertant.clear.ClearException extends java.lang.Exception {
+  public ai.desertant.clear.ClearException(java.lang.String);
+}
+public final class ai.desertant.clear.LoudnessPreset extends java.lang.Enum<ai.desertant.clear.LoudnessPreset> {
+  private final double integratedLufs;
+  public static final ai.desertant.clear.LoudnessPreset APPLE_PODCASTS;
+  public static final ai.desertant.clear.LoudnessPreset SPOTIFY;
+  public static final ai.desertant.clear.LoudnessPreset YOUTUBE;
+  public static final ai.desertant.clear.LoudnessPreset BROADCAST;
+  private ai.desertant.clear.LoudnessPreset(double);
+  public final double getIntegratedLufs();
+  public static ai.desertant.clear.LoudnessPreset[] values();
+  public static ai.desertant.clear.LoudnessPreset valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.clear.LoudnessPreset> getEntries();
+}
+public final class ai.desertant.clear.Mastering$Companion {
+  private ai.desertant.clear.Mastering$Companion();
+  public final ai.desertant.clear.Mastering of(ai.desertant.clear.LoudnessPreset);
+  public final ai.desertant.clear.Mastering getBYPASS();
+}
+public final class ai.desertant.clear.Mastering {
+  public static final ai.desertant.clear.Mastering$Companion Companion;
+  private final double integratedLufs;
+  private final double truePeakDbtp;
+  private final double maxLoudnessGainDb;
+  private final boolean enabled;
+  private final java.lang.Double balanceChannelsLufs;
+  private static final ai.desertant.clear.Mastering BYPASS;
+  public ai.desertant.clear.Mastering(double, double, double, boolean, java.lang.Double);
+  public final double getIntegratedLufs();
+  public final double getTruePeakDbtp();
+  public final double getMaxLoudnessGainDb();
+  public final boolean getEnabled();
+  public final java.lang.Double getBalanceChannelsLufs();
+  public ai.desertant.clear.Mastering();
+}
+public final class ai.desertant.clear.Options {
+  private final double strength;
+  private final ai.desertant.clear.Mastering mastering;
+  private final double sampleRate;
+  private final ai.desertant.clear.ChannelMode channelMode;
+  public ai.desertant.clear.Options(double, ai.desertant.clear.Mastering, double, ai.desertant.clear.ChannelMode);
+  public final double getStrength();
+  public final ai.desertant.clear.Mastering getMastering();
+  public final double getSampleRate();
+  public final ai.desertant.clear.ChannelMode getChannelMode();
+  public ai.desertant.clear.Options();
+}
+public final class ai.desertant.clear.Result {
+  private final java.util.List<float[]> channels;
+  private final double sampleRate;
+  private final double durationSec;
+  private final double processingSec;
+  private final java.lang.Double measuredLufs;
+  private final java.lang.Double measuredTruePeakDbfs;
+  public ai.desertant.clear.Result(java.util.List<float[]>, double, double, double, java.lang.Double, java.lang.Double);
+  public final java.util.List<float[]> getChannels();
+  public final double getSampleRate();
+  public final double getDurationSec();
+  public final double getProcessingSec();
+  public final java.lang.Double getMeasuredLufs();
+  public final java.lang.Double getMeasuredTruePeakDbfs();
+  public final float[] getSamples();
+  public final int getChannelCount();
+  public final double getRealtimeFactor();
+}
+######## ai.desertant:ear:4.3.0
+public final class ai.desertant.ear.Detection {
+  private final java.util.List<ai.desertant.ear.LanguageCandidate> candidates;
+  private final int windows;
+  private final boolean isReliable;
+  public ai.desertant.ear.Detection(java.util.List<ai.desertant.ear.LanguageCandidate>, int, boolean);
+  public final java.util.List<ai.desertant.ear.LanguageCandidate> getCandidates();
+  public final int getWindows();
+  public final boolean isReliable();
+  public final java.lang.String getLanguage();
+  public final double getConfidence();
+}
+public final class ai.desertant.ear.Ear$Companion {
+  private ai.desertant.ear.Ear$Companion();
+}
+public final class ai.desertant.ear.Ear implements java.lang.AutoCloseable {
+  public static final ai.desertant.ear.Ear$Companion Companion;
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.ear.Ear(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object identify(float[], double, ai.desertant.ear.Options, kotlin.coroutines.Continuation<? super ai.desertant.ear.Detection>);
+  public static java.lang.Object identify$default(ai.desertant.ear.Ear, float[], double, ai.desertant.ear.Options, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public void close();
+}
+public final class ai.desertant.ear.EarException extends java.lang.Exception {
+  public ai.desertant.ear.EarException(java.lang.String);
+}
+public final class ai.desertant.ear.LanguageCandidate {
+  private final java.lang.String language;
+  private final double probability;
+  public ai.desertant.ear.LanguageCandidate(java.lang.String, double);
+  public final java.lang.String getLanguage();
+  public final double getProbability();
+}
+public final class ai.desertant.ear.Options {
+  private final int windows;
+  public ai.desertant.ear.Options(int);
+  public final int getWindows();
+  public ai.desertant.ear.Options();
+}
+######## ai.desertant:uhm:4.3.0
+public final class ai.desertant.uhm.Bias extends java.lang.Enum<ai.desertant.uhm.Bias> {
+  private final double threshold;
+  public static final ai.desertant.uhm.Bias PRECISION;
+  public static final ai.desertant.uhm.Bias BALANCED;
+  public static final ai.desertant.uhm.Bias RECALL;
+  private ai.desertant.uhm.Bias(double);
+  public final double getThreshold();
+  public static ai.desertant.uhm.Bias[] values();
+  public static ai.desertant.uhm.Bias valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.uhm.Bias> getEntries();
+}
+public final class ai.desertant.uhm.Filler {
+  private final double start;
+  private final double end;
+  private final double confidence;
+  private final java.lang.String type;
+  public ai.desertant.uhm.Filler(double, double, double, java.lang.String);
+  public final double getStart();
+  public final double getEnd();
+  public final double getConfidence();
+  public final java.lang.String getType();
+}
+public final class ai.desertant.uhm.Options {
+  private final ai.desertant.uhm.Bias bias;
+  private final java.lang.Double minConfidence;
+  private final java.lang.Double minDurationSec;
+  private final double minOverlapFraction;
+  private final boolean splitContainedWords;
+  public ai.desertant.uhm.Options(ai.desertant.uhm.Bias, java.lang.Double, java.lang.Double, double, boolean);
+  public final ai.desertant.uhm.Bias getBias();
+  public final java.lang.Double getMinConfidence();
+  public final java.lang.Double getMinDurationSec();
+  public final double getMinOverlapFraction();
+  public final boolean getSplitContainedWords();
+  public ai.desertant.uhm.Options();
+}
+public final class ai.desertant.uhm.Uhm$Companion {
+  private ai.desertant.uhm.Uhm$Companion();
+}
+public final class ai.desertant.uhm.Uhm implements java.lang.AutoCloseable {
+  public static final ai.desertant.uhm.Uhm$Companion Companion;
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.uhm.Uhm(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object detect(float[], double, ai.desertant.uhm.Options, java.util.List<ai.desertant.uhm.Word>, kotlin.coroutines.Continuation<? super ai.desertant.uhm.UhmResult>);
+  public static java.lang.Object detect$default(ai.desertant.uhm.Uhm, float[], double, ai.desertant.uhm.Options, java.util.List, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public synchronized void close();
+}
+public final class ai.desertant.uhm.UhmException extends java.lang.Exception {
+  public ai.desertant.uhm.UhmException(java.lang.String);
+}
+public final class ai.desertant.uhm.UhmResult {
+  private final java.util.List<ai.desertant.uhm.Filler> fillers;
+  private final double audioDuration;
+  private final java.util.List<ai.desertant.uhm.Word> words;
+  public ai.desertant.uhm.UhmResult(java.util.List<ai.desertant.uhm.Filler>, double, java.util.List<ai.desertant.uhm.Word>);
+  public final java.util.List<ai.desertant.uhm.Filler> getFillers();
+  public final double getAudioDuration();
+  public final java.util.List<ai.desertant.uhm.Word> getWords();
+}
+public final class ai.desertant.uhm.Word {
+  private final double start;
+  private final double end;
+  private final java.lang.String text;
+  public ai.desertant.uhm.Word(double, double, java.lang.String);
+  public final double getStart();
+  public final double getEnd();
+  public final java.lang.String getText();
+}
+######## ai.desertant:who:4.3.0
+public final class ai.desertant.who.Diarization {
+  private final java.util.List<ai.desertant.who.Turn> turns;
+  private final int speakerCount;
+  private final double duration;
+  public ai.desertant.who.Diarization(java.util.List<ai.desertant.who.Turn>, int, double);
+  public final java.util.List<ai.desertant.who.Turn> getTurns();
+  public final int getSpeakerCount();
+  public final double getDuration();
+  public final java.util.List<ai.desertant.who.Turn> turns(int);
+  public final java.util.List<java.lang.Integer> speakers(double);
+  public final ai.desertant.who.Diarization keepingSpeakers(double);
+}
+public final class ai.desertant.who.Turn {
+  private final int speaker;
+  private final double start;
+  private final double end;
+  public ai.desertant.who.Turn(int, double, double);
+  public final int getSpeaker();
+  public final double getStart();
+  public final double getEnd();
+  public final double getDuration();
+}
+public final class ai.desertant.who.Who$Companion {
+  private ai.desertant.who.Who$Companion();
+}
+public final class ai.desertant.who.Who implements java.lang.AutoCloseable {
+  public static final ai.desertant.who.Who$Companion Companion;
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.who.Who(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object diarize(float[], double, kotlin.coroutines.Continuation<? super ai.desertant.who.Diarization>);
+  public static java.lang.Object diarize$default(ai.desertant.who.Who, float[], double, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public void close();
+}
+public final class ai.desertant.who.WhoException extends java.lang.Exception {
+  public ai.desertant.who.WhoException(java.lang.String);
+}
+######## ai.desertant:eye:4.3.0
+public final class ai.desertant.eye.Analysis$Companion {
+  private ai.desertant.eye.Analysis$Companion();
+  public final ai.desertant.eye.Analysis fromJson(java.lang.String);
+  public final ai.desertant.eye.Analysis fromJson$eye_release(org.json.JSONObject, ai.desertant.eye.Details);
+  private static final ai.desertant.eye.Box fromJson$box(org.json.JSONObject);
+  private static final java.util.Map<ai.desertant.eye.Tag, java.lang.Double> fromJson$tags(org.json.JSONObject);
+  private static final <T> java.util.List<T> fromJson$list(org.json.JSONObject, java.lang.String, kotlin.jvm.functions.Function1<? super org.json.JSONObject, ? extends T>);
+  private static final ai.desertant.eye.Detection fromJson$detection(org.json.JSONObject);
+}
+public final class ai.desertant.eye.Analysis {
+  public static final ai.desertant.eye.Analysis$Companion Companion;
+  private final java.lang.String model;
+  private final int width;
+  private final int height;
+  private final java.util.Map<ai.desertant.eye.Tag, java.lang.Double> confidences;
+  private final ai.desertant.eye.Tag kind;
+  private final ai.desertant.eye.Scores scores;
+  private final java.lang.Integer rotation;
+  private final float[] embedding;
+  private final java.util.List<ai.desertant.eye.Detection> people;
+  private final java.util.List<ai.desertant.eye.Detection> pets;
+  private final java.util.List<ai.desertant.eye.Face> faces;
+  private final java.util.List<ai.desertant.eye.Crop> crops;
+  private final ai.desertant.eye.Details details;
+  private final org.json.JSONObject json;
+  public ai.desertant.eye.Analysis(java.lang.String, int, int, java.util.Map<ai.desertant.eye.Tag, java.lang.Double>, ai.desertant.eye.Tag, ai.desertant.eye.Scores, java.lang.Integer, float[], java.util.List<ai.desertant.eye.Detection>, java.util.List<ai.desertant.eye.Detection>, java.util.List<ai.desertant.eye.Face>, java.util.List<ai.desertant.eye.Crop>, ai.desertant.eye.Details, org.json.JSONObject);
+  public final java.lang.String getModel();
+  public final int getWidth();
+  public final int getHeight();
+  public final java.util.Map<ai.desertant.eye.Tag, java.lang.Double> getConfidences();
+  public final ai.desertant.eye.Tag getKind();
+  public final ai.desertant.eye.Scores getScores();
+  public final java.lang.Integer getRotation();
+  public final float[] getEmbedding();
+  public final java.util.List<ai.desertant.eye.Detection> getPeople();
+  public final java.util.List<ai.desertant.eye.Detection> getPets();
+  public final java.util.List<ai.desertant.eye.Face> getFaces();
+  public final java.util.List<ai.desertant.eye.Crop> getCrops();
+  public final ai.desertant.eye.Details getDetails();
+  public final java.lang.Double confidence(ai.desertant.eye.Tag);
+  public final boolean has(ai.desertant.eye.Tag, ai.desertant.eye.Level);
+  public static boolean has$default(ai.desertant.eye.Analysis, ai.desertant.eye.Tag, ai.desertant.eye.Level, int, java.lang.Object);
+  public final java.util.List<ai.desertant.eye.Tag> tags(ai.desertant.eye.Level);
+  public static java.util.List tags$default(ai.desertant.eye.Analysis, ai.desertant.eye.Level, int, java.lang.Object);
+  public final ai.desertant.eye.Box bestCrop(double);
+  public final java.lang.Double similarity(ai.desertant.eye.Analysis);
+  public final java.lang.String toJson();
+  public final org.json.JSONObject getDuplicates$eye_release();
+  public final boolean has(ai.desertant.eye.Tag);
+  public final java.util.List<ai.desertant.eye.Tag> tags();
+  public static final ai.desertant.eye.Analysis fromJson(java.lang.String);
+}
+public final class ai.desertant.eye.Box {
+  private final double x0;
+  private final double y0;
+  private final double x1;
+  private final double y1;
+  public ai.desertant.eye.Box(double, double, double, double);
+  public final double getX0();
+  public final double getY0();
+  public final double getX1();
+  public final double getY1();
+  public final double getWidth();
+  public final double getHeight();
+}
+public final class ai.desertant.eye.Collections {
+  public static final ai.desertant.eye.Collections INSTANCE;
+  private ai.desertant.eye.Collections();
+  public final java.util.List<java.util.List<java.lang.Integer>> duplicates(java.util.List<ai.desertant.eye.Analysis>, java.util.List<java.lang.Double>);
+  public final java.lang.Integer best(java.util.List<ai.desertant.eye.Analysis>);
+  public final java.util.List<kotlin.Pair<java.lang.Integer, java.lang.Double>> similar(ai.desertant.eye.Analysis, java.util.List<ai.desertant.eye.Analysis>, int);
+  private final double[] rank(ai.desertant.eye.Analysis);
+  private final int compare(double[], double[]);
+  private static final int duplicates$root(int[], int);
+}
+public final class ai.desertant.eye.Crop {
+  private final ai.desertant.eye.Box box;
+  private final double score;
+  public ai.desertant.eye.Crop(ai.desertant.eye.Box, double);
+  public final ai.desertant.eye.Box getBox();
+  public final double getScore();
+}
+public final class ai.desertant.eye.Details {
+  private final ai.desertant.eye.Photo photo;
+  private final ai.desertant.eye.Layout layout;
+  private final java.util.List<ai.desertant.eye.FaceDetails> faces;
+  private final ai.desertant.eye.Sharpness sharpness;
+  public ai.desertant.eye.Details(ai.desertant.eye.Photo, ai.desertant.eye.Layout, java.util.List<ai.desertant.eye.FaceDetails>, ai.desertant.eye.Sharpness);
+  public final ai.desertant.eye.Photo getPhoto();
+  public final ai.desertant.eye.Layout getLayout();
+  public final java.util.List<ai.desertant.eye.FaceDetails> getFaces();
+  public final ai.desertant.eye.Sharpness getSharpness();
+}
+public final class ai.desertant.eye.Detection {
+  private final java.lang.String label;
+  private final double confidence;
+  private final ai.desertant.eye.Box box;
+  public ai.desertant.eye.Detection(java.lang.String, double, ai.desertant.eye.Box);
+  public final java.lang.String getLabel();
+  public final double getConfidence();
+  public final ai.desertant.eye.Box getBox();
+}
+public final class ai.desertant.eye.Eye$Companion {
+  private ai.desertant.eye.Eye$Companion();
+  public final java.util.List<java.util.List<java.lang.Integer>> duplicates(java.util.List<ai.desertant.eye.Analysis>, java.util.List<java.lang.Double>);
+  public static java.util.List duplicates$default(ai.desertant.eye.Eye$Companion, java.util.List, java.util.List, int, java.lang.Object);
+  public final java.lang.Integer best(java.util.List<ai.desertant.eye.Analysis>);
+  public final java.util.List<kotlin.Pair<java.lang.Integer, java.lang.Double>> similar(ai.desertant.eye.Analysis, java.util.List<ai.desertant.eye.Analysis>, int);
+  public static java.util.List similar$default(ai.desertant.eye.Eye$Companion, ai.desertant.eye.Analysis, java.util.List, int, int, java.lang.Object);
+  public final java.util.List<java.util.List<java.lang.Integer>> duplicates(java.util.List<ai.desertant.eye.Analysis>);
+  public final java.util.List<kotlin.Pair<java.lang.Integer, java.lang.Double>> similar(ai.desertant.eye.Analysis, java.util.List<ai.desertant.eye.Analysis>);
+}
+public final class ai.desertant.eye.Eye implements java.lang.AutoCloseable {
+  public static final ai.desertant.eye.Eye$Companion Companion;
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.eye.Eye(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object analyze(android.graphics.Bitmap, ai.desertant.eye.Options, kotlin.coroutines.Continuation<? super ai.desertant.eye.Analysis>);
+  public static java.lang.Object analyze$default(ai.desertant.eye.Eye, android.graphics.Bitmap, ai.desertant.eye.Options, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public final java.lang.Object analyze(byte[], int, int, ai.desertant.eye.Options, kotlin.coroutines.Continuation<? super ai.desertant.eye.Analysis>);
+  public static java.lang.Object analyze$default(ai.desertant.eye.Eye, byte[], int, int, ai.desertant.eye.Options, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public synchronized void close();
+  public static final java.util.List<java.util.List<java.lang.Integer>> duplicates(java.util.List<ai.desertant.eye.Analysis>, java.util.List<java.lang.Double>);
+  public static final java.lang.Integer best(java.util.List<ai.desertant.eye.Analysis>);
+  public static final java.util.List<kotlin.Pair<java.lang.Integer, java.lang.Double>> similar(ai.desertant.eye.Analysis, java.util.List<ai.desertant.eye.Analysis>, int);
+  public static final java.util.List<java.util.List<java.lang.Integer>> duplicates(java.util.List<ai.desertant.eye.Analysis>);
+  public static final java.util.List<kotlin.Pair<java.lang.Integer, java.lang.Double>> similar(ai.desertant.eye.Analysis, java.util.List<ai.desertant.eye.Analysis>);
+}
+public final class ai.desertant.eye.EyeException extends java.lang.Exception {
+  public ai.desertant.eye.EyeException(java.lang.String);
+}
+public final class ai.desertant.eye.Face {
+  private final ai.desertant.eye.Box box;
+  private final double detectionConfidence;
+  private final java.util.List<ai.desertant.eye.Point> landmarks;
+  private final ai.desertant.eye.Pose pose;
+  private final double quality;
+  private final java.util.Map<ai.desertant.eye.Tag, java.lang.Double> confidences;
+  public ai.desertant.eye.Face(ai.desertant.eye.Box, double, java.util.List<ai.desertant.eye.Point>, ai.desertant.eye.Pose, double, java.util.Map<ai.desertant.eye.Tag, java.lang.Double>);
+  public final ai.desertant.eye.Box getBox();
+  public final double getDetectionConfidence();
+  public final java.util.List<ai.desertant.eye.Point> getLandmarks();
+  public final ai.desertant.eye.Pose getPose();
+  public final double getQuality();
+  public final java.util.Map<ai.desertant.eye.Tag, java.lang.Double> getConfidences();
+  public final java.lang.Double confidence(ai.desertant.eye.Tag);
+  public final boolean has(ai.desertant.eye.Tag, ai.desertant.eye.Level);
+  public static boolean has$default(ai.desertant.eye.Face, ai.desertant.eye.Tag, ai.desertant.eye.Level, int, java.lang.Object);
+  public final boolean has(ai.desertant.eye.Tag);
+}
+public final class ai.desertant.eye.FaceDetails {
+  private final ai.desertant.eye.Box box;
+  private final double confidence;
+  private final java.util.List<ai.desertant.eye.Point> landmarks;
+  private final double isFace;
+  private final double isReal;
+  private final double eyesOpen;
+  private final java.util.Map<java.lang.String, java.lang.Double> blink;
+  private final double smile;
+  private final java.util.Map<java.lang.String, java.lang.Double> mouth;
+  private final java.util.Map<java.lang.String, java.lang.Double> expression;
+  private final double looking;
+  private final java.util.Map<java.lang.String, java.lang.Double> occlusion;
+  private final double sharp;
+  private final java.util.Map<java.lang.String, java.lang.Double> lighting;
+  private final double keepsake;
+  private final ai.desertant.eye.Pose pose;
+  private final double quality;
+  public ai.desertant.eye.FaceDetails(ai.desertant.eye.Box, double, java.util.List<ai.desertant.eye.Point>, double, double, double, java.util.Map<java.lang.String, java.lang.Double>, double, java.util.Map<java.lang.String, java.lang.Double>, java.util.Map<java.lang.String, java.lang.Double>, double, java.util.Map<java.lang.String, java.lang.Double>, double, java.util.Map<java.lang.String, java.lang.Double>, double, ai.desertant.eye.Pose, double);
+  public final ai.desertant.eye.Box getBox();
+  public final double getConfidence();
+  public final java.util.List<ai.desertant.eye.Point> getLandmarks();
+  public final double isFace();
+  public final double isReal();
+  public final double getEyesOpen();
+  public final java.util.Map<java.lang.String, java.lang.Double> getBlink();
+  public final double getSmile();
+  public final java.util.Map<java.lang.String, java.lang.Double> getMouth();
+  public final java.util.Map<java.lang.String, java.lang.Double> getExpression();
+  public final double getLooking();
+  public final java.util.Map<java.lang.String, java.lang.Double> getOcclusion();
+  public final double getSharp();
+  public final java.util.Map<java.lang.String, java.lang.Double> getLighting();
+  public final double getKeepsake();
+  public final ai.desertant.eye.Pose getPose();
+  public final double getQuality();
+}
+public final class ai.desertant.eye.Grid {
+  private final int width;
+  private final int height;
+  private final float[] values;
+  public ai.desertant.eye.Grid(int, int, float[]);
+  public final int getWidth();
+  public final int getHeight();
+  public final float[] getValues();
+  public final float get(int, int);
+}
+public final class ai.desertant.eye.Layout {
+  private final ai.desertant.eye.Grid attention;
+  private final java.util.List<ai.desertant.eye.Detection> people;
+  private final java.util.List<ai.desertant.eye.Detection> pets;
+  private final java.util.Map<java.lang.String, java.lang.Double> shot;
+  private final java.util.List<ai.desertant.eye.Crop> crops;
+  public ai.desertant.eye.Layout(ai.desertant.eye.Grid, java.util.List<ai.desertant.eye.Detection>, java.util.List<ai.desertant.eye.Detection>, java.util.Map<java.lang.String, java.lang.Double>, java.util.List<ai.desertant.eye.Crop>);
+  public final ai.desertant.eye.Grid getAttention();
+  public final java.util.List<ai.desertant.eye.Detection> getPeople();
+  public final java.util.List<ai.desertant.eye.Detection> getPets();
+  public final java.util.Map<java.lang.String, java.lang.Double> getShot();
+  public final java.util.List<ai.desertant.eye.Crop> getCrops();
+}
+public final class ai.desertant.eye.Level extends java.lang.Enum<ai.desertant.eye.Level> {
+  private final double cutoff;
+  public static final ai.desertant.eye.Level RECOMMENDED;
+  public static final ai.desertant.eye.Level STRICT;
+  private ai.desertant.eye.Level(double);
+  public final double getCutoff();
+  public static ai.desertant.eye.Level[] values();
+  public static ai.desertant.eye.Level valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.eye.Level> getEntries();
+}
+public final class ai.desertant.eye.Options {
+  private final java.util.Set<ai.desertant.eye.Part> parts;
+  private final int maxFaces;
+  public ai.desertant.eye.Options(java.util.Set<? extends ai.desertant.eye.Part>, int);
+  public final java.util.Set<ai.desertant.eye.Part> getParts();
+  public final int getMaxFaces();
+  public ai.desertant.eye.Options();
+}
+public final class ai.desertant.eye.Part extends java.lang.Enum<ai.desertant.eye.Part> {
+  private final int bit;
+  public static final ai.desertant.eye.Part PHOTO;
+  public static final ai.desertant.eye.Part LAYOUT;
+  public static final ai.desertant.eye.Part FACES;
+  public static final ai.desertant.eye.Part SHARPNESS;
+  private ai.desertant.eye.Part(int);
+  public final int getBit$eye_release();
+  public static ai.desertant.eye.Part[] values();
+  public static ai.desertant.eye.Part valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.eye.Part> getEntries();
+}
+public final class ai.desertant.eye.Photo {
+  private final float[] embedding;
+  private final java.util.Map<java.lang.String, java.lang.Double> type;
+  private final java.util.Map<java.lang.String, java.lang.Double> reject;
+  private final java.util.Map<java.lang.String, java.lang.Double> sensitive;
+  private final java.util.Map<java.lang.String, java.lang.Double> scenes;
+  private final java.util.Map<java.lang.Integer, java.lang.Double> rotation;
+  private final double aesthetic;
+  private final java.util.Map<java.lang.String, java.lang.Double> aestheticAttributes;
+  private final double keeper;
+  private final double cover;
+  private final java.util.Map<java.lang.String, java.lang.Double> blur;
+  private final double bokeh;
+  private final java.util.Map<java.lang.String, java.lang.Double> pet;
+  private final java.util.Map<java.lang.String, java.lang.Double> peak;
+  public ai.desertant.eye.Photo(float[], java.util.Map<java.lang.String, java.lang.Double>, java.util.Map<java.lang.String, java.lang.Double>, java.util.Map<java.lang.String, java.lang.Double>, java.util.Map<java.lang.String, java.lang.Double>, java.util.Map<java.lang.Integer, java.lang.Double>, double, java.util.Map<java.lang.String, java.lang.Double>, double, double, java.util.Map<java.lang.String, java.lang.Double>, double, java.util.Map<java.lang.String, java.lang.Double>, java.util.Map<java.lang.String, java.lang.Double>);
+  public final float[] getEmbedding();
+  public final java.util.Map<java.lang.String, java.lang.Double> getType();
+  public final java.util.Map<java.lang.String, java.lang.Double> getReject();
+  public final java.util.Map<java.lang.String, java.lang.Double> getSensitive();
+  public final java.util.Map<java.lang.String, java.lang.Double> getScenes();
+  public final java.util.Map<java.lang.Integer, java.lang.Double> getRotation();
+  public final double getAesthetic();
+  public final java.util.Map<java.lang.String, java.lang.Double> getAestheticAttributes();
+  public final double getKeeper();
+  public final double getCover();
+  public final java.util.Map<java.lang.String, java.lang.Double> getBlur();
+  public final double getBokeh();
+  public final java.util.Map<java.lang.String, java.lang.Double> getPet();
+  public final java.util.Map<java.lang.String, java.lang.Double> getPeak();
+}
+public final class ai.desertant.eye.Point {
+  private final double x;
+  private final double y;
+  public ai.desertant.eye.Point(double, double);
+  public final double getX();
+  public final double getY();
+}
+public final class ai.desertant.eye.Pose {
+  private final double yaw;
+  private final double pitch;
+  private final double roll;
+  public ai.desertant.eye.Pose(double, double, double);
+  public final double getYaw();
+  public final double getPitch();
+  public final double getRoll();
+}
+public final class ai.desertant.eye.Scores {
+  private final double aesthetic;
+  private final double keeper;
+  private final double cover;
+  public ai.desertant.eye.Scores(double, double, double);
+  public final double getAesthetic();
+  public final double getKeeper();
+  public final double getCover();
+}
+public final class ai.desertant.eye.Sharpness {
+  private final double score;
+  private final ai.desertant.eye.Grid blurMap;
+  public ai.desertant.eye.Sharpness(double, ai.desertant.eye.Grid);
+  public final double getScore();
+  public final ai.desertant.eye.Grid getBlurMap();
+}
+public final class ai.desertant.eye.Tag {
+  private final java.lang.String id;
+  public ai.desertant.eye.Tag(java.lang.String);
+  public final java.lang.String getId();
+}
+public final class ai.desertant.eye.Tags {
+  public static final ai.desertant.eye.Tags INSTANCE;
+  public static final ai.desertant.eye.Tag ACADEMIC_DRESS;
+  public static final ai.desertant.eye.Tag ACCIDENT_DISASTER;
+  public static final ai.desertant.eye.Tag ACCIDENTAL;
+  public static final ai.desertant.eye.Tag ACCORDION;
+  public static final ai.desertant.eye.Tag ACOUSTIC_ELECTRIC_GUITAR;
+  public static final ai.desertant.eye.Tag ACTION_FIGURE;
+  public static final ai.desertant.eye.Tag ADOLESCENT;
+  public static final ai.desertant.eye.Tag AERIAL_PHOTOGRAPHY;
+  public static final ai.desertant.eye.Tag AIR_TRAVEL;
+  public static final ai.desertant.eye.Tag AIRCRAFT;
+  public static final ai.desertant.eye.Tag AIRLINER;
+  public static final ai.desertant.eye.Tag AIRPLANE;
+  public static final ai.desertant.eye.Tag ALCOHOLIC_BEVERAGE;
+  public static final ai.desertant.eye.Tag AMERICAN_FOOTBALL;
+  public static final ai.desertant.eye.Tag AMERICAN_SHORTHAIR;
+  public static final ai.desertant.eye.Tag ANIMAL;
+  public static final ai.desertant.eye.Tag ANTELOPE;
+  public static final ai.desertant.eye.Tag ANTIQUE_CAR;
+  public static final ai.desertant.eye.Tag APARTMENT;
+  public static final ai.desertant.eye.Tag APPLE;
+  public static final ai.desertant.eye.Tag AQUARIUM;
+  public static final ai.desertant.eye.Tag ARCHITECTURE;
+  public static final ai.desertant.eye.Tag ARMY;
+  public static final ai.desertant.eye.Tag ART;
+  public static final ai.desertant.eye.Tag AUDIENCE;
+  public static final ai.desertant.eye.Tag AUDIO_EQUIPMENT;
+  public static final ai.desertant.eye.Tag AUSTRALIAN_SHEPHERD;
+  public static final ai.desertant.eye.Tag AVIATION;
+  public static final ai.desertant.eye.Tag BABY;
+  public static final ai.desertant.eye.Tag BACKPACK;
+  public static final ai.desertant.eye.Tag BAD_FRAMING;
+  public static final ai.desertant.eye.Tag BAD_LIGHTING;
+  public static final ai.desertant.eye.Tag BAG;
+  public static final ai.desertant.eye.Tag BAKED_GOODS;
+  public static final ai.desertant.eye.Tag BALCONY;
+  public static final ai.desertant.eye.Tag BALL_OBJECT;
+  public static final ai.desertant.eye.Tag BALLOON;
+  public static final ai.desertant.eye.Tag BANANA;
+  public static final ai.desertant.eye.Tag BANNER;
+  public static final ai.desertant.eye.Tag BASEBALL_BAT;
+  public static final ai.desertant.eye.Tag BASEBALL_GLOVE;
+  public static final ai.desertant.eye.Tag BASEBALL_SPORT;
+  public static final ai.desertant.eye.Tag BASKET;
+  public static final ai.desertant.eye.Tag BASKETBALL_SPORT;
+  public static final ai.desertant.eye.Tag BATHROOM;
+  public static final ai.desertant.eye.Tag BATHTUB;
+  public static final ai.desertant.eye.Tag BEACH;
+  public static final ai.desertant.eye.Tag BEAR;
+  public static final ai.desertant.eye.Tag BEARD;
+  public static final ai.desertant.eye.Tag BED;
+  public static final ai.desertant.eye.Tag BEE;
+  public static final ai.desertant.eye.Tag BEER;
+  public static final ai.desertant.eye.Tag BEETLE;
+  public static final ai.desertant.eye.Tag BELT;
+  public static final ai.desertant.eye.Tag BENCH;
+  public static final ai.desertant.eye.Tag BERRY;
+  public static final ai.desertant.eye.Tag BICYCLE;
+  public static final ai.desertant.eye.Tag BICYCLE_HELMET;
+  public static final ai.desertant.eye.Tag BILLBOARD;
+  public static final ai.desertant.eye.Tag BIRD;
+  public static final ai.desertant.eye.Tag BIRTHDAY;
+  public static final ai.desertant.eye.Tag BIRTHDAY_CAKE;
+  public static final ai.desertant.eye.Tag BLACK_AND_WHITE;
+  public static final ai.desertant.eye.Tag BLACK_CAT;
+  public static final ai.desertant.eye.Tag BLAZER;
+  public static final ai.desertant.eye.Tag BLOOD_INJURY;
+  public static final ai.desertant.eye.Tag BLOSSOM;
+  public static final ai.desertant.eye.Tag BLOUSE;
+  public static final ai.desertant.eye.Tag BLURRY;
+  public static final ai.desertant.eye.Tag BOAT;
+  public static final ai.desertant.eye.Tag BOKEH;
+  public static final ai.desertant.eye.Tag BOOK;
+  public static final ai.desertant.eye.Tag BOOKCASE;
+  public static final ai.desertant.eye.Tag BOOT;
+  public static final ai.desertant.eye.Tag BORDER_COLLIE;
+  public static final ai.desertant.eye.Tag BOTTLE;
+  public static final ai.desertant.eye.Tag BOUQUET;
+  public static final ai.desertant.eye.Tag BOWL;
+  public static final ai.desertant.eye.Tag BOWLING;
+  public static final ai.desertant.eye.Tag BOXER;
+  public static final ai.desertant.eye.Tag BOXING_RING;
+  public static final ai.desertant.eye.Tag BOY;
+  public static final ai.desertant.eye.Tag BRACELET;
+  public static final ai.desertant.eye.Tag BRASSIERE;
+  public static final ai.desertant.eye.Tag BREAD;
+  public static final ai.desertant.eye.Tag BRICK;
+  public static final ai.desertant.eye.Tag BRIDE;
+  public static final ai.desertant.eye.Tag BRIDGE_STRUCTURE;
+  public static final ai.desertant.eye.Tag BRONZE_SCULPTURE;
+  public static final ai.desertant.eye.Tag BUILDING;
+  public static final ai.desertant.eye.Tag BULL;
+  public static final ai.desertant.eye.Tag BULLDOG;
+  public static final ai.desertant.eye.Tag BURMESE;
+  public static final ai.desertant.eye.Tag BUS;
+  public static final ai.desertant.eye.Tag BUST;
+  public static final ai.desertant.eye.Tag BUTTERFLY;
+  public static final ai.desertant.eye.Tag CAKE;
+  public static final ai.desertant.eye.Tag CAMERA;
+  public static final ai.desertant.eye.Tag CANAL;
+  public static final ai.desertant.eye.Tag CANDID;
+  public static final ai.desertant.eye.Tag CANDLE;
+  public static final ai.desertant.eye.Tag CANDY;
+  public static final ai.desertant.eye.Tag CANNON;
+  public static final ai.desertant.eye.Tag CANOE;
+  public static final ai.desertant.eye.Tag CAP;
+  public static final ai.desertant.eye.Tag CAR;
+  public static final ai.desertant.eye.Tag CAR_SEAT;
+  public static final ai.desertant.eye.Tag CARPET;
+  public static final ai.desertant.eye.Tag CARROT;
+  public static final ai.desertant.eye.Tag CARTOON;
+  public static final ai.desertant.eye.Tag CASTLE;
+  public static final ai.desertant.eye.Tag CAT;
+  public static final ai.desertant.eye.Tag CATTLE;
+  public static final ai.desertant.eye.Tag CAVE;
+  public static final ai.desertant.eye.Tag CELLO;
+  public static final ai.desertant.eye.Tag CEMETERY;
+  public static final ai.desertant.eye.Tag CHAIR;
+  public static final ai.desertant.eye.Tag CHANDELIER;
+  public static final ai.desertant.eye.Tag CHART_OR_SLIDE;
+  public static final ai.desertant.eye.Tag CHESS;
+  public static final ai.desertant.eye.Tag CHEST_OF_DRAWERS;
+  public static final ai.desertant.eye.Tag CHICKEN;
+  public static final ai.desertant.eye.Tag CHILD;
+  public static final ai.desertant.eye.Tag CHILD_ART;
+  public static final ai.desertant.eye.Tag CHOCOLATE;
+  public static final ai.desertant.eye.Tag CHRISTMAS;
+  public static final ai.desertant.eye.Tag CHRISTMAS_TREE;
+  public static final ai.desertant.eye.Tag CHURCH;
+  public static final ai.desertant.eye.Tag CITY;
+  public static final ai.desertant.eye.Tag CITYSCAPE;
+  public static final ai.desertant.eye.Tag CLASSIC_CAR;
+  public static final ai.desertant.eye.Tag CLOCK;
+  public static final ai.desertant.eye.Tag CLOTHING;
+  public static final ai.desertant.eye.Tag CLOUD;
+  public static final ai.desertant.eye.Tag COAST;
+  public static final ai.desertant.eye.Tag COAT;
+  public static final ai.desertant.eye.Tag COCKTAIL;
+  public static final ai.desertant.eye.Tag COFFEE_CUP;
+  public static final ai.desertant.eye.Tag COFFEE_DRINK;
+  public static final ai.desertant.eye.Tag COFFEE_TABLE;
+  public static final ai.desertant.eye.Tag COIN;
+  public static final ai.desertant.eye.Tag COMMON_SUNFLOWER;
+  public static final ai.desertant.eye.Tag COMPUTER;
+  public static final ai.desertant.eye.Tag COMPUTER_KEYBOARD;
+  public static final ai.desertant.eye.Tag COMPUTER_MONITOR;
+  public static final ai.desertant.eye.Tag COMPUTER_MOUSE;
+  public static final ai.desertant.eye.Tag CONCERT;
+  public static final ai.desertant.eye.Tag CONVENIENCE_STORE;
+  public static final ai.desertant.eye.Tag COOKIE;
+  public static final ai.desertant.eye.Tag COSMETICS;
+  public static final ai.desertant.eye.Tag COSTUME;
+  public static final ai.desertant.eye.Tag COUCH;
+  public static final ai.desertant.eye.Tag COWBOY_HAT;
+  public static final ai.desertant.eye.Tag CRAB;
+  public static final ai.desertant.eye.Tag CRANE_MACHINE;
+  public static final ai.desertant.eye.Tag CREAM_DRINK;
+  public static final ai.desertant.eye.Tag CROSS;
+  public static final ai.desertant.eye.Tag CROSS_COUNTRY_RUNNING;
+  public static final ai.desertant.eye.Tag CROWD;
+  public static final ai.desertant.eye.Tag CROWN;
+  public static final ai.desertant.eye.Tag CUMULUS;
+  public static final ai.desertant.eye.Tag CUP;
+  public static final ai.desertant.eye.Tag CUPBOARD;
+  public static final ai.desertant.eye.Tag CUPCAKE;
+  public static final ai.desertant.eye.Tag CURTAIN;
+  public static final ai.desertant.eye.Tag CYCLE_SPORT;
+  public static final ai.desertant.eye.Tag DANCE;
+  public static final ai.desertant.eye.Tag DEER;
+  public static final ai.desertant.eye.Tag DENIM;
+  public static final ai.desertant.eye.Tag DESK;
+  public static final ai.desertant.eye.Tag DESSERT;
+  public static final ai.desertant.eye.Tag DINOSAUR;
+  public static final ai.desertant.eye.Tag DISPLAY_DEVICE;
+  public static final ai.desertant.eye.Tag DISTILLED_BEVERAGE;
+  public static final ai.desertant.eye.Tag DOCUMENT;
+  public static final ai.desertant.eye.Tag DOG;
+  public static final ai.desertant.eye.Tag DOLL;
+  public static final ai.desertant.eye.Tag DOLPHIN;
+  public static final ai.desertant.eye.Tag DOOR;
+  public static final ai.desertant.eye.Tag DRAGONFLY;
+  public static final ai.desertant.eye.Tag DRAWING;
+  public static final ai.desertant.eye.Tag DRESS;
+  public static final ai.desertant.eye.Tag DRESS_SHIRT;
+  public static final ai.desertant.eye.Tag DRINK;
+  public static final ai.desertant.eye.Tag DRUM;
+  public static final ai.desertant.eye.Tag DUCK;
+  public static final ai.desertant.eye.Tag EAGLE;
+  public static final ai.desertant.eye.Tag EARRING;
+  public static final ai.desertant.eye.Tag EGG;
+  public static final ai.desertant.eye.Tag ELEPHANT;
+  public static final ai.desertant.eye.Tag ENGINE;
+  public static final ai.desertant.eye.Tag ENGLISH_COCKER_SPANIEL;
+  public static final ai.desertant.eye.Tag EVERYONE_LOOKING;
+  public static final ai.desertant.eye.Tag EVERYONE_SMILING;
+  public static final ai.desertant.eye.Tag EYES_CLOSED;
+  public static final ai.desertant.eye.Tag FALCON;
+  public static final ai.desertant.eye.Tag FAST_FOOD;
+  public static final ai.desertant.eye.Tag FEDORA;
+  public static final ai.desertant.eye.Tag FENCE;
+  public static final ai.desertant.eye.Tag FICTIONAL_CHARACTER;
+  public static final ai.desertant.eye.Tag FIELD;
+  public static final ai.desertant.eye.Tag FIGURINE;
+  public static final ai.desertant.eye.Tag FIRE;
+  public static final ai.desertant.eye.Tag FIRE_HYDRANT;
+  public static final ai.desertant.eye.Tag FIREFIGHTER;
+  public static final ai.desertant.eye.Tag FIREPLACE;
+  public static final ai.desertant.eye.Tag FIREWORKS;
+  public static final ai.desertant.eye.Tag FISH;
+  public static final ai.desertant.eye.Tag FIXED_WING_AIRCRAFT;
+  public static final ai.desertant.eye.Tag FLAG;
+  public static final ai.desertant.eye.Tag FLOWER;
+  public static final ai.desertant.eye.Tag FLOWERPOT;
+  public static final ai.desertant.eye.Tag FOG;
+  public static final ai.desertant.eye.Tag FOOD;
+  public static final ai.desertant.eye.Tag FOOTBALL;
+  public static final ai.desertant.eye.Tag FOOTBALL_HELMET;
+  public static final ai.desertant.eye.Tag FOOTWEAR;
+  public static final ai.desertant.eye.Tag FOREST;
+  public static final ai.desertant.eye.Tag FORGETTABLE;
+  public static final ai.desertant.eye.Tag FORK;
+  public static final ai.desertant.eye.Tag FOUNTAIN;
+  public static final ai.desertant.eye.Tag FRENCH_FRIES;
+  public static final ai.desertant.eye.Tag FRIED_FOOD;
+  public static final ai.desertant.eye.Tag FROG;
+  public static final ai.desertant.eye.Tag FRUIT;
+  public static final ai.desertant.eye.Tag FUNERAL;
+  public static final ai.desertant.eye.Tag FURNITURE;
+  public static final ai.desertant.eye.Tag GARDEN_ROSES;
+  public static final ai.desertant.eye.Tag GATE;
+  public static final ai.desertant.eye.Tag GIRAFFE;
+  public static final ai.desertant.eye.Tag GIRL;
+  public static final ai.desertant.eye.Tag GLASS;
+  public static final ai.desertant.eye.Tag GLASSES;
+  public static final ai.desertant.eye.Tag GLOVE;
+  public static final ai.desertant.eye.Tag GOAT;
+  public static final ai.desertant.eye.Tag GOGGLES;
+  public static final ai.desertant.eye.Tag GOLDEN_RETRIEVER;
+  public static final ai.desertant.eye.Tag GOLF;
+  public static final ai.desertant.eye.Tag GOOSE;
+  public static final ai.desertant.eye.Tag GOWN;
+  public static final ai.desertant.eye.Tag GRADUATION;
+  public static final ai.desertant.eye.Tag GRAFFITI;
+  public static final ai.desertant.eye.Tag GRAPE;
+  public static final ai.desertant.eye.Tag GRASS;
+  public static final ai.desertant.eye.Tag GRASSLAND;
+  public static final ai.desertant.eye.Tag GRAVE;
+  public static final ai.desertant.eye.Tag GRILLING;
+  public static final ai.desertant.eye.Tag GROUP_SHOT;
+  public static final ai.desertant.eye.Tag GUITAR;
+  public static final ai.desertant.eye.Tag GUITARIST;
+  public static final ai.desertant.eye.Tag GUN;
+  public static final ai.desertant.eye.Tag HALLOWEEN;
+  public static final ai.desertant.eye.Tag HAMBURGER;
+  public static final ai.desertant.eye.Tag HANDBAG;
+  public static final ai.desertant.eye.Tag HANDWRITING;
+  public static final ai.desertant.eye.Tag HAPPY;
+  public static final ai.desertant.eye.Tag HARBOR_SEAL;
+  public static final ai.desertant.eye.Tag HAT;
+  public static final ai.desertant.eye.Tag HEADPHONES;
+  public static final ai.desertant.eye.Tag HELICOPTER;
+  public static final ai.desertant.eye.Tag HELMET;
+  public static final ai.desertant.eye.Tag HIGH_HEELS;
+  public static final ai.desertant.eye.Tag HIKING;
+  public static final ai.desertant.eye.Tag HILL;
+  public static final ai.desertant.eye.Tag HIMALAYAN;
+  public static final ai.desertant.eye.Tag HOCKEY;
+  public static final ai.desertant.eye.Tag HOME_APPLIANCE;
+  public static final ai.desertant.eye.Tag HOODIE;
+  public static final ai.desertant.eye.Tag HORIZON;
+  public static final ai.desertant.eye.Tag HORSE;
+  public static final ai.desertant.eye.Tag HORSE_RACING;
+  public static final ai.desertant.eye.Tag HOT_AIR_BALLOON;
+  public static final ai.desertant.eye.Tag HOUSE;
+  public static final ai.desertant.eye.Tag HOUSEPLANT;
+  public static final ai.desertant.eye.Tag HUMAN_FACE;
+  public static final ai.desertant.eye.Tag HUT;
+  public static final ai.desertant.eye.Tag ICE_CREAM;
+  public static final ai.desertant.eye.Tag ICE_SKATING;
+  public static final ai.desertant.eye.Tag ICING;
+  public static final ai.desertant.eye.Tag ID_CARD;
+  public static final ai.desertant.eye.Tag IDENTITY_DOCUMENT;
+  public static final ai.desertant.eye.Tag ILLUSTRATION;
+  public static final ai.desertant.eye.Tag ILLUSTRATION_OR_ART;
+  public static final ai.desertant.eye.Tag INSECT;
+  public static final ai.desertant.eye.Tag JACKET;
+  public static final ai.desertant.eye.Tag JEANS;
+  public static final ai.desertant.eye.Tag JERSEY;
+  public static final ai.desertant.eye.Tag JET_AIRCRAFT;
+  public static final ai.desertant.eye.Tag JEWELLERY;
+  public static final ai.desertant.eye.Tag JUICE;
+  public static final ai.desertant.eye.Tag JUNGLE;
+  public static final ai.desertant.eye.Tag KEEPER;
+  public static final ai.desertant.eye.Tag KISS;
+  public static final ai.desertant.eye.Tag KITCHEN;
+  public static final ai.desertant.eye.Tag KITCHEN_APPLIANCE;
+  public static final ai.desertant.eye.Tag KITCHEN_DINING_ROOM_TABLE;
+  public static final ai.desertant.eye.Tag KNIFE;
+  public static final ai.desertant.eye.Tag LABRADOR_RETRIEVER;
+  public static final ai.desertant.eye.Tag LADDER;
+  public static final ai.desertant.eye.Tag LAKE;
+  public static final ai.desertant.eye.Tag LAMP;
+  public static final ai.desertant.eye.Tag LANDMARK;
+  public static final ai.desertant.eye.Tag LANDSCAPE;
+  public static final ai.desertant.eye.Tag LANTERN;
+  public static final ai.desertant.eye.Tag LAPTOP;
+  public static final ai.desertant.eye.Tag LAVENDER_PLANT;
+  public static final ai.desertant.eye.Tag LAWN;
+  public static final ai.desertant.eye.Tag LEAF;
+  public static final ai.desertant.eye.Tag LEAF_VEGETABLE;
+  public static final ai.desertant.eye.Tag LEGO;
+  public static final ai.desertant.eye.Tag LEMON_PLANT;
+  public static final ai.desertant.eye.Tag LETTER_MESSAGE;
+  public static final ai.desertant.eye.Tag LIGHT_AIRCRAFT;
+  public static final ai.desertant.eye.Tag LIGHTHOUSE;
+  public static final ai.desertant.eye.Tag LIGHTNING;
+  public static final ai.desertant.eye.Tag LILY;
+  public static final ai.desertant.eye.Tag LION;
+  public static final ai.desertant.eye.Tag LIPSTICK;
+  public static final ai.desertant.eye.Tag LIZARD;
+  public static final ai.desertant.eye.Tag LOOKING_AT_CAMERA;
+  public static final ai.desertant.eye.Tag LOOKING_AWAY;
+  public static final ai.desertant.eye.Tag LOUDSPEAKER;
+  public static final ai.desertant.eye.Tag LOW_CONTENT;
+  public static final ai.desertant.eye.Tag LUGGAGE_AND_BAGS;
+  public static final ai.desertant.eye.Tag MAINE_COON;
+  public static final ai.desertant.eye.Tag MAN;
+  public static final ai.desertant.eye.Tag MANNEQUIN;
+  public static final ai.desertant.eye.Tag MANX;
+  public static final ai.desertant.eye.Tag MAP;
+  public static final ai.desertant.eye.Tag MAPLE;
+  public static final ai.desertant.eye.Tag MARINE_MAMMAL;
+  public static final ai.desertant.eye.Tag MASK;
+  public static final ai.desertant.eye.Tag MEAL;
+  public static final ai.desertant.eye.Tag MEAT;
+  public static final ai.desertant.eye.Tag MECHANICAL_FAN;
+  public static final ai.desertant.eye.Tag MEDICAL_HOSPITAL;
+  public static final ai.desertant.eye.Tag MEDICAL_REFERENCE;
+  public static final ai.desertant.eye.Tag MEME_OR_GRAPHIC;
+  public static final ai.desertant.eye.Tag MENU;
+  public static final ai.desertant.eye.Tag METROPOLIS;
+  public static final ai.desertant.eye.Tag METROPOLITAN_AREA;
+  public static final ai.desertant.eye.Tag MICROPHONE;
+  public static final ai.desertant.eye.Tag MILITARY;
+  public static final ai.desertant.eye.Tag MILITARY_AIRCRAFT;
+  public static final ai.desertant.eye.Tag MILITARY_CAMOUFLAGE;
+  public static final ai.desertant.eye.Tag MILITARY_UNIFORM;
+  public static final ai.desertant.eye.Tag MIRROR;
+  public static final ai.desertant.eye.Tag MOBILE_PHONE;
+  public static final ai.desertant.eye.Tag MONKEY;
+  public static final ai.desertant.eye.Tag MONUMENT;
+  public static final ai.desertant.eye.Tag MOON;
+  public static final ai.desertant.eye.Tag MOTHS_AND_BUTTERFLIES;
+  public static final ai.desertant.eye.Tag MOTORCYCLE;
+  public static final ai.desertant.eye.Tag MOTORSPORT;
+  public static final ai.desertant.eye.Tag MOUNTAIN;
+  public static final ai.desertant.eye.Tag MOUNTAIN_RANGE;
+  public static final ai.desertant.eye.Tag MOUSTACHE;
+  public static final ai.desertant.eye.Tag MUFFIN;
+  public static final ai.desertant.eye.Tag MUG;
+  public static final ai.desertant.eye.Tag MUSHROOM;
+  public static final ai.desertant.eye.Tag MUSIC;
+  public static final ai.desertant.eye.Tag MUSICAL_ENSEMBLE;
+  public static final ai.desertant.eye.Tag MUSICAL_KEYBOARD;
+  public static final ai.desertant.eye.Tag MUSICIAN;
+  public static final ai.desertant.eye.Tag NARROW_BODY_AIRCRAFT;
+  public static final ai.desertant.eye.Tag NECKLACE;
+  public static final ai.desertant.eye.Tag NEIGHBOURHOOD;
+  public static final ai.desertant.eye.Tag NEWSPAPER;
+  public static final ai.desertant.eye.Tag NORWEGIAN_FOREST_CAT;
+  public static final ai.desertant.eye.Tag NSFW_EXPLICIT;
+  public static final ai.desertant.eye.Tag NSFW_SUGGESTIVE;
+  public static final ai.desertant.eye.Tag OCEAN;
+  public static final ai.desertant.eye.Tag OFFICE_BUILDING;
+  public static final ai.desertant.eye.Tag ORANGE_FRUIT;
+  public static final ai.desertant.eye.Tag OTHER;
+  public static final ai.desertant.eye.Tag OUTERWEAR;
+  public static final ai.desertant.eye.Tag OVERHEAD_POWER_LINE;
+  public static final ai.desertant.eye.Tag OWL;
+  public static final ai.desertant.eye.Tag PAINTING;
+  public static final ai.desertant.eye.Tag PALM_TREE;
+  public static final ai.desertant.eye.Tag PARACHUTE;
+  public static final ai.desertant.eye.Tag PARROT;
+  public static final ai.desertant.eye.Tag PASTA;
+  public static final ai.desertant.eye.Tag PASTRY;
+  public static final ai.desertant.eye.Tag PEAK_MOMENT;
+  public static final ai.desertant.eye.Tag PEDESTRIAN;
+  public static final ai.desertant.eye.Tag PEN;
+  public static final ai.desertant.eye.Tag PENGUIN;
+  public static final ai.desertant.eye.Tag PEOPLE;
+  public static final ai.desertant.eye.Tag PERFORMING_ARTS;
+  public static final ai.desertant.eye.Tag PERSIAN;
+  public static final ai.desertant.eye.Tag PERSON;
+  public static final ai.desertant.eye.Tag PERSONAL_COMPUTER;
+  public static final ai.desertant.eye.Tag PERSONAL_FLOTATION_DEVICE;
+  public static final ai.desertant.eye.Tag PET;
+  public static final ai.desertant.eye.Tag PHOTO;
+  public static final ai.desertant.eye.Tag PHOTO_OF_SCREEN;
+  public static final ai.desertant.eye.Tag PIANO;
+  public static final ai.desertant.eye.Tag PICTURE_FRAME;
+  public static final ai.desertant.eye.Tag PIG;
+  public static final ai.desertant.eye.Tag PIZZA;
+  public static final ai.desertant.eye.Tag PLANT;
+  public static final ai.desertant.eye.Tag PLATE;
+  public static final ai.desertant.eye.Tag PLAYGROUND;
+  public static final ai.desertant.eye.Tag PODIUM;
+  public static final ai.desertant.eye.Tag POND;
+  public static final ai.desertant.eye.Tag POODLE;
+  public static final ai.desertant.eye.Tag PORCH;
+  public static final ai.desertant.eye.Tag PORTRAIT;
+  public static final ai.desertant.eye.Tag POSTER;
+  public static final ai.desertant.eye.Tag PRINTED_CIRCUIT_BOARD;
+  public static final ai.desertant.eye.Tag PROJECTION_SCREEN;
+  public static final ai.desertant.eye.Tag PUBLIC_TRANSPORT;
+  public static final ai.desertant.eye.Tag PUG;
+  public static final ai.desertant.eye.Tag PUMPKIN;
+  public static final ai.desertant.eye.Tag RABBIT;
+  public static final ai.desertant.eye.Tag RACE_CAR;
+  public static final ai.desertant.eye.Tag RACING;
+  public static final ai.desertant.eye.Tag RACING_BICYCLE;
+  public static final ai.desertant.eye.Tag RACKET;
+  public static final ai.desertant.eye.Tag RAILROAD_CAR;
+  public static final ai.desertant.eye.Tag RAILWAY;
+  public static final ai.desertant.eye.Tag RAINBOW;
+  public static final ai.desertant.eye.Tag RAT;
+  public static final ai.desertant.eye.Tag RECEIPT;
+  public static final ai.desertant.eye.Tag REEF;
+  public static final ai.desertant.eye.Tag REFERENCE;
+  public static final ai.desertant.eye.Tag REFERENCE_PHOTO;
+  public static final ai.desertant.eye.Tag REFRIGERATOR;
+  public static final ai.desertant.eye.Tag REPAIR_REFERENCE;
+  public static final ai.desertant.eye.Tag REPTILE;
+  public static final ai.desertant.eye.Tag RESIDENTIAL_AREA;
+  public static final ai.desertant.eye.Tag RIFLE;
+  public static final ai.desertant.eye.Tag RIVER;
+  public static final ai.desertant.eye.Tag ROAD;
+  public static final ai.desertant.eye.Tag ROCK;
+  public static final ai.desertant.eye.Tag ROSE;
+  public static final ai.desertant.eye.Tag ROTATED;
+  public static final ai.desertant.eye.Tag ROTTWEILER;
+  public static final ai.desertant.eye.Tag RUINS;
+  public static final ai.desertant.eye.Tag RUNNING;
+  public static final ai.desertant.eye.Tag SAILBOAT;
+  public static final ai.desertant.eye.Tag SALAD;
+  public static final ai.desertant.eye.Tag SAND;
+  public static final ai.desertant.eye.Tag SANDAL;
+  public static final ai.desertant.eye.Tag SANDWICH;
+  public static final ai.desertant.eye.Tag SAXOPHONE;
+  public static final ai.desertant.eye.Tag SCARF;
+  public static final ai.desertant.eye.Tag SCOOTER;
+  public static final ai.desertant.eye.Tag SCREENSHOT;
+  public static final ai.desertant.eye.Tag SCULPTURE;
+  public static final ai.desertant.eye.Tag SEA;
+  public static final ai.desertant.eye.Tag SEA_LION;
+  public static final ai.desertant.eye.Tag SEAFOOD;
+  public static final ai.desertant.eye.Tag SELFIE;
+  public static final ai.desertant.eye.Tag SENIOR_CITIZEN;
+  public static final ai.desertant.eye.Tag SENSITIVE;
+  public static final ai.desertant.eye.Tag SHARP;
+  public static final ai.desertant.eye.Tag SHED;
+  public static final ai.desertant.eye.Tag SHEEP;
+  public static final ai.desertant.eye.Tag SHELLFISH;
+  public static final ai.desertant.eye.Tag SHIH_TZU;
+  public static final ai.desertant.eye.Tag SHIP;
+  public static final ai.desertant.eye.Tag SHIRT;
+  public static final ai.desertant.eye.Tag SHOE;
+  public static final ai.desertant.eye.Tag SHOPPING_REFERENCE;
+  public static final ai.desertant.eye.Tag SHORE;
+  public static final ai.desertant.eye.Tag SHORTS;
+  public static final ai.desertant.eye.Tag SHOWER;
+  public static final ai.desertant.eye.Tag SHRUB_PLANT;
+  public static final ai.desertant.eye.Tag SIAMESE;
+  public static final ai.desertant.eye.Tag SIDEWALK;
+  public static final ai.desertant.eye.Tag SINGLE_LENS_REFLEX_CAMERA;
+  public static final ai.desertant.eye.Tag SINK;
+  public static final ai.desertant.eye.Tag SKATEBOARD;
+  public static final ai.desertant.eye.Tag SKETCH;
+  public static final ai.desertant.eye.Tag SKI;
+  public static final ai.desertant.eye.Tag SKIING;
+  public static final ai.desertant.eye.Tag SKIRT;
+  public static final ai.desertant.eye.Tag SKULL;
+  public static final ai.desertant.eye.Tag SKY;
+  public static final ai.desertant.eye.Tag SKYLINE;
+  public static final ai.desertant.eye.Tag SKYSCRAPER;
+  public static final ai.desertant.eye.Tag SMARTPHONE;
+  public static final ai.desertant.eye.Tag SMILE;
+  public static final ai.desertant.eye.Tag SMILING;
+  public static final ai.desertant.eye.Tag SNACK;
+  public static final ai.desertant.eye.Tag SNAKE;
+  public static final ai.desertant.eye.Tag SNEAKERS;
+  public static final ai.desertant.eye.Tag SNOW;
+  public static final ai.desertant.eye.Tag SNOWBOARDING;
+  public static final ai.desertant.eye.Tag SOCCER;
+  public static final ai.desertant.eye.Tag SOCK;
+  public static final ai.desertant.eye.Tag SOFA_BED;
+  public static final ai.desertant.eye.Tag SOFT_DRINK;
+  public static final ai.desertant.eye.Tag SOIL;
+  public static final ai.desertant.eye.Tag SOLDIER;
+  public static final ai.desertant.eye.Tag SPARROW;
+  public static final ai.desertant.eye.Tag SPEECH;
+  public static final ai.desertant.eye.Tag SPIDER;
+  public static final ai.desertant.eye.Tag SPOON;
+  public static final ai.desertant.eye.Tag SPORTS;
+  public static final ai.desertant.eye.Tag SPORTS_CAR;
+  public static final ai.desertant.eye.Tag SPORTS_UNIFORM;
+  public static final ai.desertant.eye.Tag SPORTS_VENUE;
+  public static final ai.desertant.eye.Tag SQUASH_PLANT;
+  public static final ai.desertant.eye.Tag SQUIRREL;
+  public static final ai.desertant.eye.Tag STADIUM;
+  public static final ai.desertant.eye.Tag STAGE;
+  public static final ai.desertant.eye.Tag STAINED_GLASS;
+  public static final ai.desertant.eye.Tag STAIRS;
+  public static final ai.desertant.eye.Tag STATUE;
+  public static final ai.desertant.eye.Tag STEERING_WHEEL;
+  public static final ai.desertant.eye.Tag STONE_CARVING;
+  public static final ai.desertant.eye.Tag STOOL;
+  public static final ai.desertant.eye.Tag STRAWBERRY;
+  public static final ai.desertant.eye.Tag STREET;
+  public static final ai.desertant.eye.Tag STREET_LIGHT;
+  public static final ai.desertant.eye.Tag STUDIO_COUCH;
+  public static final ai.desertant.eye.Tag STUFFED_TOY;
+  public static final ai.desertant.eye.Tag SUIT;
+  public static final ai.desertant.eye.Tag SUN;
+  public static final ai.desertant.eye.Tag SUN_HAT;
+  public static final ai.desertant.eye.Tag SUNGLASSES;
+  public static final ai.desertant.eye.Tag SUNSET;
+  public static final ai.desertant.eye.Tag SUPERCAR;
+  public static final ai.desertant.eye.Tag SUPERHERO;
+  public static final ai.desertant.eye.Tag SURFBOARD;
+  public static final ai.desertant.eye.Tag SURFING;
+  public static final ai.desertant.eye.Tag SURPRISED;
+  public static final ai.desertant.eye.Tag SUSHI;
+  public static final ai.desertant.eye.Tag SWAN;
+  public static final ai.desertant.eye.Tag SWEATER;
+  public static final ai.desertant.eye.Tag SWIMMING;
+  public static final ai.desertant.eye.Tag SWIMMING_POOL;
+  public static final ai.desertant.eye.Tag SWIMWEAR;
+  public static final ai.desertant.eye.Tag T_SHIRT;
+  public static final ai.desertant.eye.Tag TABLE;
+  public static final ai.desertant.eye.Tag TABLET_COMPUTER;
+  public static final ai.desertant.eye.Tag TANK;
+  public static final ai.desertant.eye.Tag TAXI;
+  public static final ai.desertant.eye.Tag TEA;
+  public static final ai.desertant.eye.Tag TECHNICAL_FLAW;
+  public static final ai.desertant.eye.Tag TEDDY_BEAR;
+  public static final ai.desertant.eye.Tag TELEPHONE;
+  public static final ai.desertant.eye.Tag TELEVISION;
+  public static final ai.desertant.eye.Tag TEMPLE;
+  public static final ai.desertant.eye.Tag TENNIS;
+  public static final ai.desertant.eye.Tag TENT;
+  public static final ai.desertant.eye.Tag TEST_OR_DUPLICATE_SHOT;
+  public static final ai.desertant.eye.Tag TIE;
+  public static final ai.desertant.eye.Tag TIGER;
+  public static final ai.desertant.eye.Tag TODDLER;
+  public static final ai.desertant.eye.Tag TOILET;
+  public static final ai.desertant.eye.Tag TOMATO;
+  public static final ai.desertant.eye.Tag TORTOISE;
+  public static final ai.desertant.eye.Tag TOWER;
+  public static final ai.desertant.eye.Tag TOWER_BLOCK;
+  public static final ai.desertant.eye.Tag TOWN;
+  public static final ai.desertant.eye.Tag TOY;
+  public static final ai.desertant.eye.Tag TRACK_AND_FIELD_ATHLETICS;
+  public static final ai.desertant.eye.Tag TRACTOR;
+  public static final ai.desertant.eye.Tag TRAFFIC_LIGHT;
+  public static final ai.desertant.eye.Tag TRAFFIC_SIGN;
+  public static final ai.desertant.eye.Tag TRAIN;
+  public static final ai.desertant.eye.Tag TRAY;
+  public static final ai.desertant.eye.Tag TREE;
+  public static final ai.desertant.eye.Tag TRIPOD;
+  public static final ai.desertant.eye.Tag TROUSERS;
+  public static final ai.desertant.eye.Tag TRUCK;
+  public static final ai.desertant.eye.Tag TRUMPET;
+  public static final ai.desertant.eye.Tag TURTLE;
+  public static final ai.desertant.eye.Tag ULTRAMARATHON;
+  public static final ai.desertant.eye.Tag UMBRELLA;
+  public static final ai.desertant.eye.Tag UNIFORM;
+  public static final ai.desertant.eye.Tag UNUSABLE;
+  public static final ai.desertant.eye.Tag URBAN_AREA;
+  public static final ai.desertant.eye.Tag VAN;
+  public static final ai.desertant.eye.Tag VASE;
+  public static final ai.desertant.eye.Tag VEGETABLE;
+  public static final ai.desertant.eye.Tag VEHICLE;
+  public static final ai.desertant.eye.Tag VINTAGE_CAR;
+  public static final ai.desertant.eye.Tag VIOLENCE_PROTEST;
+  public static final ai.desertant.eye.Tag VIOLIN;
+  public static final ai.desertant.eye.Tag VOLLEYBALL_BALL;
+  public static final ai.desertant.eye.Tag VOLLEYBALL_SPORT;
+  public static final ai.desertant.eye.Tag WALKING;
+  public static final ai.desertant.eye.Tag WALKWAY;
+  public static final ai.desertant.eye.Tag WALL_CLOCK;
+  public static final ai.desertant.eye.Tag WASTE_CONTAINER;
+  public static final ai.desertant.eye.Tag WATCH;
+  public static final ai.desertant.eye.Tag WATER;
+  public static final ai.desertant.eye.Tag WATER_SKIING;
+  public static final ai.desertant.eye.Tag WATERCRAFT;
+  public static final ai.desertant.eye.Tag WATERFALL;
+  public static final ai.desertant.eye.Tag WAVE_NOUN;
+  public static final ai.desertant.eye.Tag WEAPON;
+  public static final ai.desertant.eye.Tag WEDDING;
+  public static final ai.desertant.eye.Tag WEDDING_CAKE;
+  public static final ai.desertant.eye.Tag WEDDING_DRESS;
+  public static final ai.desertant.eye.Tag WHEELCHAIR;
+  public static final ai.desertant.eye.Tag WHITEBOARD;
+  public static final ai.desertant.eye.Tag WILDERNESS;
+  public static final ai.desertant.eye.Tag WILDLIFE;
+  public static final ai.desertant.eye.Tag WINDMILL;
+  public static final ai.desertant.eye.Tag WINDOW;
+  public static final ai.desertant.eye.Tag WINE;
+  public static final ai.desertant.eye.Tag WINE_BOTTLE;
+  public static final ai.desertant.eye.Tag WINE_GLASS;
+  public static final ai.desertant.eye.Tag WOMAN;
+  public static final ai.desertant.eye.Tag ZOO;
+  public static final java.util.List<ai.desertant.eye.Tag> ALL;
+  private ai.desertant.eye.Tags();
+}
+######## ai.desertant:moderator:4.3.0
+public final class ai.desertant.moderator.Moderation {
+  private final double score;
+  private final boolean isNSFW;
+  private final ai.desertant.moderator.Regions regions;
+  public ai.desertant.moderator.Moderation(double, boolean, ai.desertant.moderator.Regions);
+  public final double getScore();
+  public final boolean isNSFW();
+  public final ai.desertant.moderator.Regions getRegions();
+}
+public final class ai.desertant.moderator.Moderator implements java.lang.AutoCloseable {
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.moderator.Moderator(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object analyze(android.graphics.Bitmap, ai.desertant.moderator.Options, kotlin.coroutines.Continuation<? super ai.desertant.moderator.Moderation>);
+  public static java.lang.Object analyze$default(ai.desertant.moderator.Moderator, android.graphics.Bitmap, ai.desertant.moderator.Options, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public final java.lang.Object analyze(byte[], int, int, ai.desertant.moderator.Options, kotlin.coroutines.Continuation<? super ai.desertant.moderator.Moderation>);
+  public static java.lang.Object analyze$default(ai.desertant.moderator.Moderator, byte[], int, int, ai.desertant.moderator.Options, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public synchronized void close();
+}
+public final class ai.desertant.moderator.ModeratorException extends java.lang.Exception {
+  public ai.desertant.moderator.ModeratorException(java.lang.String);
+}
+public final class ai.desertant.moderator.Options {
+  private final double threshold;
+  private final ai.desertant.moderator.Policy policy;
+  private final ai.desertant.moderator.Quality quality;
+  public ai.desertant.moderator.Options(double, ai.desertant.moderator.Policy, ai.desertant.moderator.Quality);
+  public final double getThreshold();
+  public final ai.desertant.moderator.Policy getPolicy();
+  public final ai.desertant.moderator.Quality getQuality();
+  public ai.desertant.moderator.Options();
+}
+public final class ai.desertant.moderator.Policy extends java.lang.Enum<ai.desertant.moderator.Policy> {
+  private final int nativeValue;
+  public static final ai.desertant.moderator.Policy STANDARD;
+  public static final ai.desertant.moderator.Policy ALLOW_TOPLESS;
+  private ai.desertant.moderator.Policy(int);
+  public final int getNativeValue$moderator_release();
+  public static ai.desertant.moderator.Policy[] values();
+  public static ai.desertant.moderator.Policy valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.moderator.Policy> getEntries();
+}
+public final class ai.desertant.moderator.Quality extends java.lang.Enum<ai.desertant.moderator.Quality> {
+  private final int nativeValue;
+  public static final ai.desertant.moderator.Quality FAST;
+  public static final ai.desertant.moderator.Quality BALANCED;
+  public static final ai.desertant.moderator.Quality ACCURATE;
+  private ai.desertant.moderator.Quality(int);
+  public final int getNativeValue$moderator_release();
+  public static ai.desertant.moderator.Quality[] values();
+  public static ai.desertant.moderator.Quality valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.moderator.Quality> getEntries();
+}
+public final class ai.desertant.moderator.Regions {
+  private final double nipples;
+  private final double genitals;
+  private final double buttocks;
+  private final double nude;
+  private final double sexAct;
+  public ai.desertant.moderator.Regions(double, double, double, double, double);
+  public final double getNipples();
+  public final double getGenitals();
+  public final double getButtocks();
+  public final double getNude();
+  public final double getSexAct();
+}
+######## ai.desertant:shapes:4.3.0
+public final class ai.desertant.shapes.Options {
+  private final ai.desertant.shapes.Rotation rotation;
+  private final java.util.Set<ai.desertant.shapes.Shape$Kind> kinds;
+  private final double minimumConfidence;
+  public ai.desertant.shapes.Options(ai.desertant.shapes.Rotation, java.util.Set<? extends ai.desertant.shapes.Shape$Kind>, double);
+  public final ai.desertant.shapes.Rotation getRotation();
+  public final java.util.Set<ai.desertant.shapes.Shape$Kind> getKinds();
+  public final double getMinimumConfidence();
+  public ai.desertant.shapes.Options();
+}
+public final class ai.desertant.shapes.Point {
+  private final double x;
+  private final double y;
+  public ai.desertant.shapes.Point(double, double);
+  public final double getX();
+  public final double getY();
+}
+public final class ai.desertant.shapes.Rotation extends java.lang.Enum<ai.desertant.shapes.Rotation> {
+  public static final ai.desertant.shapes.Rotation SNAPPED;
+  public static final ai.desertant.shapes.Rotation UPRIGHT;
+  public static final ai.desertant.shapes.Rotation FREE;
+  private ai.desertant.shapes.Rotation();
+  public static ai.desertant.shapes.Rotation[] values();
+  public static ai.desertant.shapes.Rotation valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.shapes.Rotation> getEntries();
+}
+public final class ai.desertant.shapes.Shape$Arrow extends ai.desertant.shapes.Shape {
+  private final ai.desertant.shapes.Point from;
+  private final ai.desertant.shapes.Point control1;
+  private final ai.desertant.shapes.Point control2;
+  private final ai.desertant.shapes.Point to;
+  private final boolean startHead;
+  private final boolean endHead;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Arrow(ai.desertant.shapes.Point, ai.desertant.shapes.Point, ai.desertant.shapes.Point, ai.desertant.shapes.Point, boolean, boolean, java.util.List<ai.desertant.shapes.Point>);
+  public final ai.desertant.shapes.Point getFrom();
+  public final ai.desertant.shapes.Point getControl1();
+  public final ai.desertant.shapes.Point getControl2();
+  public final ai.desertant.shapes.Point getTo();
+  public final boolean getStartHead();
+  public final boolean getEndHead();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+  public final java.util.List<java.util.List<ai.desertant.shapes.Point>> arrowheads(double);
+  private static final ai.desertant.shapes.Point arrowheads$at(ai.desertant.shapes.Shape$Arrow, double);
+  private static final ai.desertant.shapes.Point arrowheads$head$barb(ai.desertant.shapes.Point, double, double, double, double);
+  private static final java.util.List<ai.desertant.shapes.Point> arrowheads$head(double, ai.desertant.shapes.Point, ai.desertant.shapes.Point);
+}
+public final class ai.desertant.shapes.Shape$Cloud extends ai.desertant.shapes.Shape {
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Cloud(java.util.List<ai.desertant.shapes.Point>);
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shape$Curve extends ai.desertant.shapes.Shape {
+  private final ai.desertant.shapes.Point from;
+  private final ai.desertant.shapes.Point control1;
+  private final ai.desertant.shapes.Point control2;
+  private final ai.desertant.shapes.Point to;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Curve(ai.desertant.shapes.Point, ai.desertant.shapes.Point, ai.desertant.shapes.Point, ai.desertant.shapes.Point, java.util.List<ai.desertant.shapes.Point>);
+  public final ai.desertant.shapes.Point getFrom();
+  public final ai.desertant.shapes.Point getControl1();
+  public final ai.desertant.shapes.Point getControl2();
+  public final ai.desertant.shapes.Point getTo();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shape$Diamond extends ai.desertant.shapes.Shape {
+  private final java.util.List<ai.desertant.shapes.Point> vertices;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Diamond(java.util.List<ai.desertant.shapes.Point>, java.util.List<ai.desertant.shapes.Point>);
+  public final java.util.List<ai.desertant.shapes.Point> getVertices();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shape$Ellipse extends ai.desertant.shapes.Shape {
+  private final ai.desertant.shapes.Point center;
+  private final double semiMajor;
+  private final double semiMinor;
+  private final double rotation;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Ellipse(ai.desertant.shapes.Point, double, double, double, java.util.List<ai.desertant.shapes.Point>);
+  public final ai.desertant.shapes.Point getCenter();
+  public final double getSemiMajor();
+  public final double getSemiMinor();
+  public final double getRotation();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shape$Heart extends ai.desertant.shapes.Shape {
+  private final ai.desertant.shapes.Point center;
+  private final double width;
+  private final double height;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Heart(ai.desertant.shapes.Point, double, double, java.util.List<ai.desertant.shapes.Point>);
+  public final ai.desertant.shapes.Point getCenter();
+  public final double getWidth();
+  public final double getHeight();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shape$Hexagon extends ai.desertant.shapes.Shape {
+  private final java.util.List<ai.desertant.shapes.Point> vertices;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Hexagon(java.util.List<ai.desertant.shapes.Point>, java.util.List<ai.desertant.shapes.Point>);
+  public final java.util.List<ai.desertant.shapes.Point> getVertices();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shape$Kind extends java.lang.Enum<ai.desertant.shapes.Shape$Kind> {
+  public static final ai.desertant.shapes.Shape$Kind LINE;
+  public static final ai.desertant.shapes.Shape$Kind CURVE;
+  public static final ai.desertant.shapes.Shape$Kind ARROW;
+  public static final ai.desertant.shapes.Shape$Kind RECTANGLE;
+  public static final ai.desertant.shapes.Shape$Kind ELLIPSE;
+  public static final ai.desertant.shapes.Shape$Kind TRIANGLE;
+  public static final ai.desertant.shapes.Shape$Kind DIAMOND;
+  public static final ai.desertant.shapes.Shape$Kind PENTAGON;
+  public static final ai.desertant.shapes.Shape$Kind HEXAGON;
+  public static final ai.desertant.shapes.Shape$Kind STAR;
+  public static final ai.desertant.shapes.Shape$Kind HEART;
+  public static final ai.desertant.shapes.Shape$Kind CLOUD;
+  public static final ai.desertant.shapes.Shape$Kind SCRIBBLE;
+  private ai.desertant.shapes.Shape$Kind();
+  public static ai.desertant.shapes.Shape$Kind[] values();
+  public static ai.desertant.shapes.Shape$Kind valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.shapes.Shape$Kind> getEntries();
+}
+public final class ai.desertant.shapes.Shape$Line extends ai.desertant.shapes.Shape {
+  private final ai.desertant.shapes.Point from;
+  private final ai.desertant.shapes.Point to;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Line(ai.desertant.shapes.Point, ai.desertant.shapes.Point, java.util.List<ai.desertant.shapes.Point>);
+  public final ai.desertant.shapes.Point getFrom();
+  public final ai.desertant.shapes.Point getTo();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shape$Pentagon extends ai.desertant.shapes.Shape {
+  private final java.util.List<ai.desertant.shapes.Point> vertices;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Pentagon(java.util.List<ai.desertant.shapes.Point>, java.util.List<ai.desertant.shapes.Point>);
+  public final java.util.List<ai.desertant.shapes.Point> getVertices();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shape$Rectangle extends ai.desertant.shapes.Shape {
+  private final java.util.List<ai.desertant.shapes.Point> corners;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Rectangle(java.util.List<ai.desertant.shapes.Point>, java.util.List<ai.desertant.shapes.Point>);
+  public final java.util.List<ai.desertant.shapes.Point> getCorners();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shape$Scribble extends ai.desertant.shapes.Shape {
+  private final java.util.List<ai.desertant.shapes.Point> hull;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Scribble(java.util.List<ai.desertant.shapes.Point>, java.util.List<ai.desertant.shapes.Point>);
+  public final java.util.List<ai.desertant.shapes.Point> getHull();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shape$Star extends ai.desertant.shapes.Shape {
+  private final ai.desertant.shapes.Point center;
+  private final double outerRadius;
+  private final double innerRadius;
+  private final double rotation;
+  private final int pointCount;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Star(ai.desertant.shapes.Point, double, double, double, int, java.util.List<ai.desertant.shapes.Point>);
+  public final ai.desertant.shapes.Point getCenter();
+  public final double getOuterRadius();
+  public final double getInnerRadius();
+  public final double getRotation();
+  public final int getPointCount();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shape$Triangle extends ai.desertant.shapes.Shape {
+  private final java.util.List<ai.desertant.shapes.Point> vertices;
+  private final java.util.List<ai.desertant.shapes.Point> outline;
+  public ai.desertant.shapes.Shape$Triangle(java.util.List<ai.desertant.shapes.Point>, java.util.List<ai.desertant.shapes.Point>);
+  public final java.util.List<ai.desertant.shapes.Point> getVertices();
+  public java.util.List<ai.desertant.shapes.Point> getOutline();
+  public ai.desertant.shapes.Shape$Kind getKind();
+}
+public abstract class ai.desertant.shapes.Shape {
+  private ai.desertant.shapes.Shape();
+  public abstract java.util.List<ai.desertant.shapes.Point> getOutline();
+  public abstract ai.desertant.shapes.Shape$Kind getKind();
+}
+public final class ai.desertant.shapes.Shapes$Companion {
+  private ai.desertant.shapes.Shapes$Companion();
+}
+public final class ai.desertant.shapes.Shapes implements java.lang.AutoCloseable {
+  public static final ai.desertant.shapes.Shapes$Companion Companion;
+  private final ai.desertant.core.LoadedModel model;
+  public ai.desertant.shapes.Shapes(android.content.Context, java.lang.String);
+  public final boolean isDownloaded();
+  public final java.lang.Object download(kotlin.coroutines.Continuation<? super kotlin.Unit>);
+  public final java.lang.Object recognize(java.util.List<ai.desertant.shapes.Point>, ai.desertant.shapes.Options, kotlin.coroutines.Continuation<? super ai.desertant.shapes.Shape>);
+  public static java.lang.Object recognize$default(ai.desertant.shapes.Shapes, java.util.List, ai.desertant.shapes.Options, kotlin.coroutines.Continuation, int, java.lang.Object);
+  public synchronized void close();
+}
+public final class ai.desertant.shapes.ShapesException extends java.lang.Exception {
+  public ai.desertant.shapes.ShapesException(java.lang.String);
+}
+######## ai.desertant:tongue:4.3.0 (jar)
+public final class ai.desertant.tongue.Metadata {
+  public static final ai.desertant.tongue.Metadata$Companion Companion;
+  private final java.util.List<java.lang.String> labels;
+  private final int numBuckets;
+  private final int dimension;
+  private final java.util.List<java.lang.Integer> ngramOrders;
+  private final float embeddingScale;
+  private final java.util.List<java.lang.String> latinLabels;
+  public ai.desertant.tongue.Metadata(java.util.List<java.lang.String>, int, int, java.util.List<java.lang.Integer>, float, java.util.List<java.lang.String>);
+  public final java.util.List<java.lang.String> getLabels();
+  public final int getNumBuckets();
+  public final int getDimension();
+  public final java.util.List<java.lang.Integer> getNgramOrders();
+  public final float getEmbeddingScale();
+  public final java.util.List<java.lang.String> getLatinLabels();
+}
+public final class ai.desertant.tongue.DesertAnt {
+  public static final ai.desertant.tongue.DesertAnt INSTANCE;
+  private static volatile java.lang.String apiKey;
+  private static volatile boolean sendsDeviceContext;
+  private ai.desertant.tongue.DesertAnt();
+  public static final java.lang.String getApiKey();
+  public static final void setApiKey(java.lang.String);
+  public static final boolean getSendsDeviceContext();
+  public static final void setSendsDeviceContext(boolean);
+}
+public final class ai.desertant.tongue.Tongue$Companion {
+  private ai.desertant.tongue.Tongue$Companion();
+  public final ai.desertant.tongue.Tongue bundled();
+  public final ai.desertant.tongue.Tongue bundled(java.lang.Object);
+  public final ai.desertant.tongue.Tongue of(java.lang.String, byte[]);
+  public final ai.desertant.tongue.Tongue of(java.lang.String, byte[], java.lang.Object);
+  public static ai.desertant.tongue.Tongue of$default(ai.desertant.tongue.Tongue$Companion, java.lang.String, byte[], java.lang.Object, int, java.lang.Object);
+}
+public final class ai.desertant.tongue.DiscardTable {
+  public static final ai.desertant.tongue.DiscardTable INSTANCE;
+  private static final java.util.List<kotlin.Pair<java.lang.Integer, java.lang.Integer>> ranges;
+  private ai.desertant.tongue.DiscardTable();
+  public final java.util.List<kotlin.Pair<java.lang.Integer, java.lang.Integer>> getRanges();
+}
+public final class ai.desertant.tongue.Range {
+  private final int start;
+  private final int end;
+  private final java.lang.String script;
+  public ai.desertant.tongue.Range(int, int, java.lang.String);
+  public final int getStart();
+  public final int getEnd();
+  public final java.lang.String getScript();
+}
+public final class ai.desertant.tongue.Metadata$Companion {
+  private ai.desertant.tongue.Metadata$Companion();
+  public final ai.desertant.tongue.Metadata parse(java.lang.String);
+  private static final java.util.List<java.lang.String> parse$strings(java.lang.String, java.lang.String);
+  private static final java.util.List<java.lang.Integer> parse$ints(java.lang.String, java.lang.String);
+  private static final java.lang.Double parse$number(java.lang.String, java.lang.String);
+}
+public final class ai.desertant.tongue.Hashing {
+  public static final ai.desertant.tongue.Hashing INSTANCE;
+  public static final int OFFSET_BASIS;
+  public static final int PRIME;
+  private static final java.util.List<java.lang.Integer> NGRAM_ORDERS;
+  private static final char BOUNDARY_START;
+  private static final char BOUNDARY_END;
+  private ai.desertant.tongue.Hashing();
+  public final java.util.List<java.lang.Integer> getNGRAM_ORDERS();
+  public final long fnv1a(java.lang.String);
+  private final long fnv1a(int[], int, int);
+  public final java.util.Map<java.lang.Integer, java.lang.Integer> buckets(java.lang.String, int, java.util.List<java.lang.Integer>);
+  public static java.util.Map buckets$default(ai.desertant.tongue.Hashing, java.lang.String, int, java.util.List, int, java.lang.Object);
+  private final int[] buildMarked(java.lang.String);
+  public final java.util.Map<java.lang.Integer, java.lang.Integer> buckets(java.lang.String, int);
+}
+public final class ai.desertant.tongue.Router {
+  public static final ai.desertant.tongue.Router INSTANCE;
+  private ai.desertant.tongue.Router();
+  public final java.lang.String scriptFor(int);
+  public final java.util.Map<java.lang.String, java.lang.Integer> histogram(java.lang.String);
+  public final java.lang.String presence(java.util.Map<java.lang.String, java.lang.Integer>, java.util.Set<java.lang.String>);
+  public final java.lang.String dominantScript(java.lang.String);
+  public final ai.desertant.tongue.Route route(java.lang.String);
+}
+public final class ai.desertant.tongue.Route {
+  private final ai.desertant.tongue.Verdict verdict;
+  private final java.util.List<java.lang.String> candidates;
+  private final java.lang.String script;
+  public ai.desertant.tongue.Route(ai.desertant.tongue.Verdict, java.util.List<java.lang.String>, java.lang.String);
+  public final ai.desertant.tongue.Verdict getVerdict();
+  public final java.util.List<java.lang.String> getCandidates();
+  public final java.lang.String getScript();
+}
+public final class ai.desertant.tongue.Detection {
+  private final java.lang.String normalized;
+  private final java.util.List<ai.desertant.tongue.Prediction> candidates;
+  private final ai.desertant.tongue.Reliability reliability;
+  private final ai.desertant.tongue.Route route;
+  private final boolean isTooCloseToCall;
+  public ai.desertant.tongue.Detection(java.lang.String, java.util.List<ai.desertant.tongue.Prediction>, ai.desertant.tongue.Reliability, ai.desertant.tongue.Route, boolean);
+  public final java.lang.String getNormalized();
+  public final java.util.List<ai.desertant.tongue.Prediction> getCandidates();
+  public final ai.desertant.tongue.Reliability getReliability();
+  public final ai.desertant.tongue.Route getRoute();
+  public final boolean isTooCloseToCall();
+  public final java.lang.String getLanguage();
+}
+public final class ai.desertant.tongue.Weights {
+  private final ai.desertant.tongue.Metadata metadata;
+  private final byte[] embedding;
+  private final float[] linearWeight;
+  private final float[] linearBias;
+  public ai.desertant.tongue.Weights(byte[], ai.desertant.tongue.Metadata);
+  private final float readFloat(byte[], int);
+  public final java.util.List<ai.desertant.tongue.Prediction> rank(java.lang.String, java.util.Set<java.lang.String>, int);
+}
+public final class ai.desertant.tongue.TongueException extends java.lang.RuntimeException {
+  public ai.desertant.tongue.TongueException(java.lang.String);
+}
+public final class ai.desertant.tongue.Verdict extends java.lang.Enum<ai.desertant.tongue.Verdict> {
+  public static final ai.desertant.tongue.Verdict DECISIVE;
+  public static final ai.desertant.tongue.Verdict NARROWING;
+  public static final ai.desertant.tongue.Verdict AMBIGUOUS;
+  private ai.desertant.tongue.Verdict();
+  public static ai.desertant.tongue.Verdict[] values();
+  public static ai.desertant.tongue.Verdict valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.tongue.Verdict> getEntries();
+}
+public final class ai.desertant.tongue.Prediction {
+  private final java.lang.String language;
+  private final double probability;
+  public ai.desertant.tongue.Prediction(java.lang.String, double);
+  public final java.lang.String getLanguage();
+  public final double getProbability();
+}
+public final class ai.desertant.tongue.Normalizer {
+  public static final ai.desertant.tongue.Normalizer INSTANCE;
+  public static final int MAX_CHARACTERS;
+  public static final java.lang.String WHITESPACE_CLASS;
+  private static final java.lang.String NON_WHITESPACE;
+  private static final kotlin.text.Regex URL;
+  private static final kotlin.text.Regex EMAIL;
+  private static final kotlin.text.Regex MENTION;
+  private static final kotlin.text.Regex DIGITS;
+  private static final kotlin.text.Regex WHITESPACE;
+  private ai.desertant.tongue.Normalizer();
+  private final boolean isDiscarded(int);
+  public final java.lang.String normalize(java.lang.String);
+  private final java.lang.String dropDiscardedCategories(java.lang.String);
+  private final java.lang.String truncateToCodePoints(java.lang.String, int);
+  public final java.util.List<java.lang.String> tokens(java.lang.String);
+}
+public final class ai.desertant.tongue.Reliability extends java.lang.Enum<ai.desertant.tongue.Reliability> {
+  public static final ai.desertant.tongue.Reliability CONFIDENT;
+  public static final ai.desertant.tongue.Reliability LIKELY;
+  public static final ai.desertant.tongue.Reliability TENTATIVE;
+  public static final ai.desertant.tongue.Reliability EMPTY;
+  private ai.desertant.tongue.Reliability();
+  public static ai.desertant.tongue.Reliability[] values();
+  public static ai.desertant.tongue.Reliability valueOf(java.lang.String);
+  public static kotlin.enums.EnumEntries<ai.desertant.tongue.Reliability> getEntries();
+}
+public final class ai.desertant.tongue.Tongue {
+  public static final ai.desertant.tongue.Tongue$Companion Companion;
+  private final ai.desertant.tongue.Metadata metadata;
+  private final ai.desertant.tongue.Weights weights;
+  private static final java.lang.String NO_CONTEXT;
+  public ai.desertant.tongue.Tongue(ai.desertant.tongue.Metadata, ai.desertant.tongue.Weights);
+  public final boolean flushTelemetry();
+  public final ai.desertant.tongue.Detection detect(java.lang.String, int);
+  public static ai.desertant.tongue.Detection detect$default(ai.desertant.tongue.Tongue, java.lang.String, int, int, java.lang.Object);
+  private final ai.desertant.tongue.Reliability reliabilityOf(java.lang.String, java.util.List<ai.desertant.tongue.Prediction>);
+  public final ai.desertant.tongue.Detection detect(java.lang.String);
+  public static final ai.desertant.tongue.Tongue bundled();
+  public static final ai.desertant.tongue.Tongue bundled(java.lang.Object);
+  public static final ai.desertant.tongue.Tongue of(java.lang.String, byte[]);
+  public static final ai.desertant.tongue.Tongue of(java.lang.String, byte[], java.lang.Object);
+}
+public final class ai.desertant.tongue.ScriptTables {
+  public static final ai.desertant.tongue.ScriptTables INSTANCE;
+  private static final java.util.List<ai.desertant.tongue.Range> ranges;
+  private static final java.util.Map<java.lang.String, java.lang.String> decisive;
+  private static final java.util.Map<java.lang.String, java.util.List<java.lang.String>> narrowing;
+  public static final java.lang.String JAPANESE;
+  private ai.desertant.tongue.ScriptTables();
+  public final java.util.List<ai.desertant.tongue.Range> getRanges();
+  public final java.util.Map<java.lang.String, java.lang.String> getDecisive();
+  public final java.util.Map<java.lang.String, java.util.List<java.lang.String>> getNarrowing();
+}

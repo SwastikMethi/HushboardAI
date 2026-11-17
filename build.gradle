@@ -1,0 +1,4 @@
+// Root build file: declares the plugin versions the modules apply.
+plugins {
+    alias(libs.plugins.android.application) apply false
+}

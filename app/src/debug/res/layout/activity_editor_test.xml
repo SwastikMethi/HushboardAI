@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug editor host: one field per editor type. Text is hardcoded because it never ships. -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:ignore="HardcodedText,Autofill">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <EditText
+            android:id="@+id/field_plain"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Plain text"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/field_multiline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Multi-line"
+            android:inputType="textMultiLine|textCapSentences"
+            android:minLines="2" />
+
+        <EditText
+            android:id="@+id/field_password"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Password"
+            android:inputType="textPassword" />
+
+        <EditText
+            android:id="@+id/field_no_learning"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="No personalized learning"
+            android:imeOptions="flagNoPersonalizedLearning"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/field_send"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Action: send"
+            android:imeOptions="actionSend"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/field_search"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Action: search"
+            android:imeOptions="actionSearch"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/field_next"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Action: next"
+            android:imeOptions="actionNext"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/field_done"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Action: done"
+            android:imeOptions="actionDone"
+            android:inputType="text" />
+
+        <EditText
+            android:id="@+id/field_go"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Action: go"
+            android:imeOptions="actionGo"
+            android:inputType="textUri" />
+    </LinearLayout>
+</ScrollView>

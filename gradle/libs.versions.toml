@@ -1,0 +1,70 @@
+# Version catalog: the single place every dependency version is pinned.
+[versions]
+agp = "9.2.1"
+appcompat = "1.7.1"
+material = "1.14.0"
+constraintlayout = "2.2.1"
+fragment = "1.8.9"
+recyclerview = "1.4.0"
+lifecycle = "2.9.4"
+datastore = "1.3.0"
+work = "2.12.0"
+concurrentFutures = "1.3.0"
+emojipicker = "1.7.0"
+rxjava = "3.1.12"
+rxandroid = "3.0.2"
+coroutines = "1.9.0"
+desertant = "4.3.0"
+junit = "4.13.2"
+androidxTest = "1.7.0"
+androidxTestExtJunit = "1.3.0"
+espresso = "3.7.0"
+uiautomator = "2.3.0"
+
+[libraries]
+appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
+material = { module = "com.google.android.material:material", version.ref = "material" }
+constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "constraintlayout" }
+fragment = { module = "androidx.fragment:fragment", version.ref = "fragment" }
+recyclerview = { module = "androidx.recyclerview:recyclerview", version.ref = "recyclerview" }
+lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
+lifecycle-livedata = { module = "androidx.lifecycle:lifecycle-livedata", version.ref = "lifecycle" }
+datastore-preferences-rxjava3 = { module = "androidx.datastore:datastore-preferences-rxjava3", version.ref = "datastore" }
+work-runtime = { module = "androidx.work:work-runtime", version.ref = "work" }
+work-testing = { module = "androidx.work:work-testing", version.ref = "work" }
+concurrent-futures = { module = "androidx.concurrent:concurrent-futures", version.ref = "concurrentFutures" }
+emojipicker = { module = "androidx.emoji2:emoji2-emojipicker", version.ref = "emojipicker" }
+rxjava = { module = "io.reactivex.rxjava3:rxjava", version.ref = "rxjava" }
+rxandroid = { module = "io.reactivex.rxjava3:rxandroid", version.ref = "rxandroid" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+
+desertant-emo = { module = "ai.desertant:emo", version.ref = "desertant" }
+desertant-redact = { module = "ai.desertant:redact", version.ref = "desertant" }
+desertant-toxic = { module = "ai.desertant:toxic", version.ref = "desertant" }
+desertant-tongue = { module = "ai.desertant:tongue", version.ref = "desertant" }
+desertant-gist = { module = "ai.desertant:gist", version.ref = "desertant" }
+desertant-voz = { module = "ai.desertant:voz", version.ref = "desertant" }
+desertant-clear = { module = "ai.desertant:clear", version.ref = "desertant" }
+desertant-ear = { module = "ai.desertant:ear", version.ref = "desertant" }
+desertant-uhm = { module = "ai.desertant:uhm", version.ref = "desertant" }
+desertant-who = { module = "ai.desertant:who", version.ref = "desertant" }
+desertant-eye = { module = "ai.desertant:eye", version.ref = "desertant" }
+desertant-moderator = { module = "ai.desertant:moderator", version.ref = "desertant" }
+desertant-shapes = { module = "ai.desertant:shapes", version.ref = "desertant" }
+
+junit = { module = "junit:junit", version.ref = "junit" }
+androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTest" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTest" }
+androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "androidxTestExtJunit" }
+espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
+uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
+
+[bundles]
+desertant = [
+    "desertant-emo", "desertant-redact", "desertant-toxic", "desertant-tongue", "desertant-gist",
+    "desertant-voz", "desertant-clear", "desertant-ear", "desertant-uhm", "desertant-who",
+    "desertant-eye", "desertant-moderator", "desertant-shapes",
+]
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }

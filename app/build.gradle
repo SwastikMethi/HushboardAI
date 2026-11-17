@@ -1,0 +1,67 @@
+// App module: the keyboard service and the companion app, built into one APK.
+plugins {
+    alias(libs.plugins.android.application)
+}
+
+android {
+    namespace = 'com.example.aikeyboard'
+    compileSdk {
+        version = release(36) { minorApiLevel = 1 }
+    }
+
+    defaultConfig {
+        applicationId = 'com.example.aikeyboard'
+        minSdk = 26
+        targetSdk = 36
+        versionCode = 1
+        versionName = '0.1.0'
+        testInstrumentationRunner = 'androidx.test.runner.AndroidJUnitRunner'
+        // The vendor SDK ships arm64-v8a and x86_64 only; every test target here is arm64.
+        ndk {
+            abiFilters.add('arm64-v8a')
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        viewBinding = true
+    }
+}
+
+dependencies {
+    implementation libs.appcompat
+    implementation libs.material
+    implementation libs.constraintlayout
+    implementation libs.fragment
+    implementation libs.recyclerview
+    implementation libs.lifecycle.viewmodel
+    implementation libs.lifecycle.livedata
+    implementation libs.datastore.preferences.rxjava3
+    implementation libs.work.runtime
+    implementation libs.concurrent.futures
+    implementation libs.emojipicker
+    implementation libs.rxjava
+    implementation libs.rxandroid
+    // Compile-time access to the coroutine-to-future builder used by sdkbridge.
+    implementation libs.kotlinx.coroutines.core
+
+    // Each native model adds ~56 MB to the APK (703 MB with all 13), so models are added
+    // as their adapters land. The full set is libs.bundles.desertant.
+    implementation libs.desertant.emo
+    implementation libs.desertant.redact
+    implementation libs.desertant.toxic
+    implementation libs.desertant.tongue
+
+    testImplementation libs.junit
+
+    androidTestImplementation libs.androidx.test.core
+    androidTestImplementation libs.androidx.test.runner
+    androidTestImplementation libs.androidx.test.ext.junit
+    androidTestImplementation libs.espresso.core
+    androidTestImplementation libs.uiautomator
+    androidTestImplementation libs.work.testing
+}

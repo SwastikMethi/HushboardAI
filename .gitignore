@@ -1,0 +1,9 @@
+# Build output, machine-local config and editor state stay out of version control.
+.gradle/
+build/
+local.properties
+.DS_Store
+.idea/
+*.iml
+captures/
+.superpowers/

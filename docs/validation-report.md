@@ -477,6 +477,8 @@ Part 2 followed the owner's steps on the phone: they approved OnePlus's install 
 
 Totals for the suite on the phone (`-e clear true -e stockApps true`, three tests left out): 171 run, 132 passed, 15 skipped, 24 failed. 22 of the 24 are the microphone-grant fault in the tests.
 
+The test changes made during the phone session were then run as the whole suite on the emulator (EMU-37B, `-e clear true`): 174 run, 158 passed, 16 skipped by design (13 opt-in probes and the three latency measurements), none failed.
+
 ## The handoff checklist, item by item
 
 Each line of `docs/BUILD_AND_TEST_CHECKLIST.md`, with where it stands. "Emulator" means it ran and passed on an emulator only; the phone rows above still apply.

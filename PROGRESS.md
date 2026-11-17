@@ -236,4 +236,13 @@ What is still open at the end of the emulator work, in one place. Items from ear
 
 ## Next action
 
-**The phone session, which needs the owner.** Connect an Android phone (arm64, Android 8 or later, USB debugging on) and say so. Then, in one sitting: install the debug APK; the owner enables and selects the keyboard on the phone and grants the microphone when asked; type in the debug host, a browser, a notes app and whichever of WhatsApp, Telegram and Discord are signed in; measure key handling and suggestion latency; watch memory with Voz and Eye; try dictation with a real voice; try Clear on the phone's GPU; turn TalkBack on and go through the keyboard and the three tabs. Results go into the blocked rows of `docs/validation-report.md`.
+**The phone session is under way and waiting on the owner** (OnePlus CPH2423, serial `(serial omitted)`). Part 1 is done and recorded in the validation report under "Phone session".
+
+Waiting for, on the phone, by the owner:
+
+1. Approve OnePlus's install prompt (it appeared on the second `adb install`; the first went through without it).
+2. Open AI Keyboard and use its two setup buttons to enable and select the keyboard.
+3. Grant the microphone when Voice tools asks.
+4. Do Not Disturb on, phone unlocked and left alone for the automated run.
+
+Then, in this order: `LatencyProbeTest` with `-e latency true`; the keyboard's own tests, leaving out the ones that switch Wi-Fi off or turn animations off (ruling 91), and putting `show_ime_with_hard_keyboard` back to `0` afterwards (it was `0` on this phone); memory while typing; then with the owner at the phone: a browser, a notes app and whichever chat apps they choose, dictation with a real voice, haptics and sound, and TalkBack. The owner's chat apps are not to be screenshotted or read; they type and say what they see. Never use Gradle's `install*` tasks while the phone is connected (they install on every device); use `adb -s`.

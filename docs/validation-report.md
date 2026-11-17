@@ -131,3 +131,35 @@ Two findings from running on the device, both fixed and covered by tests:
 - Android defers background jobs for apps that are not on screen, sometimes by minutes. Downloads are only started from the companion app while it is visible, and the device tests now do the same.
 
 Full-suite run at the end of the milestone: 47 instrumented tests; 43 executed and passed, 4 skipped by design (offline probe, two-step kill probe, stock-app probe).
+
+## Milestone 3 — Emo vertical slice
+
+Unit tests (JVM): 87 passed in total. New in this milestone: `AiCoordinatorTest` 12, `InputEligibilityTest` 7, `SuggestionPolicyTest` 5, `CrashBreakerTest` 4, `InferenceSchedulerTest` 4.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| A result for an older draft is dropped | passed | host | `AiCoordinatorTest.aResultForAnOlderDraftIsDropped` |
+| A result computed under older settings is dropped, and the draft is analysed again | passed | host | `AiCoordinatorTest.aResultComputedUnderOlderSettingsIsDropped` |
+| A new draft clears what was shown for the old one | passed | host | `AiCoordinatorTest.aNewDraftClearsWhatWasShownForTheOldOne` |
+| Turning AI off clears suggestions and cancels pending work | passed | host | `AiCoordinatorTest.turningAiOffClearsSuggestionsAndCancelsPendingWork` |
+| A model that is switched off, not installed, or in a disallowed field is never called | passed | host | `AiCoordinatorTest` (three tests) |
+| A failing model shows nothing and typing continues | passed | host | `AiCoordinatorTest.aFailingModelShowsNothingAndDoesNotThrow` |
+| Only text before the cursor goes to the emoji model; a late result after the session ended is ignored | passed | host | `AiCoordinatorTest` (two tests) |
+| Debounce: only the newest request per model reaches the inference thread; work never runs on the timer thread | passed | host | `InferenceSchedulerTest` |
+| Field eligibility: password, no-learning, non-text, blocked app, AI off | passed | host | `InputEligibilityTest` |
+| Crash breaker: an unfinished load is reported once by the next start | passed | host | `CrashBreakerTest` |
+| Real Emo result → visible suggestion → tap inserts it | passed | EMU-37 | `KeyboardAiTest.anEmojiIsSuggestedForTheDraftAndATapInsertsIt`; `docs/evidence/screenshots/m3_ai_suggestions.png` (🍕 😋 🔥 for "Pizza sounds good") |
+| The same flow with the network off | passed | EMU-37, airplane mode | Same test run with `cmd connectivity airplane-mode enable`; "Active default network: none" confirmed |
+| Nothing suggested with AI off, in a password field, in a no-learning field, in a blocked app | passed | EMU-37 | `KeyboardAiTest` (four tests) |
+| The AI panel's master switch writes the setting the companion app uses; the tool-row control follows | passed | EMU-37 | `KeyboardAiTest.theAiPanelSwitchIsTheSameSettingTheCompanionAppUses` |
+| A model switched on but not installed offers setup, never runs, and typing is unaffected | passed | EMU-37 | `KeyboardAiTest.aModelSwitchedOnButNotInstalledOffersSetupInsteadOfRunning` |
+| A model whose load never finished is switched off at the next start; re-enabling clears the note | passed | EMU-37 | `KeyboardAiTest.aModelThatCrashedTheKeyboardIsSwitchedOffAtTheNextStart` (marker planted by the test; no real crash was induced) |
+| Bounded draft read with offset and partial flag | passed | EMU-37 | `EditorBridgeTest.readDraft_*` (API 31+ path only; the older-API fallback is not run — no image below API 35 here) |
+| Appearance: gradient AI control, emoji strip, muted violet panel at keyboard height | passed (reviewed) | EMU-37 | `m3_typing_ai_off.png`, `m3_ai_suggestions.png`, `m3_ai_panel.png` |
+| The 600 ms enable sweep plays once and is skipped with animations off | not run | — | Implemented (`AiToggleView.playEnableSweep`, guarded by `ValueAnimator.areAnimatorsEnabled()`); not asserted by a test. Milestone 8. |
+| Releasing models under memory pressure | not run | — | Implemented (`onTrimMemory`); not simulated |
+| Per-app AI switches screen, suggestion-frequency setting | not run | — | Implemented; the blocked-app rule itself is tested above |
+| Suggestion latency after the last key | blocked | PHONE | Needs the physical device. On the emulator, warm Emo inference measured about 3 ms plus the 150 ms pause. |
+| No typing stalls while a model loads | blocked | PHONE | Needs the physical device |
+
+Full-suite run at the end of the milestone: 60 instrumented tests; 53 passed, 6 skipped by design (offline probe, kill probe ×2, stock-app probe, screenshot tour ×2), 1 failed. The failure was the privacy-screen test, which needed to scroll now that Settings has more rows; fixed, and `CompanionAppTest` then passed 6 of 6 in its own run.

@@ -25,6 +25,24 @@
     <string name="key_previous">Previous</string>
     <string name="open_keyboard_settings">Keyboard settings</string>
 
+    <!-- Keyboard: AI control and panel -->
+    <string name="ai_on">AI on</string>
+    <string name="ai_off">AI off</string>
+    <string name="ai_toggle_on">AI support, on</string>
+    <string name="ai_toggle_off">AI support, off</string>
+    <string name="ai_panel_hint">Choose what helps while you type</string>
+    <string name="ai_panel_paused">Paused. Your choices are kept.</string>
+    <string name="ai_panel_password">AI is off in password fields</string>
+    <string name="ai_panel_private">AI is off in fields that ask not to be learned from</string>
+    <string name="ai_panel_unsupported">AI works in text fields only</string>
+    <string name="ai_panel_blocked">You turned AI off for this app</string>
+    <string name="ai_panel_manage">Manage models</string>
+    <string name="ai_panel_close">Back to keyboard</string>
+    <string name="ai_panel_on_device">Runs on your device</string>
+    <string name="ai_model_not_downloaded">Not downloaded</string>
+    <string name="ai_model_crashed">Turned off after it stopped the keyboard</string>
+    <string name="strip_setup_models">Set up AI models</string>
+
     <!-- Onboarding -->
     <string name="setup_title">Set up AI Keyboard</string>
     <string name="setup_privacy">AI help works on the text in the field you are typing in, on this device. The keyboard cannot see the rest of a conversation, and it never sends a message for you.</string>
@@ -108,6 +126,22 @@
     <string name="settings_word_suggestions_summary">Offer completions above the keys</string>
     <string name="settings_haptics">Vibrate on keypress</string>
     <string name="settings_sound">Sound on keypress</string>
+    <string name="settings_group_ai">AI preferences</string>
+    <string name="settings_frequency">Suggestion frequency</string>
+    <string-array name="frequency_labels">
+        <item>Relaxed — after a longer pause</item>
+        <item>Balanced</item>
+        <item>Eager — sooner after you stop</item>
+    </string-array>
+    <string-array name="frequency_values" translatable="false">
+        <item>relaxed</item>
+        <item>balanced</item>
+        <item>eager</item>
+    </string-array>
+    <string name="settings_apps">Use AI in selected apps</string>
+    <string name="settings_apps_summary">Turn AI off for apps you have used the keyboard in</string>
+    <string name="apps_intro">AI help can be turned off app by app. Only apps you have typed in with this keyboard are listed; the app stores their package names and nothing else.</string>
+    <string name="apps_none">No apps yet. They appear here after you use the keyboard in them.</string>
     <string name="settings_group_models">Models &amp; privacy</string>
     <string name="settings_unmetered">Download on unmetered networks only</string>
     <string name="settings_unmetered_summary">Wait for Wi-Fi or another network without data charges</string>

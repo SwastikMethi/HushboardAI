@@ -19,6 +19,11 @@ public final class AppSettings {
     public static final String KEYBOARD_HEIGHT = "keyboard.height";
     public static final String UNMETERED_ONLY = "downloads.unmetered_only";
 
+    public static final String SUGGESTION_FREQUENCY = "ai.frequency";
+    public static final String FREQUENCY_RELAXED = "relaxed";
+    public static final String FREQUENCY_BALANCED = "balanced";
+    public static final String FREQUENCY_EAGER = "eager";
+
     public static final String HEIGHT_COMPACT = "compact";
     public static final String HEIGHT_STANDARD = "standard";
     public static final String HEIGHT_TALL = "tall";
@@ -29,6 +34,11 @@ public final class AppSettings {
 
     public static String modelSettingKey(String modelId, String name) {
         return "model." + modelId + "." + name;
+    }
+
+    /** Set when a model was switched off because it stopped the keyboard while loading. */
+    public static String modelCrashedKey(String modelId) {
+        return "model." + modelId + ".crashed";
     }
 
     /** Increases with every change, so "computed under older settings" is a simple compare. */
@@ -69,6 +79,18 @@ public final class AppSettings {
 
     public boolean unmeteredOnly() {
         return bool(UNMETERED_ONLY, true);
+    }
+
+    /** How long to wait after the last keystroke, relative to each model's own pause. */
+    public float debounceScale() {
+        switch (string(SUGGESTION_FREQUENCY, FREQUENCY_BALANCED)) {
+            case FREQUENCY_RELAXED:
+                return 2f;
+            case FREQUENCY_EAGER:
+                return 0.6f;
+            default:
+                return 1f;
+        }
     }
 
     public float heightScale() {

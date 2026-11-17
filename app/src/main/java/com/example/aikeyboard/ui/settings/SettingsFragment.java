@@ -35,6 +35,10 @@ public final class SettingsFragment extends PreferenceFragmentCompat {
             activity.selectTab(R.id.tab_models);
             return true;
         });
+        find("apps").setOnPreferenceClickListener(p -> {
+            activity.openAppPreferences();
+            return true;
+        });
         find("privacy").setOnPreferenceClickListener(p -> {
             activity.openPrivacy();
             return true;

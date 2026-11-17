@@ -16,6 +16,7 @@ import com.example.aikeyboard.databinding.ActivityMainBinding;
 import com.example.aikeyboard.ui.models.ModelDetailFragment;
 import com.example.aikeyboard.ui.models.ModelLibraryFragment;
 import com.example.aikeyboard.ui.onboarding.SetupFragment;
+import com.example.aikeyboard.ui.settings.AppPreferencesFragment;
 import com.example.aikeyboard.ui.settings.PrivacyFragment;
 import com.example.aikeyboard.ui.settings.SettingsFragment;
 
@@ -90,6 +91,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void openPrivacy() {
         open(new PrivacyFragment());
+    }
+
+    public void openAppPreferences() {
+        open(new AppPreferencesFragment());
     }
 
     // A screen reached from a tab: Back returns to the tab it came from.

@@ -16,17 +16,23 @@ public final class InputSession {
     public final int imeOptions;
     public final boolean password;
     public final boolean noLearning;
+    public final boolean textField;
     public final boolean wordSuggestions;
 
     private int generation;
 
     public InputSession(EditorInfo info) {
+        this(info.packageName, info.inputType, info.imeOptions);
+    }
+
+    public InputSession(String editorPackage, int inputType, int imeOptions) {
         id = nextId++;
-        editorPackage = info.packageName;
-        inputType = info.inputType;
-        imeOptions = info.imeOptions;
+        this.editorPackage = editorPackage;
+        this.inputType = inputType;
+        this.imeOptions = imeOptions;
         password = isPassword(inputType);
         noLearning = isNoLearning(imeOptions);
+        textField = (inputType & InputType.TYPE_MASK_CLASS) == InputType.TYPE_CLASS_TEXT;
         wordSuggestions = allowsWordSuggestions(inputType);
     }
 

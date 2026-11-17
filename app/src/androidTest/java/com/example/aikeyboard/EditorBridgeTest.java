@@ -91,6 +91,41 @@ public class EditorBridgeTest {
         assertEquals(9, result[0]);
     }
 
+    private EditorBridge.Draft draft(int before, int after) {
+        EditorBridge.Draft[] result = new EditorBridge.Draft[1];
+        getInstrumentation().runOnMainSync(() -> result[0] = bridge.readDraft(before, after));
+        return result[0];
+    }
+
+    @Test
+    public void readDraft_returnsOnlyABoundedWindowAndSaysItIsPartial() {
+        given("0123456789abcdefghij", 12, 12);
+        EditorBridge.Draft draft = draft(5, 3);
+        assertEquals("789abcde", draft.text);
+        assertEquals(5, draft.selectionStart);
+        assertEquals(5, draft.selectionEnd);
+        assertEquals(7, draft.offset);
+        assertTrue(draft.partial);
+    }
+
+    @Test
+    public void readDraft_knowsWhenItHasTheWholeDraft() {
+        given("hi", 2, 2);
+        EditorBridge.Draft draft = draft(100, 100);
+        assertEquals("hi", draft.text);
+        assertEquals(0, draft.offset);
+        assertFalse(draft.partial);
+    }
+
+    @Test
+    public void readDraft_includesTheSelection() {
+        given("hello world", 6, 11);
+        EditorBridge.Draft draft = draft(100, 100);
+        assertEquals("hello world", draft.text);
+        assertEquals(6, draft.selectionStart);
+        assertEquals(11, draft.selectionEnd);
+    }
+
     @Test
     public void replaceRange_swapsTheExpectedTextAndKeepsTheCursorAfterIt() {
         given("helo world", 10, 10);

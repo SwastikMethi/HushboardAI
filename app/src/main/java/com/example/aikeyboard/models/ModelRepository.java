@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 public final class ModelRepository {
 
@@ -74,6 +75,7 @@ public final class ModelRepository {
     // Models whose transfer the user asked to stop, so a stopping worker knows to clean up.
     private final Set<String> cancelledByUser = ConcurrentHashMap.newKeySet();
     private final Map<String, Long> lastProgressAt = new ConcurrentHashMap<>();
+    private volatile Consumer<String> runtimeReleaser = modelId -> { };
 
     public ModelRepository(Context appContext, SettingsRepository settings, ExecutorService io) {
         this.app = appContext;
@@ -180,6 +182,11 @@ public final class ModelRepository {
         });
     }
 
+    /** Who closes a loaded model before its files go away. Called on a background thread. */
+    public void setRuntimeReleaser(Consumer<String> releaser) {
+        runtimeReleaser = releaser;
+    }
+
     /** Turns the model off and removes its files. Files stay if only disabled. */
     public void delete(String modelId) {
         ModelDescriptor model = ModelRegistry.find(modelId);
@@ -187,9 +194,13 @@ public final class ModelRepository {
         settings.setBoolean(AppSettings.modelEnabledKey(modelId), false);
         cancelledByUser.add(modelId);
         WorkManager.getInstance(app).cancelUniqueWork(workName(model));
+        // Not installed from this moment: no new inference can pick the model up.
         set(modelId, AssetState.NOT_INSTALLED, 0, null);
-        io.execute(() -> deleteRecursively(
-                new File(app.getNoBackupFilesDir(), "models/" + modelId)));
+        io.execute(() -> {
+            // Wait for any inference in progress, then close the model, then delete.
+            runtimeReleaser.accept(modelId);
+            deleteRecursively(new File(app.getNoBackupFilesDir(), "models/" + modelId));
+        });
     }
 
     /** The runtime found the installed files unusable on this device. */

@@ -62,6 +62,15 @@ public final class SettingsRepository {
         update(PreferencesKeys.booleanKey(key), value);
     }
 
+    /**
+     * The user's choice for one model. Turning a model back on also clears the note that it
+     * was switched off after a crash: re-enabling it is the user's informed decision.
+     */
+    public void setModelEnabled(String modelId, boolean enabled) {
+        setBoolean(AppSettings.modelEnabledKey(modelId), enabled);
+        if (enabled) setBoolean(AppSettings.modelCrashedKey(modelId), false);
+    }
+
     public void setInt(String key, int value) {
         update(PreferencesKeys.intKey(key), value);
     }

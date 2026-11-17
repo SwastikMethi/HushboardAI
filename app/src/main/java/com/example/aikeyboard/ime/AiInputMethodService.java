@@ -41,10 +41,11 @@ public class AiInputMethodService extends InputMethodService {
     @Override
     public void onCreate() {
         super.onCreate();
-        SettingsRepository repository = AppContainer.from(this).settings;
+        AppContainer app = AppContainer.from(this);
+        SettingsRepository repository = app.settings;
         settings = repository.latest();
         EditorBridge editor = new EditorBridge(this::getCurrentInputConnection);
-        controller = new KeyboardController(this, editor, loadWordList(), settings);
+        controller = new KeyboardController(this, editor, loadWordList(), app);
         // The service owns this subscription and ends it in onDestroy. Changes made in the
         // companion app arrive here while the keyboard is open.
         settingsSubscription = repository.observe()

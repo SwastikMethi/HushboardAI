@@ -7,7 +7,7 @@ The execution plan is `~/.claude/plans/i-have-added-a-whimsical-mist.md` (approv
 | 0 — Compatibility spike | Done (emulator). Device rows blocked | 17 instrumented tests on the Android 17 emulator; see validation report. Peak memory and a physical-device smoke run wait for the phone. |
 | 1 — Reliable keyboard | Done (emulator). Device rows blocked | 32 unit tests, 35 instrumented tests; typing verified in the debug host and in Android Settings search. Haptics, sound, latency and third-party chat apps wait for the phone. |
 | 2 — Companion and assets | Done (emulator). Device rows blocked | 55 unit tests, 47 instrumented tests. Real downloads, a cancel that stops, pause on leaving Wi-Fi and resume, live settings sync, three-tab companion app with the privacy disclosure. |
-| 3 — First real Emo slice | Not started | — |
+| 3 — First real Emo slice | Done (emulator). Device rows blocked | 87 unit tests, 60 instrumented tests. Real Emo suggestions in the keyboard, online and in airplane mode; stale results dropped; AI toggle and panel; crash breaker; per-app AI switches. Latency on a real device waits for the phone. |
 | 4 — Redact and Toxic | Not started | — |
 | 5 — Tongue and Gist | Not started | — |
 | 6 — Voice tools | Not started | — |
@@ -52,6 +52,13 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 21. **Models without a captured file list show "Coming later"** and offer no download. That is nine of the thirteen today; each flips to downloadable when its adapter lands. Cost if wrong: none — the alternative is a button that does nothing.
 22. **Android glue (repository, worker, settings store) was written together with its device tests**, not strictly after a failing test. Their decision logic lives in classes that were test-first (`ModelDownloader`, `AppSettings`, `ModelRegistry`), and each device test was watched failing before the wiring that makes it pass. Cost if wrong: thinner unit coverage of the glue itself.
 
+23. **Adapters block the inference thread while the SDK works.** `ModelAdapter.run` waits on the SDK's future there, and only there; the main thread never waits. One thread means one model call at a time, which is the "one heavy slot" the plan asks for and what serialises access to each native model. Cost if wrong: a slow voice model would delay an emoji suggestion; split the slot then.
+24. **Emoji fill the strip only when no word is being completed.** While a word is half-typed the strip shows completions; in the pause after it, emoji. The mockup shows emoji after a finished word, which is this case. Cost if wrong: emoji appear less often than some would like.
+25. **Text is not read for AI at all in a field where AI may not run.** Eligibility is decided first; only then is the bounded window around the cursor read (1,000 characters before, 200 after). Cost if wrong: none.
+26. **The AI panel lists only models that act while typing and have a working adapter** — Emo today; Redact and Toxic join in milestone 4. Cost if wrong: none; a listed switch that did nothing would be worse.
+27. **The master switch in the keyboard uses a solid AI-blue track rather than a drawn gradient.** The gradient identity is on the tool-row control (sparkle and border). Cost if wrong: a milestone 8 polish item.
+28. **`ModelInput`, `ModelResult`, `ActivityEvent` and `CapabilityRouter` were not created.** `ModelAdapter<I, O>` is generic over its input and output, so wrapper types add nothing yet; routing is one check in `AiCoordinator`. They are added only if the voice and image milestones show a real need. Cost if wrong: a small refactor when a second input kind arrives.
+
 ## Deviations from the handoff file list
 
 - `sdkbridge/DesertAntSuspendBridge.kt` and `sdkbridge/CancellableOperation.java`: not needed (ruling 3).
@@ -62,7 +69,9 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 - `ui/models/ModelsViewModel.java`, `ui/settings/SettingsViewModel.java`: not created; screens observe the app-wide repositories directly.
 - `data/PreferenceKeys.java` → constants in `AppSettings`. `core/AppExecutors.java` → `AppContainer`. `models/ModelStorage.java` → `ModelRepository`. `assets/models/catalog.json` → `ModelRegistry` (one source for the 13 entries). `ui/AppNavigator.java` → `MainActivity`. `ui/components/ModelRowViewHolder.java` → `ModelLibraryFragment` (a fixed list of 13 rows needs no recycler). `ui/keyboard/KeyboardPreviewFragment.java` → the practice field in `SetupFragment`.
 - Added: `models/ModelDownloader.java` (the app's own downloader, ruling 4), `ui/settings/SettingsStore.java`, `ui/settings/PrivacyFragment.java`.
-- `ui/settings/AppPreferencesFragment.java`: arrives in milestone 3, when the keyboard starts recording which apps it has been used in.
+- Added in milestone 3: `ai/CrashBreaker.java`, `ui/settings/AppPreferencesFragment.java` (as the handoff lists).
+- `ime/view/AiPanelView.java` → `res/layout/view_ai_panel.xml` plus `KeyboardController`, for the same reason as `KeyboardRootView`.
+- `ai/ModelInput.java`, `ModelResult.java`, `ActivityEvent.java`, `CapabilityRouter.java`: not created (ruling 28).
 
 ## Open items carried forward
 
@@ -78,6 +87,9 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 - Model rows show an initial rather than a drawn icon, and settings groups are flat lists rather than rounded cards. Milestone 8.
 - Not yet driven by a test: deleting a model from its detail screen, resetting one model's settings, low-storage failure, a double tap on Download.
 
+- The SDK's logging is switched off at process start (`DesertAntClient.silenceSdkLogs`). Done; the open item from milestone 0 is closed.
+- Not yet asserted by a test: the single enable sweep and its reduced-motion skip, model release under memory pressure, the per-app switches screen.
+
 ## Next action
 
-Milestone 3: the first real AI slice — Emo suggestions in the keyboard, the AI toggle and panel, stale-result suppression, the crash breaker, and per-app AI preferences.
+Milestone 4: Redact and Toxic — adapters, notices with Review and Dismiss, the masking preview, guarded apply and Undo, and whole-character span handling.

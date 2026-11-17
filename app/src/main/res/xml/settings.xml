@@ -49,6 +49,27 @@
 
     <PreferenceCategory
         app:iconSpaceReserved="false"
+        app:title="@string/settings_group_ai">
+
+        <ListPreference
+            app:defaultValue="balanced"
+            app:entries="@array/frequency_labels"
+            app:entryValues="@array/frequency_values"
+            app:iconSpaceReserved="false"
+            app:key="ai.frequency"
+            app:title="@string/settings_frequency"
+            app:useSimpleSummaryProvider="true" />
+
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="apps"
+            app:persistent="false"
+            app:summary="@string/settings_apps_summary"
+            app:title="@string/settings_apps" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        app:iconSpaceReserved="false"
         app:title="@string/settings_group_models">
 
         <SwitchPreferenceCompat

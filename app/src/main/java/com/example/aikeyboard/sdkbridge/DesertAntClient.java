@@ -3,6 +3,8 @@ package com.example.aikeyboard.sdkbridge;
 
 import java.util.concurrent.CompletableFuture;
 
+import ai.desertant.core.DesertAnt;
+import ai.desertant.core.LogLevel;
 import kotlin.coroutines.Continuation;
 import kotlin.coroutines.EmptyCoroutineContext;
 import kotlinx.coroutines.CoroutineScope;
@@ -25,6 +27,14 @@ public final class DesertAntClient {
             SupervisorKt.SupervisorJob(null).plus(Dispatchers.getDefault()));
 
     private DesertAntClient() {}
+
+    /**
+     * Turns the vendor SDK's own logging off. The SDK handles what the user types, so nothing
+     * it might print may reach the system log. Call once at process start, before any model.
+     */
+    public static void silenceSdkLogs() {
+        DesertAnt.setLogLevel(LogLevel.OFF);
+    }
 
     /**
      * Starts the call and returns at once; the SDK moves the work to its own dispatchers.

@@ -22,7 +22,13 @@ public final class SettingsStore extends PreferenceDataStore {
 
     @Override
     public void putBoolean(String key, boolean value) {
-        settings.setBoolean(key, value);
+        // Model switches go through the one method that also clears a crash note.
+        if (key.startsWith("model.") && key.endsWith(".enabled")) {
+            settings.setModelEnabled(
+                    key.substring("model.".length(), key.length() - ".enabled".length()), value);
+        } else {
+            settings.setBoolean(key, value);
+        }
     }
 
     @Override

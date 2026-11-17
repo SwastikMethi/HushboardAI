@@ -6,6 +6,7 @@ import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.Espresso.pressBack;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.scrollTo;
+import static androidx.test.espresso.action.ViewActions.swipeUp;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.hasDescendant;
 import static androidx.test.espresso.matcher.ViewMatchers.isDescendantOfA;
@@ -150,6 +151,8 @@ public class CompanionAppTest {
     @Test
     public void thePrivacyScreenDisclosesTheLicenseCheck() {
         onView(withId(R.id.tab_settings)).perform(click());
+        // Privacy sits near the end of the list; rows off screen do not exist until scrolled to.
+        onView(withId(androidx.preference.R.id.recycler_view)).perform(swipeUp());
         onView(withText(R.string.settings_privacy)).perform(click());
         onView(withText(containsString("License check"))).perform(scrollTo())
                 .check(matches(isDisplayed()));

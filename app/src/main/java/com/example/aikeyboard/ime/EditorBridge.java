@@ -2,11 +2,13 @@
 // keyboard goes through here, so every edit is validated in one place.
 package com.example.aikeyboard.ime;
 
+import android.os.Build;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
+import android.view.inputmethod.SurroundingText;
 
 import java.util.function.Supplier;
 
@@ -54,6 +56,56 @@ public final class EditorBridge {
         } else {
             ic.performEditorAction(action);
         }
+    }
+
+    /** A bounded piece of the field's text around the cursor, as the editor chose to expose it. */
+    public static final class Draft {
+        public final String text;
+        /** Selection within {@link #text}. */
+        public final int selectionStart;
+        public final int selectionEnd;
+        /** Absolute offset of {@link #text} in the field, or -1 if the editor did not say. */
+        public final int offset;
+        /** True when the field may hold more text than was returned. */
+        public final boolean partial;
+
+        Draft(String text, int selectionStart, int selectionEnd, int offset, boolean partial) {
+            this.text = text;
+            this.selectionStart = selectionStart;
+            this.selectionEnd = selectionEnd;
+            this.offset = offset;
+            this.partial = partial;
+        }
+    }
+
+    /**
+     * Reads at most {@code before} characters before the cursor and {@code after} after it.
+     * This is all the keyboard ever sees of a draft: never a whole conversation. Returns
+     * null when the editor exposes no text; typing still works without it.
+     */
+    public Draft readDraft(int before, int after) {
+        InputConnection ic = connection.get();
+        if (ic == null) return null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            SurroundingText around = ic.getSurroundingText(before, after, 0);
+            if (around != null) {
+                String text = around.getText().toString();
+                boolean partial = around.getOffset() > 0
+                        || text.length() - around.getSelectionEnd() >= after;
+                return new Draft(text, around.getSelectionStart(), around.getSelectionEnd(),
+                        around.getOffset(), partial);
+            }
+        }
+        CharSequence head = ic.getTextBeforeCursor(before, 0);
+        CharSequence tail = ic.getTextAfterCursor(after, 0);
+        if (head == null || tail == null) return null;
+        CharSequence selected = ic.getSelectedText(0);
+        String selection = selected == null ? "" : selected.toString();
+        int cursorEnd = cursorPosition();
+        int offset = cursorEnd < 0 ? -1 : cursorEnd - selection.length() - head.length();
+        boolean partial = head.length() >= before || tail.length() >= after;
+        return new Draft(head + selection + tail, head.length(),
+                head.length() + selection.length(), offset, partial);
     }
 
     /** Up to maxChars of text before the cursor; empty when the editor exposes none. */

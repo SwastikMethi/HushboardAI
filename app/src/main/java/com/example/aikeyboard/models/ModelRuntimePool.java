@@ -1,6 +1,8 @@
 // Loaded model instances. Models load lazily on first use, are reused, and are closed when
-// switched off or deleted. Every method runs on the single inference thread, which is what
-// serialises access to each native model: nothing here needs a lock.
+// deleted, when the tools they belong to have gone unused for a while, or when memory is
+// short. (Switching a typing model off stops it being called; it stays loaded.) Every method
+// runs on the single inference thread, which is what serialises access to each native model:
+// nothing here needs a lock.
 package com.example.aikeyboard.models;
 
 import android.content.Context;
@@ -61,8 +63,15 @@ public final class ModelRuntimePool {
         }
         // If the native load kills the process, the marker tells the next start which model.
         breaker.loading(modelId);
-        M model = factory.create(app,
-                models.directory(ModelRegistry.find(modelId)).getAbsolutePath());
+        M model;
+        try {
+            model = factory.create(app,
+                    models.directory(ModelRegistry.find(modelId)).getAbsolutePath());
+        } catch (RuntimeException e) {
+            // The load failed, but the process is alive to say so: this is not a crash.
+            breaker.loaded(modelId);
+            throw e;
+        }
         if (!filesAccepted.test(model)) {
             closeQuietly(model);
             breaker.loaded(modelId);
@@ -80,11 +89,14 @@ public final class ModelRuntimePool {
 
     public void release(String modelId) {
         closeQuietly(loaded.remove(modelId));
+        // Its next load is marked again, so its next answer must clear that mark again.
+        answered.remove(modelId);
     }
 
     public void releaseAll() {
         for (AutoCloseable model : loaded.values()) closeQuietly(model);
         loaded.clear();
+        answered.clear();
     }
 
     private static void closeQuietly(AutoCloseable model) {

@@ -90,16 +90,7 @@ public class HardeningTest {
         String text = "Email me at anna@example.hu about the pizza party tonight";
         int uid = Process.myUid();
 
-        // First, proof that the meter moves at all: one small request must show up on it.
         assumeTrue("needs network to prove the traffic meter works", TestModels.online());
-        long meterBefore = TrafficStats.getUidTxBytes(uid);
-        java.net.HttpURLConnection probe = (java.net.HttpURLConnection) new java.net.URL(
-                ModelRegistry.find("shapes").baseUrl() + "shapes_meta.json").openConnection();
-        probe.setRequestMethod("HEAD");
-        probe.getResponseCode();
-        probe.disconnect();
-        assumeTrue("this device does not report per-app traffic", TestModels.await(
-                () -> TrafficStats.getUidTxBytes(uid) > meterBefore, 10_000));
 
         // First use loads each model, which is when the vendor's license check happens.
         long loadSentBefore = TrafficStats.getUidTxBytes(uid);
@@ -137,6 +128,67 @@ public class HardeningTest {
         Log.i(TAG, "125 model runs: sentBytes=" + sent + " receivedBytes=" + received);
         assertEquals("the app sent data while its models ran on text", 0, sent);
         assertEquals("the app received data while its models ran on text", 0, received);
+        assumeTheMeterMoves(uid);
+    }
+
+    // A zero only means something if the meter can show a non-zero: one small request must
+    // register. Done after the measurement, so its own connection cannot leak into it; if
+    // the device does not meter per-app traffic the test is skipped, not passed.
+    private static void assumeTheMeterMoves(int uid) throws Exception {
+        long before = TrafficStats.getUidTxBytes(uid);
+        java.net.HttpURLConnection probe = (java.net.HttpURLConnection) new java.net.URL(
+                ModelRegistry.find("shapes").baseUrl() + "shapes_meta.json").openConnection();
+        probe.setRequestMethod("HEAD");
+        probe.setRequestProperty("Connection", "close"); // or its closing lands in a later test
+        probe.getResponseCode();
+        probe.disconnect();
+        assumeTrue("this device does not report per-app traffic", TestModels.await(
+                () -> TrafficStats.getUidTxBytes(uid) > before, 10_000));
+    }
+
+    // A connection kept open for reuse is closed by the server a minute or so after the
+    // download, and those closing packets are then counted against the app while someone is
+    // typing. Seen as 80 bytes in the measurement above when it ran after a download.
+    @Test
+    public void aFinishedDownloadLeavesNoConnectionOpen() throws Exception {
+        assumeTrue("needs network", TestModels.online());
+        com.example.aikeyboard.models.ModelDescriptor shapes = ModelRegistry.find("shapes");
+        List<com.example.aikeyboard.models.ModelDescriptor.ModelFile> smallest = List.of(
+                java.util.Collections.min(shapes.files,
+                        java.util.Comparator.comparingLong(file -> file.bytes)));
+        File dir = new File(context.getCacheDir(), "connection-check");
+        File fetched = new File(dir, smallest.get(0).path);
+        fetched.delete(); // a file already there would not be fetched at all
+        int before = openSockets();
+        assumeTrue("cannot list this process's open files", before >= 0);
+        try {
+            new com.example.aikeyboard.models.ModelDownloader().fetch(shapes.baseUrl(), smallest,
+                    dir, new java.util.concurrent.atomic.AtomicBoolean(), (done, total) -> { });
+
+            assertTrue("the file should have arrived", fetched.exists());
+            assertTrue("a connection to the download server is still open: " + before
+                            + " sockets before, " + openSockets() + " after",
+                    TestModels.await(() -> openSockets() <= before, 5000));
+        } finally {
+            fetched.delete();
+            dir.delete();
+        }
+    }
+
+    private static int openSockets() {
+        File[] descriptors = new File("/proc/self/fd").listFiles();
+        if (descriptors == null) return -1;
+        int count = 0;
+        for (File descriptor : descriptors) {
+            try {
+                if (android.system.Os.readlink(descriptor.getPath()).startsWith("socket:")) {
+                    count++;
+                }
+            } catch (android.system.ErrnoException closedMeanwhile) {
+                // Gone between listing and reading: not open.
+            }
+        }
+        return count;
     }
 
     // ---- Nothing typed is kept ----
@@ -195,6 +247,109 @@ public class HardeningTest {
         assertFalse("typed text reached the system log", log.contains(SECRET));
     }
 
+    // ---- The crash breaker must not misfire ----
+
+    @Test
+    public void aModelLoadedTwiceInOneProcessLeavesNoCrashMark() throws Exception {
+        TestModels.ensureInstalled("shapes");
+        java.util.List<float[]> line = new ArrayList<>();
+        for (int i = 0; i < 20; i++) line.add(new float[] {100 + i * 20, 100 + i});
+        File mark = new File(context.getNoBackupFilesDir(), "loading/shapes");
+
+        app.inference.submit(() -> app.shapes.run(line, defaults())).get(1, TimeUnit.MINUTES);
+        // What the idle timer does: unload it. The next use loads it a second time.
+        app.inference.submit(() -> app.runtime.release("shapes")).get(1, TimeUnit.MINUTES);
+        app.inference.submit(() -> app.shapes.run(line, defaults())).get(1, TimeUnit.MINUTES);
+
+        assertFalse("a second, successful load left a crash mark: the model would be "
+                + "switched off at the next start", mark.exists());
+    }
+
+    // ---- Downloads must not hold up everything else ----
+
+    @Test
+    public void twoDownloadsInProgressDoNotHoldUpOtherFileWork() throws Exception {
+        assumeTrue("needs network", TestModels.online());
+        for (String id : new String[] {"toxic", "gist"}) models.delete(id);
+        assertTrue(TestModels.await(() -> models.bytesOnDisk("toxic") == 0
+                && models.bytesOnDisk("gist") == 0, 20_000));
+
+        try (ActivityScenario<MainActivity> onScreen =
+                ActivityScenario.launch(MainActivity.class)) {
+            models.download("toxic");
+            models.download("gist");
+            assertTrue("both downloads should be running", TestModels.await(
+                    () -> models.status("toxic").state == AssetState.DOWNLOADING
+                            && models.status("gist").state == AssetState.DOWNLOADING, 30_000));
+
+            // Opening a picture, sharing or deleting all use this executor.
+            Future<?> otherWork = app.io.submit(() -> { });
+            try {
+                otherWork.get(3, TimeUnit.SECONDS);
+            } catch (java.util.concurrent.TimeoutException e) {
+                throw new AssertionError("other file work waited behind two downloads");
+            }
+        } finally {
+            TestModels.ensureInstalled("toxic");
+            TestModels.ensureInstalled("gist");
+        }
+    }
+
+    // ---- Network, for the models that take recordings, pictures and strokes ----
+
+    @Test
+    public void runningTheVoiceImageAndDrawingModelsSendsAndReceivesNothing() throws Exception {
+        com.example.aikeyboard.media.Voice.AudioClip speech = TestSpeech.english();
+        assumeTrue("this device has no usable speech synthesiser", speech != null);
+        assumeTrue("needs network to prove the traffic meter works", TestModels.online());
+        boolean withClear = "true".equals(
+                androidx.test.platform.app.InstrumentationRegistry.getArguments()
+                        .getString("clear"));
+        for (String id : new String[] {"voz", "ear", "uhm", "who", "eye", "moderator",
+                "shapes"}) {
+            TestModels.ensureInstalled(id);
+        }
+        if (withClear) TestModels.ensureInstalled("clear");
+        com.example.aikeyboard.media.Voice.AudioClip longer = TestSpeech.repeated(speech, 3);
+        android.graphics.Bitmap picture = VisionModelsTest.harmlessPicture();
+        java.util.List<float[]> stroke = new ArrayList<>();
+        for (int i = 0; i < 30; i++) stroke.add(new float[] {100 + i * 10, 200});
+        Map<String, Object> chosen = new java.util.HashMap<>();
+        chosen.put(AppSettings.AI_ENABLED, true);
+        for (String id : new String[] {"voz", "ear", "uhm", "who"}) {
+            chosen.put(AppSettings.modelEnabledKey(id), true);
+        }
+        if (withClear) chosen.put(AppSettings.modelEnabledKey("clear"), true);
+        AppSettings voiceOn = new AppSettings(1, chosen);
+        java.util.concurrent.Callable<Void> everything = () -> {
+            app.voice.run(longer, voiceOn, id -> voiceOn.modelActive(id)
+                    && models.isReady(id), new java.util.concurrent.atomic.AtomicBoolean(),
+                    id -> { });
+            app.eye.run(picture, defaults());
+            app.moderator.run(picture, defaults());
+            app.shapes.run(stroke, defaults());
+            return null;
+        };
+        int uid = Process.myUid();
+
+        // First use loads each model (and is when a license check would happen).
+        app.inference.submit(everything).get(10, TimeUnit.MINUTES);
+        Thread.sleep(5000);
+        long sentBefore = TrafficStats.getUidTxBytes(uid);
+        long receivedBefore = TrafficStats.getUidRxBytes(uid);
+
+        for (int i = 0; i < 3; i++) app.inference.submit(everything).get(10, TimeUnit.MINUTES);
+        Thread.sleep(5000);
+
+        long sent = TrafficStats.getUidTxBytes(uid) - sentBefore;
+        long received = TrafficStats.getUidRxBytes(uid) - receivedBefore;
+        Log.i(TAG, "voice, image and drawing runs (clear=" + withClear + "): sentBytes=" + sent
+                + " receivedBytes=" + received);
+        assertEquals("the app sent data while these models ran", 0, sent);
+        assertEquals("the app received data while these models ran", 0, received);
+        assumeTheMeterMoves(uid);
+    }
+
     // ---- Memory pressure ----
 
     @Test
@@ -218,6 +373,10 @@ public class HardeningTest {
     public void deletingAModelWaitsForARunInProgressAndLeavesNothingBehind() throws Exception {
         TestModels.ensureInstalled("eye");
         android.graphics.Bitmap picture = VisionModelsTest.harmlessPicture();
+        // Loaded first, so the run below has the model in hand whatever the inference thread
+        // was still finishing. A run that has not reached the model when Delete is asked for
+        // is turned away as "not installed" instead, which is the other half of the rule.
+        app.inference.submit(() -> app.eye.run(picture, defaults())).get(2, TimeUnit.MINUTES);
 
         Future<ImageFindings> run = app.inference.submit(() -> app.eye.run(picture, defaults()));
         models.delete("eye");

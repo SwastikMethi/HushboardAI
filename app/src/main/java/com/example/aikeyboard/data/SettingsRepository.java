@@ -5,8 +5,10 @@ package com.example.aikeyboard.data;
 
 import android.content.Context;
 
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler;
 import androidx.datastore.preferences.core.MutablePreferences;
 import androidx.datastore.preferences.core.Preferences;
+import androidx.datastore.preferences.core.PreferencesFactory;
 import androidx.datastore.preferences.core.PreferencesKeys;
 import androidx.datastore.preferences.rxjava3.RxPreferenceDataStoreBuilder;
 import androidx.datastore.rxjava3.RxDataStore;
@@ -34,7 +36,18 @@ public final class SettingsRepository {
     private final Disposable ownSubscription;
 
     public SettingsRepository(Context appContext) {
-        store = new RxPreferenceDataStoreBuilder(appContext, "settings").build();
+        this(appContext, "settings");
+    }
+
+    /** @param fileName the settings file; there must be only one repository per file */
+    public SettingsRepository(Context appContext, String fileName) {
+        store = new RxPreferenceDataStoreBuilder(appContext, fileName)
+                // A settings file that cannot be read is replaced by an empty one: everything
+                // back to its default, AI off. The alternative is a keyboard that fails to
+                // start, every time, until the app's data is cleared.
+                .setCorruptionHandler(new ReplaceFileCorruptionHandler<>(
+                        damaged -> PreferencesFactory.createEmpty()))
+                .build();
         // One shared upstream, so every observer sees the same snapshot with the same revision.
         stream = store.data().map(this::snapshot).replay(1).autoConnect();
         ownSubscription = stream.subscribe(settings -> latest = settings, error -> { });

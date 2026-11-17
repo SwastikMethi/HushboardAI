@@ -54,6 +54,9 @@ public class AiInputMethodService extends InputMethodService {
                 .subscribe(latest -> {
                     settings = latest;
                     controller.onSettings(latest);
+                }, failure -> {
+                    // Settings could not be read. The keyboard keeps the last ones it had
+                    // and goes on typing; it must never stop because of its settings.
                 });
     }
 
@@ -91,6 +94,19 @@ public class AiInputMethodService extends InputMethodService {
     }
 
     @Override
+    public void onStartInput(EditorInfo attribute, boolean restarting) {
+        super.onStartInput(attribute, restarting);
+        // Called for every field, before it is known whether the keyboard will be shown.
+        controller.onInputStarted();
+    }
+
+    @Override
+    public void onFinishInput() {
+        controller.onFinishInput();
+        super.onFinishInput();
+    }
+
+    @Override
     public void onStartInputView(EditorInfo info, boolean restarting) {
         super.onStartInputView(info, restarting);
         controller.onStartInput(info, restarting);
@@ -101,7 +117,9 @@ public class AiInputMethodService extends InputMethodService {
             int candidatesStart, int candidatesEnd) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
                 candidatesStart, candidatesEnd);
-        controller.onSelectionChanged();
+        // Reported for every field that has input, shown keyboard or not. Only a field the
+        // keyboard is actually showing for is the keyboard's business.
+        if (isInputViewShown()) controller.onSelectionChanged(newSelStart, newSelEnd);
     }
 
     @Override

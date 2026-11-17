@@ -24,6 +24,8 @@ public final class SuggestionStripView extends LinearLayout {
         EMOJI,
         /** One message followed by two actions; the message gets the most room. */
         NOTICE,
+        /** Like a notice, but the message is only a label: tapping it does nothing. */
+        STATUS,
         SETUP
     }
 
@@ -105,13 +107,18 @@ public final class SuggestionStripView extends LinearLayout {
         source.setVisibility(chips && !items.isEmpty() ? VISIBLE : GONE);
         for (int i = 0; i < slots.length; i++) {
             boolean filled = i < items.size();
-            boolean noticeText = newKind == Kind.NOTICE && i == 0;
+            boolean message = newKind == Kind.NOTICE || newKind == Kind.STATUS;
+            boolean noticeText = message && i == 0;
             slots[i].setText(filled ? items.get(i) : "");
             slots[i].setTextSize(TypedValue.COMPLEX_UNIT_PX,
                     chips ? emojiSize * 0.9f : noticeText ? wordSize * 0.9f : wordSize);
             // In a notice, the two actions are tinted so they read as buttons.
-            slots[i].setTextColor(newKind == Kind.NOTICE && i > 0 ? actionColor : plainColor);
-            slots[i].setBackgroundResource(chips ? R.drawable.bg_chip : plainBackground);
+            slots[i].setTextColor(message && i > 0 ? actionColor : plainColor);
+            // A label that does nothing must not look or behave like something to tap.
+            boolean label = newKind == Kind.STATUS && i == 0;
+            slots[i].setClickable(!label);
+            slots[i].setBackgroundResource(label ? 0 : chips ? R.drawable.bg_chip
+                    : plainBackground);
             LayoutParams params = (LayoutParams) slots[i].getLayoutParams();
             params.weight = noticeText ? 2.4f : 1f;
             params.setMargins(chips ? chipMargin : 0, chips ? chipMargin : 0,

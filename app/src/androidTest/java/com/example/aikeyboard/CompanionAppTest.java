@@ -133,8 +133,11 @@ public class CompanionAppTest {
 
         onView(statusOf("emo")).check(matches(withText(R.string.status_stopped)));
 
-        settings.setModelEnabled("emo", true);
-        assertTrue(TestModels.await(() -> !settings.latest().bool(crashed, false), 5000));
+        // The row says "switch it on to try again": doing exactly that, on the row itself.
+        onView(allOf(withId(R.id.model_switch), isDescendantOfA(row("emo")))).perform(click());
+        assertTrue("switching it on in the catalog should clear the note",
+                TestModels.await(() -> !settings.latest().bool(crashed, false), 5000));
+        assertTrue(settings.latest().modelEnabled("emo"));
         InstrumentationRegistry.getInstrumentation().waitForIdleSync();
         onView(statusOf("emo")).check(matches(not(withText(R.string.status_stopped))));
         settings.setModelEnabled("emo", false);

@@ -94,8 +94,10 @@ public final class ModelLibraryFragment extends Fragment {
             row.modelSummary.setText(model.summary);
             row.modelBeta.setVisibility(model.beta ? View.VISIBLE : View.GONE);
             row.modelSwitch.setContentDescription(getString(R.string.enable_model, model.name));
-            row.modelSwitch.setOnClickListener(v -> settings.setBoolean(
-                    AppSettings.modelEnabledKey(model.id), row.modelSwitch.isChecked()));
+            // setModelEnabled, not a bare write: switching a model back on also clears the
+            // note that it was switched off after stopping the app.
+            row.modelSwitch.setOnClickListener(v -> settings.setModelEnabled(
+                    model.id, row.modelSwitch.isChecked()));
             if (model.available()) {
                 row.getRoot().setOnClickListener(v ->
                         ((MainActivity) requireActivity()).openModelDetail(model.id));

@@ -8,7 +8,6 @@ package com.example.aikeyboard;
 
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
-import static androidx.test.espresso.action.ViewActions.closeSoftKeyboard;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.isRoot;
@@ -21,8 +20,11 @@ import static org.junit.Assert.assertTrue;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Rect;
+import android.view.View;
 
 import androidx.test.core.app.ActivityScenario;
+import androidx.test.espresso.UiController;
+import androidx.test.espresso.ViewAction;
 import androidx.test.espresso.accessibility.AccessibilityChecks;
 import androidx.test.espresso.action.ViewActions;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
@@ -36,6 +38,7 @@ import com.example.aikeyboard.data.SettingsRepository;
 import com.example.aikeyboard.ime.view.AiToggleView;
 import com.example.aikeyboard.models.ModelDescriptor;
 
+import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -80,9 +83,29 @@ public class AccessibilityAuditTest {
             getInstrumentation().waitForIdleSync();
         }
         onView(withId(landmark)).check(matches(isDisplayed()));
-        // The checks run whenever an action is performed. This action changes nothing on a
-        // screen with no keyboard up; performing it is what audits the whole screen.
-        onView(isRoot()).perform(closeSoftKeyboard());
+        onView(isRoot()).perform(audit());
+    }
+
+    // The checks run whenever an action is performed, so this one does nothing itself. It
+    // used to be "close the keyboard", which waits on the system and once timed out with a
+    // keyboard still settling after a reinstall.
+    private static ViewAction audit() {
+        return ViewActions.actionWithAssertions(new ViewAction() {
+            @Override
+            public Matcher<View> getConstraints() {
+                return isRoot();
+            }
+
+            @Override
+            public String getDescription() {
+                return "audit the screen";
+            }
+
+            @Override
+            public void perform(UiController uiController, View view) {
+                uiController.loopMainThreadUntilIdle();
+            }
+        });
     }
 
     // ---- Companion app ----
@@ -98,7 +121,7 @@ public class AccessibilityAuditTest {
             });
             getInstrumentation().waitForIdleSync();
             try {
-                onView(isRoot()).perform(closeSoftKeyboard());
+                onView(isRoot()).perform(audit());
             } catch (RuntimeException rejected) {
                 assertTrue(String.valueOf(rejected.getMessage()),
                         rejected.getClass().getSimpleName().contains("Accessibility"));

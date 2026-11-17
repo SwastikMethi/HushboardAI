@@ -4,6 +4,7 @@ package com.example.aikeyboard.ai;
 
 import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
 import com.example.aikeyboard.core.TextEdit;
+import com.example.aikeyboard.core.TextRangeMapper;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -17,8 +18,10 @@ public final class RedactionPlan {
     public static List<TextEdit> mask(List<SensitiveSpan> spans, int windowOffset) {
         List<TextEdit> edits = new ArrayList<>();
         for (SensitiveSpan span : spans) {
-            edits.add(new TextEdit(windowOffset + span.start, windowOffset + span.end,
-                    span.original, span.placeholder));
+            int[] range = TextRangeMapper.editorRange(windowOffset, span.start, span.end);
+            // No trustworthy place in the editor: nothing can be edited, only previewed.
+            if (range == null) return new ArrayList<>();
+            edits.add(new TextEdit(range[0], range[1], span.original, span.placeholder));
         }
         edits.sort(Comparator.comparingInt((TextEdit e) -> e.start));
         return edits;

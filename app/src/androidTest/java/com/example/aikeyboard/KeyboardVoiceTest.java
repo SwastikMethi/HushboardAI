@@ -153,6 +153,33 @@ public class KeyboardVoiceTest {
     }
 
     @Test
+    public void movingToAnotherFieldEndsTheDictation() throws Exception {
+        focus("field_plain");
+        mic().click();
+        assertNotNull(slot("suggestion_1", "Listening…"));
+
+        // Another field in the same window: the system calls this a restart, not a new start.
+        device.findObject(By.res(PKG, "field_rich")).click();
+
+        assertTrue("a recording must not follow the user into another field",
+                TestModels.await(() -> microphone.cancelled, TIMEOUT_MS));
+        assertFalse(device.hasObject(By.res(PKG, "suggestion_1").text("Listening…")));
+    }
+
+    @Test
+    public void theListeningLabelDoesNotPresentItselfAsAButton() {
+        focus("field_plain");
+        mic().click();
+
+        UiObject2 label = slot("suggestion_1", "Listening…");
+
+        assertNotNull(label);
+        assertFalse("a status label that does nothing must not be tappable",
+                label.isClickable());
+        slot("suggestion_3", "Cancel").click();
+    }
+
+    @Test
     public void aRecordingStopsWhenTheKeyboardLeavesTheScreen() throws Exception {
         focus("field_plain");
         mic().click();

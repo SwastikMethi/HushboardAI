@@ -46,8 +46,10 @@ public final class AppContainer {
 
     public final SettingsRepository settings;
     public final ModelRepository models;
-    /** File and network work. Never used for inference. */
+    /** Short file work: opening a picture, writing something to share, deleting a model. */
     public final ExecutorService io = Executors.newFixedThreadPool(2);
+    /** Model downloads, which can run for minutes and must not hold up the work above. */
+    public final ExecutorService downloads = Executors.newFixedThreadPool(2);
     /** The one inference slot: every model call and every model load or release runs here. */
     public final ExecutorService inference =
             Executors.newSingleThreadExecutor(runnable -> new Thread(runnable, "inference"));

@@ -353,6 +353,20 @@ public class KeyboardAiTest {
     }
 
     @Test
+    public void theTagActionIsOfferedOnlyWhenThereIsSomethingToTag() throws Exception {
+        use("gist", true);
+        relaunchHost();
+        focus("field_plain"); // empty
+
+        device.findObject(By.res(PKG, "ai_toggle")).click();
+        assertNotNull(device.wait(
+                Until.findObject(By.res(PKG, "ai_panel_master")), TIMEOUT_MS));
+
+        assertFalse("with nothing typed, a Tag button would do nothing",
+                device.hasObject(By.res(PKG, "ai_panel_tag")));
+    }
+
+    @Test
     public void topicsAreComputedOnlyOnRequestAndInsertedOnlyOnTap() throws Exception {
         use("gist", true);
         use("redact", false);

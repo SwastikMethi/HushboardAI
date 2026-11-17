@@ -33,7 +33,7 @@ public final class ModelDownloadWorker extends ListenableWorker {
         // return the future at once. Nothing here may block.
         return CallbackToFutureAdapter.getFuture(completer -> {
             AppContainer container = AppContainer.from(getApplicationContext());
-            container.io.execute(() -> completer.set(download(container.models)));
+            container.downloads.execute(() -> completer.set(download(container.models)));
             return "model download";
         });
     }

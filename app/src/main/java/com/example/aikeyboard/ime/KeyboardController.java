@@ -94,6 +94,8 @@ public final class KeyboardController implements KeyGridView.Listener,
     private List<String> suggestions = List.of();
     private Verdict verdict = Verdict.AI_OFF;
     private DraftSnapshot lastSnapshot;
+    // How much text is selected, as the system last reported it (no text is read to know).
+    private int selectionLength;
 
     // What the coordinator currently offers for the draft.
     private List<String> emoji = List.of();
@@ -226,10 +228,24 @@ public final class KeyboardController implements KeyGridView.Listener,
         if (justTurnedOn && views != null) views.aiToggle.playEnableSweep();
     }
 
+    /**
+     * Some field has taken input; whether the keyboard will be shown for it is not known
+     * yet. Until it is, there is no session: input can go on with the keyboard hidden (a
+     * hardware keyboard, a password manager filling a field) and the system still reports
+     * every change, but without a session nothing is read, judged or passed to a model, and
+     * the last field's permissions are never applied to this one.
+     */
+    void onInputStarted() {
+        session = null;
+        editorInfo = null;
+    }
+
     /** A field gained the keyboard. A restart of the same field keeps the user's layer. */
     void onStartInput(EditorInfo info, boolean restarting) {
         session = new InputSession(info);
         editorInfo = info;
+        selectionLength = info.initialSelStart < 0 || info.initialSelEnd < 0 ? 0
+                : Math.abs(info.initialSelEnd - info.initialSelStart);
         if (!restarting) {
             layer = Layer.LETTERS;
             emojiShown = false;
@@ -254,8 +270,9 @@ public final class KeyboardController implements KeyGridView.Listener,
     }
 
     /** The text or cursor changed, by us or by the host app. */
-    void onSelectionChanged() {
+    void onSelectionChanged(int selectionStart, int selectionEnd) {
         if (session == null) return;
+        selectionLength = Math.abs(selectionEnd - selectionStart);
         session.bumpGeneration();
         // Whatever was being reviewed was for the text as it was; it may not be applied now.
         reviewing = null;
@@ -268,6 +285,9 @@ public final class KeyboardController implements KeyGridView.Listener,
         coordinator.onSessionEnded();
         forgetSessionState();
         if (views != null) views.keys.cancelTouches();
+        // No field has the keyboard now: see onInputStarted.
+        session = null;
+        editorInfo = null;
     }
 
     /** The keyboard left the screen: a recording must not carry on behind it. */
@@ -297,9 +317,12 @@ public final class KeyboardController implements KeyGridView.Listener,
                 ? List.of() : suggester.suggest(currentWord, MAX_SUGGESTIONS);
 
         verdict = InputEligibility.check(settings, session);
-        // In a field where AI may not run, its text is not even read for AI.
-        EditorBridge.Draft draft =
-                verdict == Verdict.ALLOWED ? editor.readDraft(DRAFT_BEFORE, DRAFT_AFTER) : null;
+        // In a field where AI may not run, its text is not even read for AI. Nor is a
+        // selection bigger than the window: the editor would hand over all of it (select-all
+        // in a long note), and the keyboard only ever looks at a bounded piece of a draft.
+        boolean readable = verdict == Verdict.ALLOWED
+                && selectionLength <= DRAFT_BEFORE + DRAFT_AFTER;
+        EditorBridge.Draft draft = readable ? editor.readDraft(DRAFT_BEFORE, DRAFT_AFTER) : null;
         lastSnapshot = draft == null
                 ? new DraftSnapshot(session.id, session.generation(), session.editorPackage,
                         "", 0, 0, -1, true)
@@ -381,16 +404,16 @@ public final class KeyboardController implements KeyGridView.Listener,
         if (views == null) return;
         // A dictation the user started comes first: its Stop and Cancel must stay in reach.
         if (dictation == Dictation.LISTENING) {
-            show(Strip.LISTENING, Kind.NOTICE, Arrays.asList(
+            show(Strip.LISTENING, Kind.STATUS, Arrays.asList(
                     service.getString(R.string.dictation_listening),
                     service.getString(R.string.voice_stop),
                     service.getString(R.string.action_cancel)));
         } else if (dictation == Dictation.TRANSCRIBING) {
-            show(Strip.TRANSCRIBING, Kind.NOTICE, Arrays.asList(
+            show(Strip.TRANSCRIBING, Kind.STATUS, Arrays.asList(
                     service.getString(R.string.dictation_working),
                     service.getString(R.string.action_cancel)));
         } else if (!undo.isEmpty()) {
-            show(Strip.UNDO, Kind.NOTICE, Arrays.asList(
+            show(Strip.UNDO, Kind.STATUS, Arrays.asList(
                     service.getResources().getQuantityString(R.plurals.masked_items,
                             undo.size(), undo.size()),
                     service.getString(R.string.action_undo),
@@ -437,7 +460,8 @@ public final class KeyboardController implements KeyGridView.Listener,
         }
         // Topics are computed only on this tap, and only where AI may run at all.
         boolean canTag = verdict == Verdict.ALLOWED && settings.modelActive("gist")
-                && app.models.isReady("gist");
+                && app.models.isReady("gist")
+                && lastSnapshot != null && !lastSnapshot.text.trim().isEmpty();
         views.aiPanel.aiPanelTag.setVisibility(canTag ? View.VISIBLE : View.GONE);
     }
 
@@ -832,7 +856,15 @@ public final class KeyboardController implements KeyGridView.Listener,
 
     @Override
     public void onKey(Key key) {
-        if (session == null) return;
+        // A key was pressed, so the keyboard is on screen and some field has input. If the
+        // system never said which (callbacks can arrive in orders this code has not seen),
+        // ask it now: typing must work, and the field asked about is the current one, so
+        // its own rules apply.
+        if (session == null) {
+            EditorInfo current = service.getCurrentInputEditorInfo();
+            if (current == null) return;
+            onStartInput(current, true);
+        }
         // The user has moved on: the undo offer and any one-off message go away.
         undo = List.of();
         stripMessage = null;

@@ -234,7 +234,6 @@ public final class ModelRepository {
         if (last != null && now - last < PROGRESS_INTERVAL_MS && done < total) return;
         lastProgressAt.put(modelId, now);
         if (cancelledByUser.contains(modelId)) return;
-        ModelDescriptor model = ModelRegistry.find(modelId);
         statuses.put(modelId, new ModelStatus(AssetState.DOWNLOADING, done, total, null));
         publish();
     }

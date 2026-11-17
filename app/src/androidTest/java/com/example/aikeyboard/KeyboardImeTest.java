@@ -157,6 +157,21 @@ public class KeyboardImeTest {
     }
 
     @Test
+    public void backspaceAndEnterLeaveTheAppInTouchMode() {
+        focus("field_multiline");
+        tap("A", "New line", "B", "Backspace");
+        assertEquals("A\n", text(R.id.field_multiline));
+
+        boolean[] touchMode = new boolean[1];
+        scenario.onActivity(a -> touchMode[0] = a.getWindow().getDecorView().isInTouchMode());
+
+        // A key event that looks like a hardware key takes the app out of touch mode, and
+        // focus highlights appear on whatever was last touched.
+        assertTrue("Enter and Backspace must be sent as on-screen keyboard keys",
+                touchMode[0]);
+    }
+
+    @Test
     public void emojiPanelInsertsAnEmojiAndReturnsToLetters() {
         focus("field_plain");
         tap("Emoji");

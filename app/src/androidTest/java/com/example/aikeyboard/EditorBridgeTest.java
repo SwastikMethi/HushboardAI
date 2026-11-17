@@ -159,6 +159,21 @@ public class EditorBridgeTest {
     }
 
     @Test
+    public void replaceRanges_refusesEditsThatOverlapAndChangesNothing() {
+        given("call anna smith now", 19, 19);
+        // Two findings that share "anna": each matches the text, together they would mangle it.
+        List<TextEdit> overlapping = Arrays.asList(
+                new TextEdit(5, 15, "anna smith", "[NAME_1]"),
+                new TextEdit(5, 9, "anna", "[GIVEN_1]"));
+        boolean[] applied = new boolean[1];
+        getInstrumentation().runOnMainSync(
+                () -> applied[0] = bridge.replaceRanges(overlapping));
+
+        assertFalse("overlapping edits must be refused as a whole", applied[0]);
+        assertEquals("call anna smith now", text());
+    }
+
+    @Test
     public void replaceRanges_aMaskCanBeUndoneAndTheUndoIsGuardedToo() {
         given(TWO_ITEMS, TWO_ITEMS.length(), TWO_ITEMS.length());
         assertTrue(replaceAll(MASK));

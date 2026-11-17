@@ -115,6 +115,9 @@ public final class ModelDownloader {
             connection = (HttpURLConnection) new URL(url).openConnection();
             connection.setConnectTimeout(15_000);
             connection.setReadTimeout(30_000);
+            // Not kept for reuse: an idle connection is closed by the server a minute or so
+            // later, and that would show as network traffic from the app while typing.
+            connection.setRequestProperty("Connection", "close");
             if (have > 0) connection.setRequestProperty("Range", "bytes=" + have + "-");
             int code = connection.getResponseCode();
             if (code == HttpURLConnection.HTTP_OK) {

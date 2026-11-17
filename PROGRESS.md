@@ -13,7 +13,8 @@ The execution plan is `~/.claude/plans/i-have-added-a-whimsical-mist.md` (approv
 | 6 — Voice tools | Done (emulator). Device rows blocked | 154 unit tests, 119 instrumented tests (107 passed, 12 opt-in probes skipped). All five voice models run for real: dictation in the keyboard (record → preview → Insert), and a Voice tools screen with record/import, steps, cancel, preview, copy, playback and sharing. Two real crashes (Voz out of memory, Clear on a software GPU) were survived by the crash breaker. A real voice through a real microphone, and Voz and Clear on phone hardware, wait for the phone. |
 | 7 — Image and drawing tools | Done (emulator). Device rows blocked | 160 unit tests, 142 instrumented tests (129 passed, 13 opt-in probes skipped). All 13 models now run for real. Image tools: pick a picture, see what Eye found and Moderator's check, warn before sharing a flagged one. Drawing: a stroke is tidied into a shape, on its own screen and in a keyboard panel that inserts it where the field takes pictures and offers the share sheet where it does not. Moderator on real sensitive material and Eye on real photos were not tried. |
 | 8 — Visual and accessibility audit | Done (emulator). Device rows blocked | 160 unit tests, 151 instrumented tests. Screens set beside both reference images and brought closer: drawn icons, grouped cards, the reference's switches, emoji chips, an app icon. The audit found the AI panel had outgrown the keyboard; every panel now keeps the keyboard's footprint. The app's screens pass Google's accessibility checks; keyboard controls are labelled and full-size; contrast and reduced motion are tested; large text checked at 1.3×. A pass with TalkBack on waits for the phone. |
-| 9 — Complete-version hardening | Emulator part done. **Phone session open** | 161 unit tests, 158 instrumented tests (145 passed, 13 opt-in probes skipped), clean build, 700.1 MB debug APK. Model runs send and receive nothing; nothing typed is kept on disk or in the log; the keyboard survives its process being killed, sleep and wake, rotation, and a cold start offline; overlapping download, delete and reset behave. Every check that needs a real phone (chat apps, latency, memory, battery, a real voice, TalkBack) is blocked until one is connected. |
+| 9 — Complete-version hardening | Emulator part done. **Phone session open** | 161 unit tests, 158 instrumented tests (145 passed, 13 opt-in probes skipped) at the end of the milestone; clean build, 700.1 MB debug APK. Model runs send and receive nothing; nothing typed is kept on disk or in the log; the keyboard survives its process being killed, sleep and wake, rotation, and a cold start offline; overlapping download, delete and reset behave. Every check that needs a real phone (chat apps, latency, memory, battery, a real voice, TalkBack) is blocked until one is connected. |
+| Final review | Done. Ten small findings deferred | One independent review of the whole branch; one fix pass (see "Final review"). After it: 161 unit tests, 171 instrumented tests (158 passed, 13 opt-in probes skipped, none failed), lint 0 errors, clean build. The review found that the keyboard's AI could read a password field while the on-screen keyboard was hidden; that is fixed and tested from the field's side. |
 
 ## Environment
 
@@ -67,7 +68,7 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 34. **Tone notices offer no edit.** Review shows which kinds of wording were flagged and says the model is in beta; there is nothing to apply. Cost if wrong: none.
 
 35. **Tongue gates Redact only.** Redact's language list is the one the vendor documents precisely; Emo's and Toxic's exact lists were not captured, so nothing is claimed or gated for them. Cost if wrong: Emo or Toxic may run on a language they handle poorly.
-36. **Tongue's telemetry switch is left at the vendor default.** The SDK exposes `setSendsDeviceContext`; what "device context" contains is not established, and the license forbids disabling its check. Not touching it keeps the app within what the owner accepted. Cost if wrong: more device detail is sent than the Privacy screen describes — to be settled by reading the vendor's documentation.
+36. **Tongue's telemetry switch is left at the vendor default.** The SDK exposes `setSendsDeviceContext`; what "device context" contains is not established, and the license forbids disabling its check. Not touching it keeps the app within what the owner accepted. Cost if wrong: more device detail is sent than the Privacy screen describes — to be settled by reading the vendor's documentation. *Settled in the final review for this SDK version: the Tongue 4.3.0 library contains no network code at all (22 classes; no sockets, HTTP, threads, files or Android references), so the switch cannot send anything. Re-check on an SDK upgrade.*
 37. **Gist's useful action is "Tag this draft" → "Insert as hashtags".** Topics are computed only on that tap, shown first, and inserted at the cursor only on a second tap, built from each topic's fixed slug. Cost if wrong: a different action (copy, label) would be a small change.
 38. **Model file lists are captured with an opt-in probe that lets the SDK download once** (`ManifestCaptureTest`). It is development tooling, not a product path. Cost if wrong: none.
 
@@ -107,6 +108,65 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 72. **Process death, sleep/wake and offline start were checked by hand over adb**, not by automated tests: the tests run inside the app's own process, so they cannot outlive its death. The commands and results are in the validation report. Cost if wrong: these three are not re-run by the test suite.
 73. **The Privacy screen now covers recordings, pictures and drawings**, added in this milestone because milestones 6 and 7 introduced them. Cost if wrong: none.
 
+Rulings 74–89 were made in the final review (see "Final review" below for what was fixed and what was deferred).
+
+74. **Final: the reviewer's "a restart carries the last field's dictation and notices into the next field" was not reproduced, and nothing was changed for it.** `KeyboardVoiceTest.movingToAnotherFieldEndsTheDictation` passed before any change. Since the password fix, the session is also dropped whenever input starts on a field. A restart of the *same* field still keeps the layer and shift state on purpose (ruling 12). Cost if wrong: a host that swaps content inside one field without moving focus could keep an undo offer or the symbols layer for one more key press.
+75. **Final: backspace and plain Enter are now sent marked as on-screen-keyboard presses, without a failing test first.** They carry real times and the soft-keyboard flags, the way the platform's own `sendDownUpKeyEvents` sends them. `KeyboardImeTest.backspaceAndEnterLeaveTheAppInTouchMode` passes before and after on Android 17, so it guards the behaviour but did not prove a problem. Cost if wrong: none expected; revert `EditorBridge.sendKey`.
+76. **Final: a key pressed while the keyboard has no session starts one from the field in focus** (`KeyboardController.onKey`). A safety net added with the password fix, for a host that shows the keyboard without telling it a field started. No test drives that order of events. Cost if wrong: on such a host the first key press behaves as in a fresh field.
+77. **Final: seven findings the reviewer called minor were re-graded by what a person would get, and fixed.** Overlapping edits could mangle a draft; selecting a long note handed all of it to the models; a status label looked tappable and did nothing, and Tag was offered on an empty draft; a damaged settings file or a settings error took the keyboard down; the app used the network on the strength of the SDK's permission only; the key events of ruling 75; and report statements that were no longer true. Cost if wrong: none; all but ruling 75 have a test that failed first.
+78. **Final: recording from inside the keyboard on real phones stays a blocked row.** The emulator records. A phone that will not give a keyboard the microphone shows "the microphone couldn't be opened" and typing carries on. Cost if wrong: no dictation on that phone, with a message. Phone session.
+79. **Final: Clear on real GPUs — ruling 50 stands.** Cost if wrong: as ruling 50, the app closes once and Clear is then switched off with the reason.
+80. **Final: Voz's 5 GiB line — ruling 39 stands.** One emulator measurement. Cost if wrong: as ruling 39.
+81. **Final: the time spent asking the host app for its text on each change was not measured.** The keyboard reads at most 1,200 characters once per change. In a host that answers slowly this would be felt as key lag. Cost if wrong: lag in that app; the remedy is to read after the typing pause instead. Phone session.
+82. **Final: WhatsApp, Telegram, Discord, a browser, and fields that declare no input type were not run anywhere.** The chat apps wait for the phone. Fields with no input type (terminals, some games) expect raw key presses, and this keyboard commits text; whether letters arrive there is unknown. Cost if wrong: typing does not work in such apps until letters are also sent as key events there.
+83. **Final: whether Redact can return overlapping spans is left unanswered, because it can no longer damage text.** Overlapping or out-of-order edits are refused as a whole and nothing is changed. Cost if wrong: on such a draft masking never applies, and the message shown says the text changed, which would not be the real reason.
+84. **Final: what the license check sends — ruling 71 stands.** Cost if wrong: as ruling 71.
+85. **Final: the reviewer could not vouch that the native voice, image and drawing libraries stay off the network; that is now measured.** Zero bytes sent and received across all eight, with their models loaded. One full run showed 80 bytes; that was a download's connection closing, not a model (ruling 89). Cost if wrong: none for what was measured; the first load of a model in a month still makes the license check.
+86. **Final: how close the screens are to the designs, a TalkBack pass, and how good each model's answers are remain the owner's to judge.** Nothing automated can settle them (ruling 70, open items). Cost if wrong: polish and wording problems found late.
+87. **Final: what a backup takes was read from the two rule files, not tested.** Settings travel, including the list of apps the keyboard has been used in (package ids only). Model files and crash markers are in the no-backup directory; the vendor's install record is excluded; text, recordings and pictures are never written anywhere a backup reads. Cost if wrong: something else under the app's files is backed up; check with `adb shell bmgr` on the phone.
+88. **Final: the first full run after the fix pass had two failures, and both were corrected in the tests, not in the app.** (a) `HardeningTest.deletingAModelWaitsForARunInProgress…` started a run and deleted the model at once; when the inference thread was still finishing the previous test's work, the delete won and the run was refused as "not installed", which is the intended behaviour for a run that has not started. The test now loads the model first, so the run really is in progress. (b) `AccessibilityAuditTest.theThreeTabsPass…` failed once on Espresso's "close keyboard" action timing out, seconds after a reinstall; it passed five times out of five alone, with either keyboard selected. The audit now performs an action that does nothing, and the canary test confirms the checks still run. Cost if wrong: (a) a run asked for just before Delete, with the model not yet loaded, fails with a message rather than finishing; (b) if that timeout was a real slowness in hiding the keyboard after a reinstall, no test notices it now.
+89. **Final: every model file is downloaded on its own connection, which is closed when the file is done.** Found in the second full run (see "Final review"): a connection kept for reuse was closed by the server later, while models were running, and showed as 80 bytes of traffic from the app. Cost if wrong: a few extra connection set-ups per model download, small beside the files themselves (up to 1.2 GB). Not covered: the vendor's own license check (a model's first load in a month) makes its own connection, which this app does not control and did not measure.
+
+## Final review
+
+One independent review of the whole branch, by a fresh reviewer given the plan, the handoff and the rulings above. It returned 1 critical finding, 6 important, 15 minor, and a list of things it declined to judge (rulings 78–87). One fix pass followed. There was no second review; each fix is held by a test that failed before it and passes after, except where stated.
+
+**Fixed**
+
+- Final: fixed C1, the keyboard's AI could read a password, no-learning or blocked field when a field was active without the keyboard on screen (typing with a hardware keyboard, or the view hidden). Android was delivering text changes to a session left over from the previous field. The session is now dropped whenever input starts or ends, text changes are ignored while the keyboard is not shown, and eligibility is decided again for every field — `EditorReadsTest.aPasswordTypedWithTheKeyboardHiddenIsNeverRead` RED→GREEN (the field counted reads of the password before; zero after), with `aPasswordFieldIsNotReadWithTheKeyboardShownEither` as the control.
+- Final: fixed I1, the crash breaker would switch off any model that was loaded a second time in one process and had not yet answered when the process ended — `HardeningTest.aModelLoadedTwiceInOneProcessLeavesNoCrashMark` RED→GREEN.
+- Final: fixed I3, switching a model back on from the catalog row left its "switched off after it stopped the app" note in place — `CompanionAppTest.aModelSwitchedOffAfterStoppingTheAppSaysSoUntilItIsSwitchedOnAgain`, which now taps the row's own switch, RED→GREEN.
+- Final: fixed I4, two downloads in progress used both of the app's file threads, so opening a picture or deleting a model waited for them. Downloads have their own two threads — `HardeningTest.twoDownloadsInProgressDoNotHoldUpOtherFileWork` RED→GREEN.
+- Final: fixed I5, "model runs send nothing" was stated for all 13 models and measured for 5. Now measured for the other 8 — `HardeningTest.runningTheVoiceImageAndDrawingModelsSendsAndReceivesNothing`. Its first run showed 80 bytes sent and 104 received; that was the test's own proof-of-meter request closing its connection, so the proof moved to the end of both network tests. Result: 0 and 0. No product code changed.
+- Final: fixed I6, the reports said Tongue's telemetry was unsettled; the 4.3.0 library has no network code (ruling 36). Reports corrected; no code changed.
+- Final: fixed M4, edits that overlap or arrive out of order are refused as a whole — `EditorBridgeTest.replaceRanges_refusesEditsThatOverlapAndChangesNothing` RED→GREEN.
+- Final: fixed M5, a selection larger than the keyboard's reading window is not handed to the models — `EditorReadsTest.selectingAWholeLongNoteDoesNotHandItToTheModels` RED→GREEN.
+- Final: fixed M7 (in part), the "Listening…" and "Transcribing…" labels no longer look or act like buttons, and Tag is offered only when there is text to tag — `KeyboardVoiceTest.theListeningLabelDoesNotPresentItselfAsAButton` and `KeyboardAiTest.theTagActionIsOfferedOnlyWhenThereIsSomethingToTag` RED→GREEN.
+- Final: fixed M11 (in part), a damaged settings file starts again from defaults instead of failing on every start — `SettingsSyncTest.aDamagedSettingsFileStartsFromDefaultsInsteadOfFailing` RED→GREEN. The keyboard's settings subscription also has an error handler now; that one line has no test.
+- Final: fixed M13, see ruling 75 (no failing test first).
+- Final: fixed M14, the app's own manifest now declares the network permission it uses for downloads, instead of relying on the SDK's. A declaration; the merged manifest is unchanged, so there is no test.
+- Final: fixed M15, report statements that had drifted from the code, one unused variable, and the Privacy screen's wording on shared copies.
+- Final: fixed a fault the reviewer did not report, found by running the whole suite after the pass. A finished download left its connection to the download server open for reuse. The server closes such a connection a minute or so later, and the closing packets were then counted as traffic from the app while its models were running: 80 bytes sent in the second full run, in the check that had measured zero when run on its own. The packets carry no content, but "nothing leaves while you type" has to hold without a footnote. The downloader now asks for each connection to be closed when its file is done — `HardeningTest.aFinishedDownloadLeavesNoConnectionOpen` RED→GREEN (one socket left open after a download before; none after). See ruling 89.
+
+**The suite after the pass.** Clean build, then the whole device suite on `AiKeyboard_Test` with `-e clear true`, three times:
+
+1. 170 tests: 155 passed, 13 skipped, 2 failed. Both failures were in tests (ruling 88).
+2. 170 tests: 156 passed, 13 skipped, 1 failed: the 80 bytes that led to ruling 89.
+3. 171 tests: 158 passed, 13 skipped (opt-in probes), none failed. Unit tests 161, lint 0 errors and 37 warnings, debug APK 700,096,810 bytes.
+
+**Deferred** (not fixed; the owner decides)
+
+- Final: minor (deferred): a model that is switched off stays in memory until Android asks for memory back or the app's process ends. `ModelAdapter.release()` and `modelId()` are never called.
+- Final: minor (deferred): if a model call runs past its time limit, a delete or the idle unload can close the model while its native call is still running.
+- Final: minor (deferred): cancelling a download during its final checksum can leave its row showing the wrong state until the list is next refreshed.
+- Final: minor (deferred): in an app whose editor does not answer `getExtractedText`, a picked word and a mask are not applied (masking falls back to copy). Typing itself is unaffected.
+- Final: minor (deferred): when Gist fails, the panel says no topic stood out instead of saying it failed; a drawing that cannot be written for inserting is dropped without a message.
+- Final: minor (deferred): "Try it" on a model's screen runs the model even while the master AI switch is off.
+- Final: minor (deferred): in a narrow window, a shape answer for one stroke can be applied to the stroke drawn straight after it.
+- Final: minor (deferred): suggestions asked for while a long voice job is running wait behind it instead of being dropped, and Tongue runs twice for each draft.
+- Final: minor (deferred): two quick changes to the per-app AI list can overwrite each other; the app's screens (not the keyboard) have no handler for a settings error.
+- Final: minor (deferred): Voice tools playback hands the whole clip to the player at once, which a device may refuse for a long clip; that would close the screen.
+
 ## Deviations from the handoff file list
 
 - `sdkbridge/DesertAntSuspendBridge.kt` and `sdkbridge/CancellableOperation.java`: not needed (ruling 3).
@@ -124,37 +184,48 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 - Milestone 7: `media/ImageImportController.java` → `media/ImageImport.java` (decode only; the picker lives in the screen). `media/StrokeController.java` → `ui/tools/StrokeView.java` (the surface) and `ui/tools/ShapeRecognizer.java` (runs the model, drops stale answers), both shared by the Drawing screen and the keyboard panel. Added: `media/Vision.java` (value types), `res/layout/view_draw_panel.xml`, a field that takes pictures in the debug editor host.
 - Milestone 6: `media/AudioImportController.java` → `media/AudioDecoder.java` (decoding is the whole job; the picker lives in the screen). Added: `media/Voice.java` (value types), `media/VoiceText.java` (how a transcript is worded), `ui/tools/MicPermissionActivity.java`, a FileProvider with `xml/file_paths.xml`. The Voice tools screen keeps its work in a ViewModel nested in `VoiceToolsFragment` so a run survives rotation.
 
-## Open items carried forward
+## Open items
 
-- Redact spans can start inside an emoji sequence; milestone 4 must widen spans to whole characters before editing.
-- Tongue's telemetry switch (`setSendsDeviceContext`) is left at the vendor default (ruling 36). **For the owner:** check the vendor's documentation for what "device context" contains.
-- Keep the SDK logger quiet so input text cannot reach logs (milestone 3, when the first model loads in the keyboard).
-- All-models APK is 703 MB. Reported to the owner; needs a packaging decision before any store release.
+What is still open at the end of the emulator work, in one place. Items from earlier milestones that were closed along the way have been removed from this list; the rulings above say how.
 
-- Reinstalling the app makes Android switch away from the keyboard (it stays enabled). Onboarding reports this correctly; tests re-select it in their own setup.
-- TalkBack has not been driven yet; keys are exposed as labelled nodes. Milestone 8.
+**For the owner to decide or do**
 
+- The phone session (see "Next action"): every device-only gate is blocked until then.
+- The deferred findings from the final review (see "Final review"): ten small ones, none fixed, each with what it means for someone using the app.
+- The debug APK is 700 MB because each native model library is about 56 MB. A store release needs a packaging decision (compressed libraries or per-model delivery), a real application id instead of `com.example.aikeyboard`, and your signing key.
+- The app is still installed on your `Pixel_6_Pro` emulator from milestones 0–5, with about 1.4 GB of downloaded models, and that emulator is close to full. Nothing was removed from it. To get the space back, with that emulator running: `adb uninstall com.example.aikeyboard` and `adb uninstall com.example.aikeyboard.test`.
+- A dedicated emulator, `AiKeyboard_Test`, was added under `~/.android/avd/` (ruling 40). Delete `AiKeyboard_Test.ini` and `AiKeyboard_Test.avd` there if you do not want it.
+- The license check was not captured on the wire (ruling 71).
+
+**Needs the phone**
+
+- Typing in WhatsApp, Telegram, Discord, a browser and a notes app; key-handling and suggestion latency; memory on a constrained phone; battery and heat; haptics and key sound.
+- Voz's memory line (ruling 39) and Clear on a phone's GPU (ruling 50).
+- Dictation with a real voice; speech with real fillers (Uhm); a real recording with several speakers (Who).
+- A pass with TalkBack switched on (ruling 70).
+
+**Not tried on any device**
+
+- Eye on real photos; Moderator on anything it should flag (ruling 55); a rotated camera photo on Android 8, where the rotation note is ignored.
+- Audio in a language other than English; a recording longer than two minutes.
+- The copy-only privacy preview (needs an editor that hides its text offset) and the partial-draft wording (needs a draft over 1,000 characters). Both are unit-tested.
+- Inserting a drawing into a real chat app; a host app that turns an insert down.
+- Font sizes above 1.3×, display-size scaling, right-to-left layout.
+- How useful each model's output is across a real sample of messages. One or two inputs per model were used.
+
+**Not driven by a test** (the code is there)
+
+- The two-minute cut message; the "microphone couldn't be opened" message; a microphone taken away mid-recording.
+- Eye or Moderator failing mid-analysis; sharing failing for lack of storage; a download onto a nearly full disk (unit-tested only).
+- The system photo picker itself (the screen's pick handler is called with a file); the per-app AI switches screen beyond the accessibility audit.
+- Rotation not replaying the enable sweep.
+
+**Behaviour worth knowing**
+
+- Reinstalling the app makes Android switch away from the keyboard (it stays enabled). Onboarding reports this correctly.
 - Android defers background jobs for apps that are not on screen. A download started and then immediately left may sit at "Waiting to start" for some minutes.
-- Model rows show an initial rather than a drawn icon, and settings groups are flat lists rather than rounded cards. Milestone 8.
-- Not yet driven by a test: deleting a model from its detail screen, resetting one model's settings, low-storage failure, a double tap on Download.
-
-- The SDK's logging is switched off at process start (`DesertAntClient.silenceSdkLogs`). Done; the open item from milestone 0 is closed.
-- Whole-character span handling is done (ruling 30); that milestone 0 item is closed.
-- Added in milestone 4: `core/TextEdit.java`, `ai/RedactionPlan.java`, `ai/RedactCategories.java`, `ai/ToxicPolicy.java`, `ai/NoticeText.java`, `ui/models/TryItPreference.java`, `ui/models/ModelTryIt.java`.
-- Not exercised yet: the copy-only preview (needs an editor that hides its text offset), the partial-draft wording (needs a draft over 1,000 characters), and model usefulness on a real sample set.
-- Not yet asserted by a test: the single enable sweep and its reduced-motion skip, model release under memory pressure, the per-app switches screen.
-
-- Milestone 6, **for the owner:** the app is still installed on your `Pixel_6_Pro` emulator from milestones 0–5, with about 1.4 GB of downloaded models, and that emulator is close to full. Nothing was removed from it. To get the space back: `adb uninstall com.example.aikeyboard` and `adb uninstall com.example.aikeyboard.test` while that emulator is running.
-- Voz's memory line (ruling 39) and Clear on real GPUs (ruling 50) both need the phone.
-- Not tried: speech with real fillers (Uhm), a real multi-speaker recording (Who), a recording longer than two minutes, audio in a language other than English, and how well dictation hears a real voice through a real microphone — the emulator's microphone delivers silence.
-- Not driven by a test: the two-minute cut message, the "microphone couldn't be opened" message (needs another app holding the microphone), sharing failing for lack of storage.
-- The Voice tools screen plays back the cleaned audio before it is shared, but not the original recording; what was heard is otherwise judged from the transcript.
-
-- Milestone 7, not tried: Eye on real photos (people, pets, places, documents); Moderator on anything it should flag (ruling 55); the real system photo picker being driven by a test (the screen's pick handler is called directly with a file); inserting a drawing into a real chat app; a rotated camera photo on Android 8, where the rotation note is ignored (`ImageImport`).
-- Not driven by a test: Eye or Moderator failing mid-analysis (the "couldn't run" note), sharing failing for lack of storage.
-
-- Milestone 8, not done: a pass with TalkBack actually switched on; font sizes above 1.3×; display-size scaling; right-to-left layout; a light theme (there is none).
-- Model rows now have drawn icons and settings are grouped cards; those two earlier open items are closed. Key glyphs are drawn icons; that one is closed too.
+- The Voice tools screen plays back the cleaned audio, not the original recording.
+- A drawing is not kept across a screen rotation.
 
 ## Next action
 

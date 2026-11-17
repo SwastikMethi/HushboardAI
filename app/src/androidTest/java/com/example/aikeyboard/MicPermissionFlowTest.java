@@ -1,7 +1,10 @@
 // Opt-in: the microphone being refused, from both places that can ask for it. It has to
 // start with the permission revoked, and revoking kills the app, so that is done from
-// outside first:
+// outside first. The second command clears the "refused for good" mark this test itself
+// leaves behind; without it Android shows no prompt on the next run.
 //   adb shell pm revoke com.example.aikeyboard android.permission.RECORD_AUDIO
+//   adb shell pm clear-permission-flags com.example.aikeyboard \
+//       android.permission.RECORD_AUDIO user-set user-fixed
 //   adb shell am instrument -w -e micDenied true -e class ...MicPermissionFlowTest ...
 // Taps the system's own permission prompt, so it depends on that prompt's button ids.
 package com.example.aikeyboard;
@@ -81,7 +84,8 @@ public class MicPermissionFlowTest {
 
     private void refuseInTheSystemPrompt() {
         UiObject2 deny = device.wait(Until.findObject(By.res(DENY)), TIMEOUT_MS);
-        assertNotNull("the system's microphone prompt did not appear", deny);
+        assertNotNull("the system's microphone prompt did not appear (was the permission's "
+                + "\"refused for good\" mark cleared? see the file header)", deny);
         deny.click();
     }
 

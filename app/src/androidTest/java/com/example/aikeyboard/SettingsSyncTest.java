@@ -57,6 +57,28 @@ public class SettingsSyncTest {
     }
 
     @Test
+    public void aDamagedSettingsFileStartsFromDefaultsInsteadOfFailing() throws Exception {
+        android.content.Context context = getInstrumentation().getTargetContext();
+        java.io.File file = new java.io.File(context.getFilesDir(),
+                "datastore/settings-damaged-test.preferences_pb");
+        file.getParentFile().mkdirs();
+        java.nio.file.Files.write(file.toPath(), new byte[] {0x7f, 0x00, 0x13, 0x37, (byte) 0xff});
+        try {
+            SettingsRepository damaged = new SettingsRepository(context, "settings-damaged-test");
+
+            // A keyboard that cannot read its settings must still start, with AI off.
+            AppSettings first = damaged.observe().timeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                    .blockingFirst();
+            assertTrue("defaults: AI off", !first.aiEnabled());
+            damaged.setBoolean(AppSettings.AI_ENABLED, true);
+            assertTrue("and it can be written to again",
+                    TestModels.await(() -> damaged.latest().aiEnabled(), 5000));
+        } finally {
+            file.delete();
+        }
+    }
+
+    @Test
     public void everyObserverSeesTheSameSnapshotWithTheSameRevision() throws Exception {
         List<AppSettings> first = new CopyOnWriteArrayList<>();
         List<AppSettings> second = new CopyOnWriteArrayList<>();

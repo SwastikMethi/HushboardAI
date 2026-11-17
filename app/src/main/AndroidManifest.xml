@@ -2,6 +2,10 @@
 <!-- App manifest: the companion Activity and the keyboard service, in one process. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Model files are downloaded when the user asks. The vendor's libraries declare this
+         too; the app declares it itself so its own downloader does not depend on theirs. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Voice tools record only after an explicit tap; the permission is asked for then. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 

@@ -5,6 +5,8 @@ package com.example.aikeyboard.ime;
 import android.content.ClipDescription;
 import android.net.Uri;
 import android.os.Build;
+import android.os.SystemClock;
+import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.ExtractedText;
@@ -66,8 +68,19 @@ public final class EditorBridge {
     public void backspace() {
         InputConnection ic = connection.get();
         if (ic == null) return;
-        ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL));
-        ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_DEL));
+        sendKey(ic, KeyEvent.KEYCODE_DEL);
+    }
+
+    // A key press marked as coming from an on-screen keyboard, with real times, the way
+    // InputMethodService.sendDownUpKeyEvents sends one. Unmarked, some Android versions
+    // treat it as a hardware key and take the app out of touch mode.
+    private static void sendKey(InputConnection ic, int keyCode) {
+        long now = SystemClock.uptimeMillis();
+        int flags = KeyEvent.FLAG_SOFT_KEYBOARD | KeyEvent.FLAG_KEEP_TOUCH_MODE;
+        ic.sendKeyEvent(new KeyEvent(now, now, KeyEvent.ACTION_DOWN, keyCode, 0, 0,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, 0, flags));
+        ic.sendKeyEvent(new KeyEvent(now, SystemClock.uptimeMillis(), KeyEvent.ACTION_UP,
+                keyCode, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0, flags));
     }
 
     /**
@@ -83,8 +96,7 @@ public final class EditorBridge {
                 || action == EditorInfo.IME_ACTION_NONE
                 || action == EditorInfo.IME_ACTION_UNSPECIFIED;
         if (plainEnter) {
-            ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
-            ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER));
+            sendKey(ic, KeyEvent.KEYCODE_ENTER);
         } else {
             ic.performEditorAction(action);
         }
@@ -182,7 +194,12 @@ public final class EditorBridge {
         ExtractedText extracted = ic.getExtractedText(new ExtractedTextRequest(), 0);
         if (extracted == null || extracted.text == null) return false;
 
+        int previousEnd = Integer.MIN_VALUE;
         for (TextEdit edit : edits) {
+            // Out of order or overlapping: each would pass its own check and together they
+            // would mangle the text. Refused as a whole.
+            if (edit.start < previousEnd) return false;
+            previousEnd = edit.end;
             // An editor may expose only a window of its text; offsets inside it are relative.
             int from = edit.start - extracted.startOffset;
             int to = edit.end - extracted.startOffset;

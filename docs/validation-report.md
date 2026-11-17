@@ -47,8 +47,10 @@ adb shell am instrument -w -e clear true -e class 'com.example.aikeyboard.VoiceM
 adb shell am instrument -w -e crashProbe run    -e crashModel clear -e class com.example.aikeyboard.CrashRecoveryProbeTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 adb shell am instrument -w -e crashProbe verify -e crashModel clear -e class com.example.aikeyboard.CrashRecoveryProbeTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 
-# Microphone refused: revoke first (this kills the app), then run.
+# Microphone refused: revoke first (this kills the app) and clear the "refused for good" mark
+# an earlier run leaves behind, then run.
 adb shell pm revoke com.example.aikeyboard android.permission.RECORD_AUDIO
+adb shell pm clear-permission-flags com.example.aikeyboard android.permission.RECORD_AUDIO user-set user-fixed
 adb shell am instrument -w -e micDenied true -e class com.example.aikeyboard.MicPermissionFlowTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 
 # Screenshots: written to /sdcard/Android/data/com.example.aikeyboard/files/tour
@@ -366,9 +368,10 @@ No physical phone was connected, so every row that needs one is **blocked**, not
 |---|---|---|---|
 | Clean build: metadata check, debug APK, unit tests, lint | passed | host | `./gradlew clean`, then `:app:checkDebugAarMetadata assembleDebug testDebugUnitTest lintDebug`: 161 tests, lint 0 errors and 37 warnings, `app/build/outputs/apk/debug/app-debug.apk` 700,096,566 bytes |
 | A fresh clone of the repository builds by the README alone | passed | host | `git clone` into an empty folder, `local.properties` written as the README says, then the README's build command: BUILD SUCCESSFUL, 161 unit tests, lint 0 errors, the same 700,096,566-byte APK |
-| Running the installed text models sends and receives nothing | passed | EMU-37B | `HardeningTest.runningInstalledModelsOnTextSendsAndReceivesNothing`: 125 runs across Emo, Redact, Toxic, Gist and Tongue, 0 bytes each way for the app's own network identity. The test first proves the meter moves with one small request |
+| Running the installed text models sends and receives nothing | passed | EMU-37B | `HardeningTest.runningInstalledModelsOnTextSendsAndReceivesNothing`: 125 runs across Emo, Redact, Toxic, Gist and Tongue, 0 bytes each way for the app's own network identity. The test then proves the meter moves with one small request; a device that does not meter per app would skip, not pass |
+| Running the voice, image and drawing models sends and receives nothing | failed once, then passed | EMU-37B | `HardeningTest.runningTheVoiceImageAndDrawingModelsSendsAndReceivesNothing` (added after the review): three rounds of the voice pipeline with Clear, Ear, Voz, Uhm and Who, plus Eye, Moderator and Shapes, 0 bytes each way. In one full run it measured 80 bytes sent. That was not a model: a download finished a minute earlier had left its connection open, and the server was closing it. Fixed in the downloader (next section) |
 | What the license check does | observed in part | EMU-37B | The SDK's own record shows one signed license per model per calendar month and a device identifier. Reloading four models with current records sent 40 bytes and received none. The request itself was not captured (see the compatibility report) |
-| What is typed is not written to the app's storage or the system log | passed | EMU-37B | `HardeningTest.whatIsTypedIsNotWrittenToTheAppsStorageOrToTheLog`: a unique word typed with Emo, Redact, Toxic and Tongue on; every file in the app's data directory except model weights, and `logcat`, searched for it |
+| What is typed is not written to the app's storage or the system log | passed | EMU-37B | `HardeningTest.whatIsTypedIsNotWrittenToTheAppsStorageOrToTheLog`: a unique word typed with Emo, Redact, Toxic and Tongue on; every file in the app's data directory except model weights, and `logcat`, searched for it. Dictated transcripts and Gist were not part of this search; the code keeps them in memory only and has no logging |
 | Deleting a model waits for a run in progress, then leaves nothing behind and switches it off | passed | EMU-37B | `HardeningTest.deletingAModelWaitsForARunInProgressAndLeavesNothingBehind` |
 | Asking for a download twice starts one transfer | passed | EMU-37B | `HardeningTest.askingForADownloadTwiceStartsOneTransfer` (one WorkManager job) |
 | Deleting from a model's own screen asks first; Cancel keeps it | passed | EMU-37B | `HardeningTest.deletingFromAModelsScreenAsksFirstAndCancelKeepsIt` |
@@ -391,6 +394,34 @@ No physical phone was connected, so every row that needs one is **blocked**, not
 
 Full-suite run at the end of the milestone, on the clean build (EMU-37B, with `-e clear true`): 158 instrumented tests; 145 passed, 13 skipped by design (opt-in probes, each run separately as listed), none failed. Unit tests: 161. Lint: 0 errors, 37 warnings.
 
+## Final review — fixes
+
+An independent review of the whole branch found one critical problem, six important ones and fifteen minor ones. `PROGRESS.md` ("Final review") lists what was fixed, what was deferred and why. The rows below are the checks added or changed in the fix pass; each "failed, then passed" row was watched failing on the code as reviewed.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| A password typed while the on-screen keyboard is hidden is never read for AI | failed, then passed | EMU-37B | `EditorReadsTest.aPasswordTypedWithTheKeyboardHiddenIsNeverRead`. The debug host's password field counts every request for its text: more than zero before the fix, zero after |
+| A password field is not read with the keyboard shown either | passed | EMU-37B | `EditorReadsTest.aPasswordFieldIsNotReadWithTheKeyboardShownEither` (the control; passed before and after) |
+| Selecting a whole long note does not hand it to the models | failed, then passed | EMU-37B | `EditorReadsTest.selectingAWholeLongNoteDoesNotHandItToTheModels` |
+| A model loaded twice in one process leaves no crash mark | failed, then passed | EMU-37B | `HardeningTest.aModelLoadedTwiceInOneProcessLeavesNoCrashMark` |
+| Switching a stopped model back on from its catalog row clears the note | failed, then passed | EMU-37B | `CompanionAppTest.aModelSwitchedOffAfterStoppingTheAppSaysSoUntilItIsSwitchedOnAgain`, now tapping the row's own switch |
+| Two downloads in progress do not hold up other file work | failed, then passed | EMU-37B | `HardeningTest.twoDownloadsInProgressDoNotHoldUpOtherFileWork` |
+| Edits that overlap are refused whole and change nothing | failed, then passed | EMU-37B | `EditorBridgeTest.replaceRanges_refusesEditsThatOverlapAndChangesNothing` |
+| A status label in the strip is not a button; Tag is offered only with text to tag | failed, then passed | EMU-37B | `KeyboardVoiceTest.theListeningLabelDoesNotPresentItselfAsAButton`, `KeyboardAiTest.theTagActionIsOfferedOnlyWhenThereIsSomethingToTag` |
+| A damaged settings file starts again from defaults | failed, then passed | EMU-37B | `SettingsSyncTest.aDamagedSettingsFileStartsFromDefaultsInsteadOfFailing` |
+| A finished download leaves no connection open | failed, then passed | EMU-37B | `HardeningTest.aFinishedDownloadLeavesNoConnectionOpen`: the app's open sockets are counted before and after fetching one small model file from the real server. One more after the download before the fix; the same number after it. Not found by the review; found by the full run |
+| Backspace and Enter leave the host app in touch mode | passed | EMU-37B | `KeyboardImeTest.backspaceAndEnterLeaveTheAppInTouchMode`. Passed before the change as well on Android 17, so it guards the behaviour without having proved a fault |
+| Moving to another field ends a dictation | passed | EMU-37B | `KeyboardVoiceTest.movingToAnotherFieldEndsTheDictation`. Written to reproduce a review finding; it passed without any change, so nothing was changed for it |
+| A key pressed while the keyboard has no session starts one | not run | — | The code is there (`KeyboardController.onKey`); no test produces that order of events |
+| The keyboard carries on after a settings read error | not run | — | An error handler was added to the keyboard's subscription; no test forces the error |
+| Clean build after the fix pass: metadata check, debug APK, unit tests, lint | passed | host | `clean :app:checkDebugAarMetadata assembleDebug testDebugUnitTest lintDebug`: 161 tests, lint 0 errors and 37 warnings, `app/build/outputs/apk/debug/app-debug.apk` 700,096,810 bytes |
+
+The whole device suite was run three times on that work (EMU-37B, with `-e clear true`):
+
+1. 170 tests: 155 passed, 13 skipped, **2 failed**. Both were faults in the tests, not the app: a delete test that raced the run it was meant to interrupt, and an accessibility audit that used "close the keyboard" as its trigger and timed out waiting for the system seconds after a reinstall (it passed five times out of five alone). Both tests were corrected.
+2. 170 tests: 156 passed, 13 skipped, **1 failed**: the 80 bytes described above, a real fault in the downloader. Fixed, with a new test.
+3. 171 tests: **158 passed, 13 skipped by design (opt-in probes), none failed.**
+
 ## The handoff checklist, item by item
 
 Each line of `docs/BUILD_AND_TEST_CHECKLIST.md`, with where it stands. "Emulator" means it ran and passed on an emulator only; the phone rows above still apply.
@@ -410,26 +441,26 @@ Each line of `docs/BUILD_AND_TEST_CHECKLIST.md`, with where it stands. "Emulator
 
 | Item | Status | Where |
 |---|---|---|
-| No AI in password and no-learning fields; typing still works | passed (emulator) | `InputEligibilityTest`, `KeyboardAiTest` (2), `KeyboardVoiceTest`, `DrawingTest` |
+| No AI in password and no-learning fields; typing still works | passed (emulator) | `InputEligibilityTest`, `KeyboardAiTest` (2), `KeyboardVoiceTest`, `DrawingTest`, and `EditorReadsTest`, where the field itself counts the keyboard's reads: zero for a password field, with the keyboard shown or hidden. The hidden case failed until the final review's fix |
 | Empty, long, partial or unavailable editor context | passed in part | Unit-tested (`TextRangeMapperTest`, `AiCoordinatorTest`); a draft over 1,000 characters and an editor that hides its offsets were not driven on a device |
 | Fast typing, paste, selection moves, app switches and settings changes drop stale work | passed | `AiCoordinatorTest` (26), `InferenceSchedulerTest`; on device through the notice and topics tests |
 | Main thread never waits on a model; p95 key handling and suggestion latency measured on a named device | design passed; measurement blocked | One inference thread (ruling 23); numbers need the phone |
-| One call at a time per model; late results suppressed | passed | `InferenceSchedulerTest`, `AiCoordinatorTest`, `ShapeRecognizer`, dictation and voice-tools cancel tests |
+| One call at a time per model; late results suppressed | passed in part | `InferenceSchedulerTest`, `AiCoordinatorTest`, dictation and voice-tools cancel tests. The review found a narrow window in which a shape answer can be applied to the next stroke (deferred, see `PROGRESS.md`) |
 | Redaction offsets: UTF-16, surrogate pairs, emoji families, combining marks, partial windows | passed | `TextRangeMapperTest` (9), `ModelSmokeTest.redact_offsetsAreUtf16CodeUnits` |
-| Apply and Undo both re-check the text; acceptance required; never auto-send | passed (emulator) | `EditorBridgeTest` (15), `KeyboardAiTest` mask/undo, Enter test |
-| Model failure, timeout, missing files and low memory leave typing working | passed (emulator) | Not-installed, crashed-model and memory-pressure tests; two real crash recoveries (Voz, Clear) |
+| Apply and Undo both re-check the text; acceptance required; never auto-send | passed (emulator) | `EditorBridgeTest` (16, including edits that overlap being refused whole), `KeyboardAiTest` mask/undo, Enter test |
+| Model failure, timeout, missing files and low memory leave typing working | passed in part (emulator) | Not-installed, crashed-model and memory-pressure tests; two real crash recoveries (Voz, Clear). A model call that times out is handled in code and was not driven by a test |
 
 ### Settings, assets and lifecycle
 
 | Item | Status | Where |
 |---|---|---|
-| One settings store; subscriptions and executors owned and disposed | passed | `SettingsSyncTest` (3) |
+| One settings store; subscriptions and executors owned and disposed | passed in part | One store, same snapshots for every observer, ordered writes and a damaged file recovering are tested (`SettingsSyncTest`, 4). That every subscription is disposed with its owner was checked by reading the code, not by a test |
 | Pausing AI keeps choices and files, clears suggestions, cancels pending work | passed (emulator) | `CompanionAppTest` master-switch test, `KeyboardAiTest`, `AiCoordinatorTest` |
 | Work unique per model revision; duplicate requests harmless | passed | `HardeningTest.askingForADownloadTwiceStartsOneTransfer` |
 | Interrupted or corrupt downloads never Ready; retry, low storage and incompatible device are distinct | passed | `ModelDownloaderTest` (11), `ModelDownloadDeviceTest` (4), `ModelMemoryGuardTest` |
-| Installed inference works offline; typing never starts a download or uploads text | passed (emulator) | Offline cold start; network test (0 bytes); models are only constructed from verified files |
-| Release, deletion and revision replacement respect work in progress | passed in part | Delete-during-run test. Replacing a model with a newer revision was not exercised: there is only one revision |
-| Drafts and redaction maps absent from logs and backups; model files excluded from backup | passed (emulator) | `HardeningTest.whatIsTyped…`; models live in the no-backup directory; the SDK's identifier is excluded by both backup rule files. An actual backup was not taken and inspected |
+| Installed inference works offline; typing never starts a download or uploads text | passed (emulator) | Offline cold start; both network tests (0 bytes for all 13 models once loaded); models are only constructed from verified files |
+| Release, deletion and revision replacement respect work in progress | passed in part | Delete-during-run test. Replacing a model with a newer revision was not exercised: there is only one revision. A model call that has run past its time limit is not protected from a release (deferred, see `PROGRESS.md`) |
+| Drafts and redaction maps absent from logs and backups; model files excluded from backup | passed (emulator) | `HardeningTest.whatIsTyped…`; models live in the no-backup directory; the SDK's identifier is excluded by both backup rule files. An actual backup was not taken and inspected. Settings are backed up, and they include the package ids of apps the keyboard has been used in |
 | Configuration change, keyboard reconnect, process death, offline start, lock/unlock | passed (emulator) | Rows above in milestone 9 |
 
 ### Media and interface

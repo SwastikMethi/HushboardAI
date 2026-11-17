@@ -7,7 +7,6 @@ import android.os.Bundle;
 
 import androidx.annotation.Nullable;
 import androidx.preference.Preference;
-import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SwitchPreferenceCompat;
 
@@ -20,7 +19,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeSet;
 
-public final class AppPreferencesFragment extends PreferenceFragmentCompat {
+public final class AppPreferencesFragment extends CardPreferenceFragment {
 
     @Override
     public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String root) {

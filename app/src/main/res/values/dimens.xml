@@ -8,7 +8,7 @@
     <dimen name="key_label_size">23sp</dimen>
     <dimen name="key_function_label_size">15sp</dimen>
     <dimen name="keyboard_side_padding">2dp</dimen>
-    <dimen name="toolbar_height">44dp</dimen>
-    <dimen name="suggestion_strip_height">40dp</dimen>
+    <dimen name="toolbar_height">48dp</dimen>
+    <dimen name="suggestion_strip_height">44dp</dimen>
     <dimen name="suggestion_text_size">16sp</dimen>
 </resources>

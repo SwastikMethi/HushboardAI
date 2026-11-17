@@ -45,6 +45,7 @@ import com.example.aikeyboard.media.ShareResultController;
 import com.example.aikeyboard.media.Voice.AudioClip;
 import com.example.aikeyboard.models.ModelDescriptor;
 import com.example.aikeyboard.models.ModelRegistry;
+import com.example.aikeyboard.ui.models.ModelIcons;
 import com.example.aikeyboard.ui.tools.ShapeRecognizer;
 
 import java.io.IOException;
@@ -193,6 +194,7 @@ public final class KeyboardController implements KeyGridView.Listener,
             ModelDescriptor model = ModelRegistry.find(modelId);
             ItemAiModelBinding row =
                     ItemAiModelBinding.inflate(inflater, views.aiPanel.aiPanelModels, true);
+            row.aiModelIcon.setImageResource(ModelIcons.of(modelId));
             row.aiModelName.setText(model.name);
             row.aiModelSummary.setText(model.summary);
             row.aiModelSwitch.setContentDescription(
@@ -205,6 +207,8 @@ public final class KeyboardController implements KeyGridView.Listener,
 
     private void showAiPanel(boolean show) {
         aiPanelShown = show;
+        // Each opening starts from the top: the first models, not where it was last left.
+        if (show && views != null) views.aiPanel.aiPanelScroll.scrollTo(0, 0);
         render();
     }
 

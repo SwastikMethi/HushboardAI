@@ -11,7 +11,6 @@ import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.preference.Preference;
-import androidx.preference.PreferenceFragmentCompat;
 
 import com.example.aikeyboard.AppContainer;
 import com.example.aikeyboard.MainActivity;
@@ -19,7 +18,7 @@ import com.example.aikeyboard.R;
 import com.example.aikeyboard.models.ModelDescriptor;
 import com.example.aikeyboard.models.ModelRegistry;
 
-public final class SettingsFragment extends PreferenceFragmentCompat {
+public final class SettingsFragment extends CardPreferenceFragment {
 
     private static final String VENDOR_URL = "https://desertant.com";
 

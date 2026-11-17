@@ -15,7 +15,7 @@
         <Preference
             app:iconSpaceReserved="false"
             app:selectable="false"
-            app:summary="@string/subtype_english"
+            app:summary="@string/settings_language_summary"
             app:title="@string/settings_language" />
 
         <ListPreference

@@ -42,7 +42,7 @@
     <string name="ai_model_not_downloaded">Not downloaded</string>
     <string name="ai_model_crashed">Turned off after it stopped the keyboard</string>
     <string name="strip_setup_models">Set up AI models</string>
-    <string name="ai_panel_tag">Tag this draft</string>
+    <string name="ai_panel_tag">Tag draft</string>
     <string name="ai_language_looks">Looks like %1$s</string>
     <string name="ai_language_unsure">Not sure of the language yet</string>
     <string name="ai_redact_uncovered">Does not cover %1$s</string>
@@ -156,7 +156,9 @@
     <!-- Settings tab -->
     <string name="settings_group_keyboard">Keyboard</string>
     <string name="settings_theme">Theme</string>
-    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_dark">Dark. The only theme in this version.</string>
+    <string name="settings_language_summary">English. The only layout in this version.</string>
+    <string name="strip_emoji_source">Emo</string>
     <string name="settings_language">Languages</string>
     <string name="settings_height">Layout &amp; height</string>
     <string-array name="height_labels">

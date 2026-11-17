@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- One model in the catalog: what it is, its real state, and the one action that applies. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?android:attr/selectableItemBackground"
@@ -10,14 +11,14 @@
     android:paddingHorizontal="16dp"
     android:paddingVertical="10dp">
 
-    <TextView
-        android:id="@+id/model_avatar"
+    <ImageView
+        android:id="@+id/model_icon"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:background="@drawable/bg_avatar"
-        android:gravity="center"
         android:importantForAccessibility="no"
-        android:textAppearance="?attr/textAppearanceTitleMedium" />
+        android:padding="8dp"
+        app:tint="?attr/colorOnSurface" />
 
     <LinearLayout
         android:layout_width="0dp"
@@ -89,4 +90,14 @@
         android:layout_marginStart="12dp"
         android:minHeight="48dp"
         android:visibility="gone" />
+
+    <!-- Shown on rows that open the model's own screen. -->
+    <ImageView
+        android:id="@+id/model_chevron"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginStart="8dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_chevron"
+        app:tint="?attr/colorOnSurfaceVariant" />
 </LinearLayout>

@@ -329,11 +329,16 @@ public class KeyboardAiTest {
                 Until.findObject(By.res(PKG, "suggestion_1").text("Personal information detected")),
                 3000));
         device.findObject(By.res(PKG, "ai_toggle")).click();
-        assertNotNull("the panel should name the detected language", device.wait(
-                Until.findObject(By.res(PKG, "ai_model_status").text("Looks like Japanese")),
+        assertNotNull("the panel should say the privacy check was skipped", device.wait(
+                Until.findObject(By.res(PKG, "ai_model_status").text("Does not cover Japanese")),
                 TIMEOUT_MS));
-        assertNotNull("the panel should say the privacy check was skipped", device.findObject(
-                By.res(PKG, "ai_model_status").text("Does not cover Japanese")));
+        // The language model's own row is further down the panel's list.
+        BySelector language = By.res(PKG, "ai_model_status").text("Looks like Japanese");
+        if (!device.hasObject(language)) {
+            device.findObject(By.res(PKG, "ai_panel_models")).scrollUntil(
+                    androidx.test.uiautomator.Direction.DOWN, Until.hasObject(language));
+        }
+        assertTrue("the panel should name the detected language", device.hasObject(language));
     }
 
     @Test

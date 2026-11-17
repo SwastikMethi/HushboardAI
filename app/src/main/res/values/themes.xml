@@ -15,6 +15,36 @@
         <item name="android:statusBarColor">@color/canvas</item>
         <item name="android:navigationBarColor">@color/canvas</item>
         <item name="switchPreferenceCompatStyle">@style/SettingsSwitchRow</item>
+        <item name="preferenceCategoryStyle">@style/SettingsCategory</item>
+        <item name="preferenceStyle">@style/SettingsRow</item>
+        <item name="dialogPreferenceStyle">@style/SettingsDialogRow</item>
+        <item name="seekBarPreferenceStyle">@style/SettingsSeekRow</item>
+        <item name="materialSwitchStyle">@style/Widget.AiKeyboard.Switch</item>
+        <!-- One accent everywhere: without these, sliders, field underlines and headings
+             fall back to the library's lavender. -->
+        <item name="colorSecondary">@color/accent_blue</item>
+        <item name="colorOnSecondary">@color/on_accent_blue</item>
+        <item name="colorTertiary">@color/accent_blue</item>
+        <item name="colorAccent">@color/accent_blue</item>
+        <item name="colorControlActivated">@color/accent_blue</item>
+    </style>
+
+    <!-- Every switch: white thumb on a blue track when on, as in the reference design. -->
+    <style name="Widget.AiKeyboard.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="thumbTint">@color/switch_thumb</item>
+        <item name="trackTint">@color/switch_track</item>
+        <item name="trackDecorationTint">@android:color/transparent</item>
+    </style>
+
+    <!-- The master AI switch: the same, with the AI gradient as its track. -->
+    <style name="Widget.AiKeyboard.Switch.Master">
+        <item name="track">@drawable/ai_switch_track</item>
+        <item name="trackTint">@null</item>
+    </style>
+
+    <!-- Settings group headings use the app's own heading row. -->
+    <style name="SettingsCategory" parent="Preference.Category.Material">
+        <item name="android:layout">@layout/settings_category</item>
     </style>
 
     <!-- A small prompt shown over whatever the user was doing (the microphone request). -->
@@ -28,6 +58,20 @@
     <!-- Settings rows use the app's Material switch instead of the older default one. -->
     <style name="SettingsSwitchRow" parent="Preference.SwitchPreferenceCompat.Material">
         <item name="widgetLayout">@layout/preference_switch</item>
+        <item name="singleLineTitle">false</item>
+    </style>
+
+    <!-- Every kind of settings row lets its title wrap, so large text is never cut off. -->
+    <style name="SettingsRow" parent="Preference.Material">
+        <item name="singleLineTitle">false</item>
+    </style>
+
+    <style name="SettingsDialogRow" parent="Preference.DialogPreference.Material">
+        <item name="singleLineTitle">false</item>
+    </style>
+
+    <style name="SettingsSeekRow" parent="Preference.SeekBarPreference.Material">
+        <item name="singleLineTitle">false</item>
     </style>
 
     <style name="PrivacyParagraph">

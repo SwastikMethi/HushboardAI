@@ -88,7 +88,8 @@ public final class ModelLibraryFragment extends Fragment {
         for (ModelDescriptor model : ModelRegistry.inGroup(group)) {
             ItemModelBinding row = ItemModelBinding.inflate(inflater, card, true);
             row.getRoot().setTag("model_row_" + model.id);
-            row.modelAvatar.setText(model.name.substring(0, 1));
+            row.modelIcon.setImageResource(ModelIcons.of(model.id));
+            row.modelChevron.setVisibility(model.available() ? View.VISIBLE : View.GONE);
             row.modelName.setText(model.name);
             row.modelSummary.setText(model.summary);
             row.modelBeta.setVisibility(model.beta ? View.VISIBLE : View.GONE);

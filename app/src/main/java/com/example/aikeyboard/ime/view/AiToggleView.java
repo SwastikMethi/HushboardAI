@@ -94,6 +94,11 @@ public final class AiToggleView extends View {
         animator.start();
     }
 
+    /** Whether the enable sweep is playing right now. */
+    public boolean isSweeping() {
+        return animator != null && animator.isRunning();
+    }
+
     @Override
     protected void onDetachedFromWindow() {
         if (animator != null) animator.cancel();

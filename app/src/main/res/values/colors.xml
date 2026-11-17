@@ -21,6 +21,8 @@
     <!-- Ordinary enabled controls and the enter key: pale blue -->
     <color name="accent_blue">#9EC1FA</color>
     <color name="on_accent_blue">#0B1B33</color>
+    <!-- A switch that is on: deeper than the accent so its white thumb stands out. -->
+    <color name="switch_on">#5F93F0</color>
 
     <!-- AI identity: used only for the AI control and its panel -->
     <color name="ai_gradient_start">#A970FF</color>

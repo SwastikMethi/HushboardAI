@@ -12,7 +12,6 @@ import androidx.annotation.Nullable;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
-import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceScreen;
 import androidx.preference.SeekBarPreference;
 import androidx.preference.SwitchPreferenceCompat;
@@ -25,13 +24,14 @@ import com.example.aikeyboard.models.ModelDescriptor;
 import com.example.aikeyboard.models.ModelRegistry;
 import com.example.aikeyboard.models.ModelRepository;
 import com.example.aikeyboard.models.ModelSettingDefinition;
+import com.example.aikeyboard.ui.settings.CardPreferenceFragment;
 import com.example.aikeyboard.ui.settings.SettingsStore;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public final class ModelDetailFragment extends PreferenceFragmentCompat {
+public final class ModelDetailFragment extends CardPreferenceFragment {
 
     private static final String ARG_MODEL = "model";
 

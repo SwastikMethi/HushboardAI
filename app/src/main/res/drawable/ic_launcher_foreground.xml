@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App icon foreground: a keyboard outline with the AI sparkle above it. The middle 66dp
+     of the 108dp canvas is the part every launcher shows. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M34,55h40a4,4 0 0,1 4,4v16a4,4 0 0,1 -4,4H34a4,4 0 0,1 -4,-4V59a4,4 0 0,1 4,-4z"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineJoin="round"
+        android:strokeWidth="3" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M38,62h0.01M46,62h0.01M54,62h0.01M62,62h0.01M70,62h0.01M38,68h0.01M70,68h0.01M45,72h18"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="3.4" />
+    <path android:pathData="M54,25C54.6,33 59,37.4 67,38C59,38.6 54.6,43 54,51C53.4,43 49,38.6 41,38C49,37.4 53.4,33 54,25z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endColor="@color/ai_gradient_end"
+                android:endX="67"
+                android:endY="38"
+                android:startColor="@color/ai_gradient_start"
+                android:startX="41"
+                android:startY="38"
+                android:type="linear" />
+        </aapt:attr>
+    </path>
+</vector>

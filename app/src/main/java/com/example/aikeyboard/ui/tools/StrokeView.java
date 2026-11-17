@@ -71,17 +71,6 @@ public final class StrokeView extends View {
         return points.isEmpty();
     }
 
-    // A plain view asks for all the height on offer. This one asks for none unless it is told
-    // an exact height, so the layout around it decides (it is given what is left over). In
-    // the keyboard that is what keeps the drawing panel the height of the keyboard instead
-    // of the whole screen.
-    @Override
-    protected void onMeasure(int widthSpec, int heightSpec) {
-        setMeasuredDimension(getDefaultSize(getSuggestedMinimumWidth(), widthSpec),
-                MeasureSpec.getMode(heightSpec) == MeasureSpec.EXACTLY
-                        ? MeasureSpec.getSize(heightSpec) : getSuggestedMinimumHeight());
-    }
-
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         // Disabled while there is no model to look at a stroke: nothing to draw for.

@@ -315,3 +315,43 @@ All device rows ran on EMU-37B. No explicit imagery was created or downloaded fo
 | A host that says it takes pictures but turns the insert down | not run | — | The fallback to the share sheet is in code (`KeyboardController.insertDrawing`); no such host was available |
 
 Full-suite run at the end of the milestone (EMU-37B, with `-e clear true`): 142 instrumented tests; 129 passed, 13 skipped by design (opt-in probes), none failed. Lint: 0 errors, 32 warnings.
+
+## Milestone 8 — Visual and accessibility audit
+
+The screens were captured and set beside `design/01_Keyboard_Approved.png` and `design/02_Companion_App_Reference.png`. What the audit found and what was done:
+
+| Found | Done |
+|---|---|
+| The AI panel was about 110dp taller than the keyboard once it listed five models, pushing the app up | Fixed at the keyboard's root: every panel is exactly the keyboard's height and scrolls inside (`KeyboardFootprintTest`, failed first) |
+| The panel reopened wherever it had been scrolled to | It opens at the top each time (test failed first) |
+| Switches had dark thumbs; sliders, headings and field underlines were lavender | White thumb on a blue track everywhere; the master AI switch carries the AI gradient; one accent colour |
+| Model rows showed a letter | A drawn icon per model, in the catalog and the keyboard's panel; chevrons on rows that open a screen |
+| Shift and backspace were font glyphs | Drawn icons (outlined, solid, and solid with a bar for caps lock) |
+| Emoji suggestions were bare | "Emo" label and chips, as in the approved design |
+| Settings and model screens were flat lists | Grouped rounded cards with small-capital headings |
+| "Theme" and "Languages" looked like controls but did nothing | They now say, in words, that they are the only option in this version |
+| A settings title was cut off with "…" | Titles wrap |
+| Tool buttons were 44dp high | 48dp; the strip went from 40dp to 44dp |
+| The app had no icon | An adaptive icon drawn for it |
+
+Still different from the references, on purpose or for later: no clipboard or grid button in the tool row (no behaviour is specified for them); a choice setting opens a list instead of the two-part toggle; settings rows have no icons; "Try it" shows text rather than a chip; the microphone sits before settings, not after.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| The AI panel covers the keyboard and no more; the app above does not move | passed | EMU-37B | `KeyboardFootprintTest.theAiPanelCoversTheKeyboardAndNoMore` |
+| Every typing model can be reached in the panel, with the master switch and both ways out still in view | passed | EMU-37B | `KeyboardFootprintTest` (2) |
+| The drawing panel also stays within the keyboard's height | passed | EMU-37B | `DrawingTest.theDrawingPanelStaysWithinTheKeyboardsOwnHeight` |
+| The three tabs pass Google's accessibility checks (labels, 48dp touch targets, contrast, clipped text) | passed | EMU-37B | `AccessibilityAuditTest.theThreeTabsPassTheAccessibilityChecks` |
+| Model detail, Privacy, per-app switches, Voice tools, Image tools and Drawing pass the same checks | passed | EMU-37B | `AccessibilityAuditTest.theScreensOpenedFromTheTabsPassTheAccessibilityChecks` |
+| The checks can fail: an unlabelled 20dp button is rejected | passed | EMU-37B | `AccessibilityAuditTest.theAuditItselfRejectsAnUnlabelledUndersizedButton` |
+| Every tappable thing in the keyboard and its AI panel has a spoken label; keys are announced by name; tool and panel buttons are full-size targets | passed | EMU-37B | `AccessibilityAuditTest.everyKeyboardControlHasASpokenLabelAndToolsAreBigEnoughToHit` |
+| Text pairs are at least 4.5 to 1 and meaningful shapes at least 3 to 1 | passed | EMU-37B | `AccessibilityAuditTest.textAndControlsMeetTheContrastRatios` (13 text pairs, 4 shape pairs) |
+| The enable sweep plays once when asked, never when the saved state is merely shown, and not at all with system animations off | passed | EMU-37B | `AccessibilityAuditTest.theEnableSweepPlaysOnceOnRequestAndNeverWithAnimationsOff` |
+| Large text (font size 1.3×): keyboard, AI panel, Models, model detail and Settings | passed (by eye) | EMU-37B | `docs/evidence/screenshots/m8_*_large_text.png`; titles wrap, nothing is cut off, the panel keeps its height and scrolls |
+| Screens beside the two reference images | passed (by eye) | EMU-37B | `docs/evidence/screenshots/m8_*.png` |
+| Key shapes against the keyboard background reach 3 to 1 | failed, accepted | — | About 1.5 to 1, as on stock keyboards; the label carries the meaning (ruling 69) |
+| A pass with TalkBack switched on | not run | PHONE | Labels and roles were checked through the accessibility tree, not by listening |
+| Font sizes above 1.3×, display-size scaling, right-to-left | not run | — | — |
+| Rotation does not replay the enable sweep | not run | — | The sweep is only ever started by the off-to-on change in `KeyboardController.onSettings`; not driven on a rotating device |
+
+Full-suite run at the end of the milestone (EMU-37B, with `-e clear true`): 151 instrumented tests; 137 passed, 13 skipped by design (opt-in probes), 1 failed. The failure was a catalog test that assumed Tongue was switched off when an earlier test had left it on (the screen rightly said "Paused"); the test now sets its own starting state, and the two classes involved then passed together, 23 of 23. After two lint-driven renames the affected screens were run again: 19 of 19. Unit tests: 160. Lint: 0 errors, 37 warnings (version notices and style hints).

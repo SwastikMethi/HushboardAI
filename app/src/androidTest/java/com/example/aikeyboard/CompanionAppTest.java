@@ -97,7 +97,11 @@ public class CompanionAppTest {
     }
 
     @Test
-    public void theCatalogListsAllThirteenModelsWithHonestStates() {
+    public void theCatalogListsAllThirteenModelsWithHonestStates() throws Exception {
+        // Starts from a known choice: a model left switched on by another test would
+        // rightly show as "Paused" here instead.
+        settings.setModelEnabled("tongue", false);
+        assertTrue(TestModels.await(() -> !settings.latest().modelEnabled("tongue"), 5000));
         openModels();
         for (ModelDescriptor model : ModelRegistry.all()) {
             onView(row(model.id)).perform(scrollTo())

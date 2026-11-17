@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Track of the master AI switch: the violet-to-blue AI identity when on, neutral when
+     off. Used untinted, so the gradient shows. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true">
+        <shape android:shape="rectangle">
+            <size android:width="52dp" android:height="32dp" />
+            <corners android:radius="16dp" />
+            <gradient
+                android:angle="0"
+                android:endColor="@color/ai_gradient_end"
+                android:startColor="@color/ai_gradient_start" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <size android:width="52dp" android:height="32dp" />
+            <corners android:radius="16dp" />
+            <solid android:color="@color/key_letter" />
+        </shape>
+    </item>
+</selector>

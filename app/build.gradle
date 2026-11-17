@@ -73,6 +73,8 @@ dependencies {
     androidTestImplementation libs.androidx.test.runner
     androidTestImplementation libs.androidx.test.ext.junit
     androidTestImplementation libs.espresso.core
+    // Google's accessibility checks (labels, touch targets, contrast) run on each screen.
+    androidTestImplementation libs.espresso.accessibility
     androidTestImplementation libs.uiautomator
     androidTestImplementation libs.work.testing
 }

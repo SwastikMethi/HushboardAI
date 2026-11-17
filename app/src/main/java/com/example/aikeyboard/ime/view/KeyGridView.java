@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -66,6 +67,11 @@ public final class KeyGridView extends View {
     private final int onAccentColor;
     private final int labelColor;
     private final int secondaryLabelColor;
+    private final Drawable shiftOffIcon;
+    private final Drawable shiftOnIcon;
+    private final Drawable shiftLockedIcon;
+    private final Drawable backspaceIcon;
+    private final int iconSize;
 
     private List<List<Key>> rows = Collections.emptyList();
     private final List<Key> keys = new ArrayList<>();
@@ -104,6 +110,12 @@ public final class KeyGridView extends View {
         labelColor = context.getColor(R.color.key_label);
         secondaryLabelColor = context.getColor(R.color.key_label_secondary);
         labelPaint.setTextAlign(Paint.Align.CENTER);
+        // mutate(): tinting these must not recolour the same drawables used elsewhere.
+        shiftOffIcon = context.getDrawable(R.drawable.ic_key_shift).mutate();
+        shiftOnIcon = context.getDrawable(R.drawable.ic_key_shift_on).mutate();
+        shiftLockedIcon = context.getDrawable(R.drawable.ic_key_shift_locked).mutate();
+        backspaceIcon = context.getDrawable(R.drawable.ic_key_backspace).mutate();
+        iconSize = Math.round(letterSize * 1.15f);
         ViewCompat.setAccessibilityDelegate(this, accessibility);
     }
 
@@ -198,6 +210,20 @@ public final class KeyGridView extends View {
             keyPaint.setColor(isHeld(key) ? pressedColor : backgroundFor(key));
             canvas.drawRoundRect(drawRect, radius, radius, keyPaint);
 
+            // Shift and backspace are drawn icons, so they look the same on every device
+            // whatever its font has for those symbols.
+            Drawable icon = iconFor(key);
+            if (icon != null) {
+                int cx = Math.round(drawRect.centerX());
+                int cy = Math.round(drawRect.centerY());
+                int half = iconSize / 2;
+                icon.setBounds(cx - half, cy - half, cx + half, cy + half);
+                icon.setTint(key.code == KeyboardLayout.CODE_SHIFT
+                        && shiftMode != ShiftState.Mode.OFF ? labelColor : secondaryLabelColor);
+                icon.draw(canvas);
+                continue;
+            }
+
             String label = displayLabel(key);
             // Word-like labels ("?123", "ABC", "English") are drawn smaller than single glyphs.
             // (U+FE0E is an invisible presentation selector and does not count as a glyph.)
@@ -209,6 +235,13 @@ public final class KeyGridView extends View {
             float baseline = drawRect.centerY() - (labelPaint.ascent() + labelPaint.descent()) / 2;
             canvas.drawText(label, drawRect.centerX(), baseline, labelPaint);
         }
+    }
+
+    private Drawable iconFor(Key key) {
+        if (key.code == KeyboardLayout.CODE_BACKSPACE) return backspaceIcon;
+        if (key.code != KeyboardLayout.CODE_SHIFT) return null;
+        return shiftMode == ShiftState.Mode.LOCKED ? shiftLockedIcon
+                : shiftMode == ShiftState.Mode.ONCE ? shiftOnIcon : shiftOffIcon;
     }
 
     private int backgroundFor(Key key) {

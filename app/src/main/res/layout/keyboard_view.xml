@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The keyboard: tool row, suggestion strip, then the key grid or the emoji panel. The AI
-     panel sits on top of all of it at the same height. -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- The keyboard: tool row, suggestion strip, then the key grid or the emoji panel. The
+     panels sit on top of all of it at exactly the same height (see KeyboardFrame). The
+     typing area must stay the first child: it is what sets that height. -->
+<com.example.aikeyboard.ime.view.KeyboardFrame xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -13,6 +14,8 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
+        <!-- Two places each side of the AI control, so it sits in the middle. Tools appear
+             only while what they do can really run; hidden, they keep their place. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="@dimen/toolbar_height"
@@ -20,19 +23,6 @@
             android:orientation="horizontal"
             android:paddingHorizontal="4dp">
 
-            <!-- Shown only while transcription can really run. Hidden, it still takes its
-                 place, balancing the settings button so the AI control sits in the middle. -->
-            <ImageButton
-                android:id="@+id/tool_mic"
-                android:layout_width="48dp"
-                android:layout_height="match_parent"
-                android:background="?android:attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/mic_button"
-                android:focusable="false"
-                android:src="@drawable/ic_mic"
-                android:visibility="invisible" />
-
-            <!-- Likewise shown only while the shape model can run. -->
             <ImageButton
                 android:id="@+id/tool_draw"
                 android:layout_width="48dp"
@@ -42,6 +32,10 @@
                 android:focusable="false"
                 android:src="@drawable/ic_draw"
                 android:visibility="invisible" />
+
+            <Space
+                android:layout_width="48dp"
+                android:layout_height="match_parent" />
 
             <Space
                 android:layout_width="0dp"
@@ -58,10 +52,15 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1" />
 
-            <!-- Matches the second tool on the left, so the AI control stays centred. -->
-            <Space
+            <ImageButton
+                android:id="@+id/tool_mic"
                 android:layout_width="48dp"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/mic_button"
+                android:focusable="false"
+                android:src="@drawable/ic_mic"
+                android:visibility="invisible" />
 
             <ImageButton
                 android:id="@+id/tool_settings"
@@ -159,4 +158,4 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />
-</FrameLayout>
+</com.example.aikeyboard.ime.view.KeyboardFrame>

@@ -19,6 +19,13 @@ public class SdkDefaultsProbeTest {
     }
 
     @Test
+    public void theSensitiveImageThresholdStartsAtTheVendorsDefault() {
+        ai.desertant.moderator.Options vendor = new ai.desertant.moderator.Options();
+        assertEquals(ModelRegistry.MODERATOR_THRESHOLD_DEFAULT / 100.0, vendor.getThreshold(),
+                1e-9);
+    }
+
+    @Test
     public void fillerBiasStartsAtTheVendorsDefault() {
         ai.desertant.uhm.Options vendor = new ai.desertant.uhm.Options();
         assertEquals(ModelRegistry.UHM_BIAS_DEFAULT,

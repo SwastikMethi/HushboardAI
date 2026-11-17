@@ -227,6 +227,8 @@
     <string name="setting_gist_limit">Number of topics</string>
     <string name="setting_clear_strength">Cleanup strength (%)</string>
     <string name="setting_clear_strength_summary">How strongly background noise is reduced</string>
+    <string name="setting_moderator_threshold">Flag at this score (%)</string>
+    <string name="setting_moderator_threshold_summary">The model\'s own cut-off. Lower flags more pictures; no setting catches everything.</string>
     <string name="setting_uhm_bias">What to flag</string>
     <string name="setting_uhm_bias_summary">The model\'s own balance between missing fillers and flagging real words</string>
     <string-array name="uhm_bias_labels">
@@ -330,4 +332,57 @@
     <string name="dictation_nothing">No speech was heard</string>
     <string name="dictation_failed">Couldn\'t transcribe that</string>
     <string name="dictation_mic_unavailable">Microphone unavailable</string>
+
+    <!-- Image tools -->
+    <string name="tools_paused">AI is paused. Turn it on in Models to use this.</string>
+    <string name="open_image_tools">Open image tools</string>
+    <string name="image_title">Image tools</string>
+    <string name="image_intro">Choose a picture. Only that picture is looked at, on this device, and it is kept only until you leave this screen.</string>
+    <string name="image_no_steps">No image model is on. Download one in Models and switch it on.</string>
+    <string name="image_step_eye">Describe the picture (Eye)</string>
+    <string name="image_step_moderator">Check for sensitive content (Moderator)</string>
+    <string name="image_choose">Choose a picture</string>
+    <string name="image_working">Looking at the picture…</string>
+    <string name="image_unreadable">This file couldn\'t be opened as a picture.</string>
+    <string name="image_preview">The picture you chose</string>
+    <string name="image_kind">Looks like: %1$s</string>
+    <string name="image_tag">%1$s %2$d%%</string>
+    <string name="image_tags">Tags: %1$s</string>
+    <string name="image_no_tags">No tags stood out.</string>
+    <string name="image_details">People: %1$d · Pets: %2$d · Faces: %3$d · Looks score: %4$d%%</string>
+    <string name="image_flagged">This picture may contain nudity (score %1$d%%).</string>
+    <string name="image_not_flagged">Sensitive-content check: nothing flagged.</string>
+    <string name="image_note">These are a model\'s estimates and can be wrong either way. Sharing sends a copy up to 1600 pixels across.</string>
+    <string name="image_share">Share picture</string>
+    <string name="image_share_warning">This picture may contain nudity. Share it anyway?</string>
+    <string name="image_share_anyway">Share anyway</string>
+    <string name="image_share_failed">The picture couldn\'t be prepared for sharing.</string>
+
+    <!-- Drawing -->
+    <string name="open_drawing">Open drawing</string>
+    <string name="drawing_intro">Draw one shape in a single stroke. Shapes tidies drawings; it does not read handwriting.</string>
+    <string name="drawing_surface">Drawing area</string>
+    <string name="drawing_hint">Draw a shape</string>
+    <string name="drawing_working">Looking…</string>
+    <string name="drawing_unclear">No clear shape. Try again.</string>
+    <string name="drawing_failed">The shape model couldn\'t run.</string>
+    <string name="drawing_no_model">Shapes is off. Download it in Models and switch it on.</string>
+    <string name="drawing_clear">Clear</string>
+    <string name="drawing_share">Share drawing</string>
+    <string name="draw_button">Draw a shape</string>
+    <string name="draw_insert">Insert</string>
+    <string name="draw_share">Share…</string>
+    <string name="shape_line">Line</string>
+    <string name="shape_curve">Curve</string>
+    <string name="shape_arrow">Arrow</string>
+    <string name="shape_rectangle">Rectangle</string>
+    <string name="shape_ellipse">Ellipse</string>
+    <string name="shape_triangle">Triangle</string>
+    <string name="shape_diamond">Diamond</string>
+    <string name="shape_pentagon">Pentagon</string>
+    <string name="shape_hexagon">Hexagon</string>
+    <string name="shape_star">Star</string>
+    <string name="shape_heart">Heart</string>
+    <string name="shape_cloud">Cloud</string>
+    <string name="shape_other">Drawing</string>
 </resources>

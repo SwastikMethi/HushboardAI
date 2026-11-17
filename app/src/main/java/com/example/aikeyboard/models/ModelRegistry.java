@@ -23,6 +23,8 @@ public final class ModelRegistry {
     // the devices that certainly cannot hold it (sold as 4 GB and below); the crash breaker
     // covers the uncertain middle. Re-measure on real phones before trusting this line.
     private static final long VOZ_MIN_RAM_BYTES = 5L << 30;
+    // The same kind of line for Eye, which peaked at about 1.5 GB: refused only below 2 GiB.
+    private static final long EYE_MIN_RAM_BYTES = 2L << 30;
 
     // Setting names shared with the adapters that read them.
     public static final String EMO_LIMIT = "limit";
@@ -41,6 +43,9 @@ public final class ModelRegistry {
     public static final int CLEAR_STRENGTH_DEFAULT = 100;
     public static final String UHM_BIAS = "bias";
     public static final String UHM_BIAS_DEFAULT = "balanced";
+    /** The score (in hundredths) at which a picture is flagged: the model's own parameter. */
+    public static final String MODERATOR_THRESHOLD = "threshold";
+    public static final int MODERATOR_THRESHOLD_DEFAULT = 50;
 
     private static final List<ModelSettingDefinition> NO_SETTINGS = Collections.emptyList();
     private static final List<ModelFile> NOT_CAPTURED = Collections.emptyList();
@@ -178,21 +183,31 @@ public final class ModelRegistry {
                             "2f2cb55e4370c30b3d5f0401bf421e018fcc8633f5d3aef225375704c60a8c1c")),
                     NO_SETTINGS),
             // Images
-            pending("eye", "Eye", Group.IMAGES, R.string.model_eye_summary, true, "v1.0.0"),
-            pending("moderator", "Moderator", Group.IMAGES, R.string.model_moderator_summary,
-                    false, "v1.0.0"),
+            new ModelDescriptor("eye", "Eye", Group.IMAGES, R.string.model_eye_summary, true,
+                    false, "v1.0.0", Arrays.asList(
+                    new ModelFile("eye.tflite", 66_038_240L,
+                            "25ba485c959a47961ac9243e74e6ad4997bfc88e1267f62aa88827fc9d92894b"),
+                    new ModelFile("eye_meta.json", 280_890L,
+                            "3678669c840378bca191250597e3a77e5b478e12d3e70c48f827b860551f791c")),
+                    NO_SETTINGS, EYE_MIN_RAM_BYTES),
+            new ModelDescriptor("moderator", "Moderator", Group.IMAGES,
+                    R.string.model_moderator_summary, false, false, "v1.0.0", Arrays.asList(
+                    new ModelFile("moderator.tflite", 9_618_016L,
+                            "925d11966ea9086acbfeaf4d00c1dd30c738c531695f2004b68880d3f121cd89")),
+                    Arrays.asList(
+                            range(MODERATOR_THRESHOLD, R.string.setting_moderator_threshold,
+                                    R.string.setting_moderator_threshold_summary, 0, 100, 5,
+                                    MODERATOR_THRESHOLD_DEFAULT))),
             // Drawing
-            pending("shapes", "Shapes", Group.DRAWING, R.string.model_shapes_summary, false,
-                    "v1.0.0")));
+            new ModelDescriptor("shapes", "Shapes", Group.DRAWING,
+                    R.string.model_shapes_summary, false, false, "v1.0.0", Arrays.asList(
+                    new ModelFile("shapes.tflite", 974_896L,
+                            "8274742f91341e54ae64df4c561a19e5fb4cf591d6b305290d129068f56ef6b9"),
+                    new ModelFile("shapes_meta.json", 1_551L,
+                            "d570c85233d505f6e19b38b512b81ff735182728240d56e6e87782f5efe1c6a4")),
+                    NO_SETTINGS)));
 
     private ModelRegistry() {}
-
-    // A model whose adapter and file list have not landed yet: listed, but "Coming later".
-    private static ModelDescriptor pending(String id, String name, Group group, int summary,
-            boolean beta, String revision) {
-        return new ModelDescriptor(id, name, group, summary, beta, false, revision,
-                NOT_CAPTURED, NO_SETTINGS);
-    }
 
     public static List<ModelDescriptor> all() {
         return ALL;

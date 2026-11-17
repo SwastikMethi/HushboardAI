@@ -1,6 +1,6 @@
 # Model compatibility report
 
-Status of each Desert Ant model in this app, with the evidence behind it. A row says **verified** only when a real adapter call ran on a device or emulator; otherwise it says what is still missing. Last updated at milestone 6.
+Status of each Desert Ant model in this app, with the evidence behind it. A row says **verified** only when a real adapter call ran on a device or emulator; otherwise it says what is still missing. Last updated at milestone 7.
 
 ## Pinned toolchain
 
@@ -39,7 +39,7 @@ Status of each Desert Ant model in this app, with the evidence behind it. A row 
 | Emo only | 76.3 MB |
 | Emo, Redact, Toxic, Tongue | 192.4 MB |
 | Emo, Redact, Toxic, Tongue, Gist and the five voice models | about 587 MB |
-| All 13 | 703.2 MB |
+| All 13 (the shipped build) | 703.2 MB from a clean build; about 756 MB from an incremental one |
 
 Each native model library is about 56 MB uncompressed because a Swift runtime is compiled into every one. Models are therefore added to the build as their adapters land. A store release would need compressed native libraries or per-model feature delivery; neither is in this plan.
 
@@ -59,11 +59,11 @@ Weights are listed as the SDK itself pinned them (file, bytes). Timings and memo
 | Ear | `ai.desertant:ear` | stable | mono PCM floats + sample rate → ranked languages, with the model's own "reliable" flag | `v0.2.0`: `ear.tflite` 10,671,552; `languages.json` 628; `ear_meta.json` 2,190; `mel_filters.f32` 64,328 — 10,738,698 total | **Verified** on emulator: English speech → `en`, reliable. Memory: about 340 MB. Shown as information next to the transcript; nothing is gated on it. |
 | Uhm | `ai.desertant:uhm` | stable | mono PCM floats + sample rate (+ optional timed words) → filler spans with type and confidence | `v1.2.0`: `uhm.tflite` 23,919,472 | **Verified** on emulator: runs on speech and flags nothing in a fluent sentence. Memory: about 885 MB. Fillers are bracketed in the preview; the audio is never cut. Setting: the model's own precision / balanced / recall bias. Not yet tried on speech that contains fillers. |
 | Who | `ai.desertant:who` | beta | mono PCM floats + sample rate → speaker turns (speaker number, start, end) | `v0.3.4`: `litert-int8/who.tflite` 30,574,096; `who_meta.json` 4,090; `who_mel_banks.f32` 23,652; `who_voice_banks.f32` 82,248; `who_embed.f16` 2,621,960 — 33,306,046 total | **Verified** on emulator: 20 s of one voice → 5 turns, all one speaker. Returns no turns for a 7-second clip, in which case no speaker labels are shown. Memory: about 440 MB. Vendor beta. Not yet tried on a real multi-speaker recording. |
-| Eye | `ai.desertant:eye` | beta | bitmap → image analysis | `v1.0.0` — not captured | Resolves, aligned. Pending (milestone 7). |
-| Moderator | `ai.desertant:moderator` | stable | bitmap → NSFW score and regions | `v1.0.0` — not captured | Resolves, aligned. Pending (milestone 7). |
-| Shapes | `ai.desertant:shapes` | stable | stroke points → shape | `v1.0.0` — not captured | Resolves, aligned. Pending (milestone 7). |
+| Eye | `ai.desertant:eye` | beta | bitmap → what sort of picture it is, tags from a fixed list of about 600 with confidences, quality scores, and people / pet / face detections | `v1.0.0`: `eye.tflite` 66,038,240; `eye_meta.json` 280,890 — 66,319,130 total | **Verified** on emulator and working in the Image tools screen: a real capture of the home screen came back as `screenshot` (tags screenshot 100%, low content 87%, …), nobody detected. About 2 s cold, 0.8 s warm. **Memory: about 1.5 GB**, so it is refused below 2 GiB of device memory and unloaded 20 seconds after its last use (1.40 GB → 272 MB). Not tried on real photos of people, pets or places. Vendor beta. No settings: the app uses the model's defaults. |
+| Moderator | `ai.desertant:moderator` | stable | bitmap → a nudity score, a flag at the threshold, and per-region scores | `v1.0.0`: `moderator.tflite` 9,618,016 | **Verified** on emulator and working in the Image tools screen: a plain drawing of a house scored 0.30 and was not flagged at the default threshold of 0.50; at a threshold of 0 it is flagged, which is how the warn-before-sharing path was exercised. Memory: about 350 MB. **Not tried on any picture it ought to flag** — no explicit imagery was used — so its detection quality is unverified. Setting: the model's own threshold. |
+| Shapes | `ai.desertant:shapes` | stable | one stroke as points → a shape (13 kinds) with a clean outline, or nothing | `v1.0.0`: `shapes.tflite` 974,896; `shapes_meta.json` 1,551 — 976,447 total | **Verified** on emulator and working in the Drawing screen and in the keyboard's drawing panel: a drawn circle → ellipse, a line → line, a rectangle → rectangle, a triangle → triangle, by formula and by real touch gestures; a random scrawl and a tangle come back as nothing. About 0.1 s cold. Memory: about 240 MB. It tidies shapes; it does not read handwriting. |
 
-Revisions for the three pending models (Eye, Moderator, Shapes) come from vendor source research and are confirmed when each model's files are first fetched. Platform-limited models (Align, Clips, Title, Schemer, Face) have no Android SDK entry and are not offered as toggles.
+Each revision above is the one compiled into that model's native library (a `vN.N.N` string in `lib<Model>Android.so`), and every pinned file was fetched from it and hash-checked. Platform-limited models (Align, Clips, Title, Schemer, Face) have no Android SDK entry and are not offered as toggles.
 
 ## Findings that shape the design
 
@@ -74,7 +74,15 @@ Revisions for the three pending models (Eye, Moderator, Shapes) come from vendor
 5. **Voz needs about 3.9 GB of memory.** Its 1.2 GB encoder is held in memory, not mapped from disk. The Android emulator's default 2–3 GB is not enough: the system killed the app at about 2.3 GB while the model was still loading. The app therefore refuses Voz on devices under 5 GiB and unloads it soon after use (see `ModelRegistry.VOZ_MIN_RAM_BYTES`, `AppContainer.VOZ_IDLE_SECONDS`). The threshold comes from one emulator measurement and needs checking on phones.
 6. **Clear depends on a working GPU delegate.** With the emulator's software renderer the model's creation crashes natively; with the host GPU it runs. There is no CPU fallback option in its API.
 7. **A crash while a model loads is survived, proved twice with real crashes** (Voz out of memory, Clear on a software GPU): the next start switches the model off, says why in the catalog, and leaves its files installed.
-8. **Audio contract for chaining.** Every voice model takes mono float samples plus the sample rate, so each step is told the rate of what it is handed: recordings and imports are brought to mono 16 kHz, and Clear's 48 kHz output goes on to the next step as it is. All calls are batch calls. Word times from Voz are what filler brackets and speaker lines are placed by.
+8. **Models that are not used while typing are unloaded after 20 seconds without use.** Voz (3.9 GB) and Eye (1.5 GB) would otherwise sit in the keyboard's process after one use. The typing models stay loaded so suggestions stay quick.
+9. **Audio contract for chaining.** Every voice model takes mono float samples plus the sample rate, so each step is told the rate of what it is handed: recordings and imports are brought to mono 16 kHz, and Clear's 48 kHz output goes on to the next step as it is. All calls are batch calls. Word times from Voz are what filler brackets and speaker lines are placed by.
+
+## Pictures and drawings: what is kept
+
+- A picked picture is read once through the system photo picker and held in memory at up to 1600 pixels across. It is not copied to disk, and the app asks for no storage permission.
+- A drawing lives in the drawing surface and is gone when the screen or the keyboard's panel is left.
+- Sharing or inserting writes one file (JPEG for a picture, PNG for a drawing) to `cache/shared/`, handed over through a content URI with a read grant for that use, and deleted after an hour like shared audio.
+- From the keyboard, a drawing is inserted with `commitContent` only where the focused field says it accepts `image/png`; anywhere else, or if the host app turns it down, the system share sheet is offered instead.
 
 ## Recordings: what is kept, and for how long
 

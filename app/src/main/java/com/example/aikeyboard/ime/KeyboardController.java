@@ -8,6 +8,8 @@ import android.Manifest;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.SystemClock;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -39,10 +41,13 @@ import com.example.aikeyboard.ime.KeyboardLayout.Layer;
 import com.example.aikeyboard.ime.view.KeyGridView;
 import com.example.aikeyboard.ime.view.SuggestionStripView;
 import com.example.aikeyboard.ime.view.SuggestionStripView.Kind;
+import com.example.aikeyboard.media.ShareResultController;
 import com.example.aikeyboard.media.Voice.AudioClip;
 import com.example.aikeyboard.models.ModelDescriptor;
 import com.example.aikeyboard.models.ModelRegistry;
+import com.example.aikeyboard.ui.tools.ShapeRecognizer;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -115,6 +120,14 @@ public final class KeyboardController implements KeyGridView.Listener,
     // user: it goes into the field only when they tap Insert.
     private String dictated;
 
+    // The drawing panel. The stroke itself lives in the panel's view; this is what is said
+    // about it.
+    private final ShapeRecognizer recognizer;
+    private boolean drawShown;
+    private int drawStatus = R.string.drawing_hint;
+    // The focused field as the system described it: what it accepts, for inserting a picture.
+    private EditorInfo editorInfo;
+
     KeyboardController(AiInputMethodService service, EditorBridge editor,
             LocalWordSuggester suggester, AppContainer app) {
         this.service = service;
@@ -122,6 +135,7 @@ public final class KeyboardController implements KeyGridView.Listener,
         this.suggester = suggester;
         this.app = app;
         this.settings = app.settings.latest();
+        recognizer = new ShapeRecognizer(service);
         coordinator = new AiCoordinator(new InferenceScheduler(app.timer, app.inference),
                 ContextCompat.getMainExecutor(service), app.emo, app.redact, app.toxic,
                 app.tongue, app.gist, app.models::isReady, this);
@@ -137,6 +151,13 @@ public final class KeyboardController implements KeyGridView.Listener,
         views.toolSettings.setOnClickListener(
                 v -> service.openCompanionApp(MainActivity.TAB_SETTINGS));
         views.toolMic.setOnClickListener(v -> startDictation());
+        views.toolDraw.setOnClickListener(v -> showDrawPanel(true));
+        views.drawPanel.drawBack.setOnClickListener(v -> showDrawPanel(false));
+        views.drawPanel.drawClear.setOnClickListener(v -> clearDrawing());
+        views.drawPanel.drawInsert.setOnClickListener(v -> insertDrawing());
+        views.drawPanel.drawSurface.setListener(this::onDrawn);
+        // A new view starts with an empty surface, whatever was on the old one.
+        drawStatus = R.string.drawing_hint;
         views.emojiPicker.setOnEmojiPickedListener(item -> editor.commitText(item.getEmoji()));
         views.emojiLetters.setOnClickListener(v -> {
             emojiShown = false;
@@ -196,6 +217,7 @@ public final class KeyboardController implements KeyGridView.Listener,
         if (session != null) readEditor();
         // Dictation switched off (or AI paused) mid-recording: the microphone closes now.
         if (dictation != Dictation.OFF && !canDictate()) cancelDictation();
+        if (drawShown && !canDraw()) closeDrawing();
         render();
         if (justTurnedOn && views != null) views.aiToggle.playEnableSweep();
     }
@@ -203,6 +225,7 @@ public final class KeyboardController implements KeyGridView.Listener,
     /** A field gained the keyboard. A restart of the same field keeps the user's layer. */
     void onStartInput(EditorInfo info, boolean restarting) {
         session = new InputSession(info);
+        editorInfo = info;
         if (!restarting) {
             layer = Layer.LETTERS;
             emojiShown = false;
@@ -253,6 +276,7 @@ public final class KeyboardController implements KeyGridView.Listener,
     // has the keyboard.
     private void forgetSessionState() {
         cancelDictation();
+        closeDrawing();
         reviewing = null;
         topics = null;
         reviewMessage = null;
@@ -331,15 +355,19 @@ public final class KeyboardController implements KeyGridView.Listener,
         views.aiToggle.setOn(settings.aiEnabled());
         // INVISIBLE, not GONE: it keeps the AI control centred.
         views.toolMic.setVisibility(canDictate() ? View.VISIBLE : View.INVISIBLE);
+        views.toolDraw.setVisibility(canDraw() ? View.VISIBLE : View.INVISIBLE);
         boolean reviewShown = reviewing != null || topics != null || dictated != null;
-        boolean overlay = aiPanelShown || reviewShown;
+        boolean overlay = aiPanelShown || reviewShown || drawShown;
         // Likewise INVISIBLE: the typing area keeps giving the panels their height.
         views.typingArea.setVisibility(overlay ? View.INVISIBLE : View.VISIBLE);
         views.aiPanel.getRoot().setVisibility(
                 aiPanelShown && !reviewShown ? View.VISIBLE : View.GONE);
         views.noticePanel.getRoot().setVisibility(reviewShown ? View.VISIBLE : View.GONE);
+        views.drawPanel.getRoot().setVisibility(
+                drawShown && !reviewShown && !aiPanelShown ? View.VISIBLE : View.GONE);
         if (aiPanelShown) renderAiPanel();
         if (reviewShown) renderReview();
+        if (drawShown) renderDrawPanel();
     }
 
     // An undo offer or a notice outranks everything: they only appear once typing has
@@ -526,6 +554,97 @@ public final class KeyboardController implements KeyGridView.Listener,
         dictation = Dictation.OFF;
         dictationRun++;
         dictated = null;
+    }
+
+    // ---- Drawing ----
+
+    // Offered only where AI may run and the shape model really can.
+    private boolean canDraw() {
+        return verdict == Verdict.ALLOWED && recognizer.usable();
+    }
+
+    private void showDrawPanel(boolean show) {
+        if (show && !canDraw()) return;
+        if (show) drawShown = true;
+        else closeDrawing();
+        render();
+    }
+
+    // Leaves the panel and throws the drawing away; a shape still being recognised is
+    // dropped when it arrives.
+    private void closeDrawing() {
+        drawShown = false;
+        clearDrawing();
+    }
+
+    private void clearDrawing() {
+        recognizer.forget();
+        drawStatus = R.string.drawing_hint;
+        if (views != null) {
+            views.drawPanel.drawSurface.clear();
+            if (drawShown) renderDrawPanel();
+        }
+    }
+
+    private void onDrawn(List<float[]> stroke) {
+        drawStatus = R.string.drawing_working;
+        renderDrawPanel();
+        recognizer.recognise(stroke, (shape, failed) -> {
+            if (views == null || !drawShown) return;
+            views.drawPanel.drawSurface.setShape(shape);
+            drawStatus = failed ? R.string.drawing_failed
+                    : shape == null ? R.string.drawing_unclear
+                    : ShapeRecognizer.nameOf(shape.kind);
+            renderDrawPanel();
+        });
+    }
+
+    private void renderDrawPanel() {
+        views.drawPanel.drawStatus.setText(drawStatus);
+        boolean drawn = !views.drawPanel.drawSurface.isEmpty();
+        boolean ready = drawn && drawStatus != R.string.drawing_working;
+        views.drawPanel.drawClear.setEnabled(drawn);
+        views.drawPanel.drawInsert.setEnabled(ready);
+        views.drawPanel.drawInsert.setAlpha(ready ? 1f : 0.4f);
+        // The button says what will happen here: not every field takes pictures.
+        views.drawPanel.drawInsert.setText(
+                EditorBridge.accepts(editorInfo, ShareResultController.PNG)
+                        ? R.string.draw_insert : R.string.draw_share);
+    }
+
+    // The tap is the user's consent. The picture goes into the field if the field takes
+    // pictures; if it does not, or the host app turns it down, the share sheet is offered.
+    private void insertDrawing() {
+        if (session == null || views == null) return;
+        Bitmap drawing = views.drawPanel.drawSurface.render();
+        InputSession drawnFor = session;
+        EditorInfo field = editorInfo;
+        String label = service.getString(R.string.shape_other);
+        app.io.execute(() -> {
+            Uri uri;
+            try {
+                uri = ShareResultController.writePicture(service, drawing,
+                        ShareResultController.PNG);
+            } catch (IOException e) {
+                uri = null;
+            }
+            Uri written = uri;
+            ContextCompat.getMainExecutor(service).execute(() -> {
+                // The field changed while the picture was being written: nothing is sent.
+                if (session != drawnFor) return;
+                if (written == null) {
+                    drawStatus = R.string.image_share_failed;
+                    if (views != null && drawShown) renderDrawPanel();
+                    return;
+                }
+                if (!editor.commitContent(field, written, ShareResultController.PNG, label)) {
+                    service.share(ShareResultController.shareIntent(written,
+                            ShareResultController.PNG));
+                }
+                closeDrawing();
+                render();
+            });
+        });
     }
 
     private void renderTranscript() {

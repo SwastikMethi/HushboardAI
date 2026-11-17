@@ -18,7 +18,10 @@ import com.example.aikeyboard.ui.models.ModelLibraryFragment;
 import com.example.aikeyboard.ui.onboarding.SetupFragment;
 import com.example.aikeyboard.ui.settings.AppPreferencesFragment;
 import com.example.aikeyboard.ui.settings.PrivacyFragment;
+import com.example.aikeyboard.models.ModelDescriptor;
 import com.example.aikeyboard.ui.settings.SettingsFragment;
+import com.example.aikeyboard.ui.tools.DrawingFragment;
+import com.example.aikeyboard.ui.tools.ImageToolsFragment;
 import com.example.aikeyboard.ui.tools.VoiceToolsFragment;
 
 public class MainActivity extends AppCompatActivity {
@@ -100,6 +103,21 @@ public class MainActivity extends AppCompatActivity {
 
     public void openVoiceTools() {
         open(new VoiceToolsFragment());
+    }
+
+    public void openImageTools() {
+        open(new ImageToolsFragment());
+    }
+
+    public void openDrawing() {
+        open(new DrawingFragment());
+    }
+
+    /** The screen where a group's models are used, or nothing for models used while typing. */
+    public void openToolsFor(ModelDescriptor.Group group) {
+        if (group == ModelDescriptor.Group.VOICE) openVoiceTools();
+        else if (group == ModelDescriptor.Group.IMAGES) openImageTools();
+        else if (group == ModelDescriptor.Group.DRAWING) openDrawing();
     }
 
     // A screen reached from a tab: Back returns to the tab it came from.

@@ -2,6 +2,8 @@
 // keyboard goes through here, so every edit is validated in one place.
 package com.example.aikeyboard.ime;
 
+import android.content.ClipDescription;
+import android.net.Uri;
 import android.os.Build;
 import android.view.KeyEvent;
 import android.view.inputmethod.EditorInfo;
@@ -9,6 +11,10 @@ import android.view.inputmethod.ExtractedText;
 import android.view.inputmethod.ExtractedTextRequest;
 import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.SurroundingText;
+
+import androidx.core.view.inputmethod.EditorInfoCompat;
+import androidx.core.view.inputmethod.InputConnectionCompat;
+import androidx.core.view.inputmethod.InputContentInfoCompat;
 
 import com.example.aikeyboard.core.TextEdit;
 
@@ -28,6 +34,29 @@ public final class EditorBridge {
     public void commitText(CharSequence text) {
         InputConnection ic = connection.get();
         if (ic != null) ic.commitText(text, 1);
+    }
+
+    /** Whether the focused field has said it takes content of this type (a picture, say). */
+    public static boolean accepts(EditorInfo info, String mimeType) {
+        if (info == null) return false;
+        for (String accepted : EditorInfoCompat.getContentMimeTypes(info)) {
+            if (ClipDescription.compareMimeTypes(mimeType, accepted)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Hands the field a picture, with permission to read it. Only where the field has said
+     * it takes this type. Returns false if it does not, or if the host app turns it down,
+     * so the caller can offer another way.
+     */
+    public boolean commitContent(EditorInfo info, Uri uri, String mimeType, String label) {
+        InputConnection ic = connection.get();
+        if (ic == null || !accepts(info, mimeType)) return false;
+        InputContentInfoCompat content = new InputContentInfoCompat(uri,
+                new ClipDescription(label, new String[] {mimeType}), null);
+        return InputConnectionCompat.commitContent(ic, info, content,
+                InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION, null);
     }
 
     /**

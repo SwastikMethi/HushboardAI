@@ -116,7 +116,7 @@ public class VoiceModelsTest {
         onInferenceThread(() -> app.voz.run(speech, settings()));
         long loadedKb = residentKb();
 
-        Thread.sleep((AppContainer.VOZ_IDLE_SECONDS + 10) * 1000L);
+        Thread.sleep((AppContainer.TOOL_IDLE_SECONDS + 10) * 1000L);
         onInferenceThread(() -> null); // lets a release that is under way finish
         long idleKb = residentKb();
 

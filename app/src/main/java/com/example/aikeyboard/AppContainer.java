@@ -10,6 +10,9 @@ import com.example.aikeyboard.ai.CrashBreaker;
 import com.example.aikeyboard.ai.adapters.ClearAdapter;
 import com.example.aikeyboard.ai.adapters.EarAdapter;
 import com.example.aikeyboard.ai.adapters.EmoAdapter;
+import com.example.aikeyboard.ai.adapters.EyeAdapter;
+import com.example.aikeyboard.ai.adapters.ModeratorAdapter;
+import com.example.aikeyboard.ai.adapters.ShapesAdapter;
 import com.example.aikeyboard.ai.adapters.GistAdapter;
 import com.example.aikeyboard.ai.adapters.RedactAdapter;
 import com.example.aikeyboard.ai.adapters.TongueAdapter;
@@ -22,6 +25,8 @@ import com.example.aikeyboard.media.AudioPipeline;
 import com.example.aikeyboard.media.ShareResultController;
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
+import com.example.aikeyboard.models.ModelDescriptor;
+import com.example.aikeyboard.models.ModelRegistry;
 import com.example.aikeyboard.models.ModelRepository;
 import com.example.aikeyboard.models.ModelRuntimePool;
 import com.example.aikeyboard.sdkbridge.DesertAntClient;
@@ -37,7 +42,7 @@ import java.util.concurrent.TimeoutException;
 
 public final class AppContainer {
 
-    public static final int VOZ_IDLE_SECONDS = 20;
+    public static final int TOOL_IDLE_SECONDS = 20;
 
     public final SettingsRepository settings;
     public final ModelRepository models;
@@ -56,12 +61,15 @@ public final class AppContainer {
     public final TongueAdapter tongue;
     public final GistAdapter gist;
     public final VozAdapter voz;
+    public final EyeAdapter eye;
+    public final ModeratorAdapter moderator;
+    public final ShapesAdapter shapes;
     /**
      * The microphone. Not final so a device test can put known speech where a microphone
      * would be; the app itself never replaces it.
      */
     public AudioCaptureController capture;
-    private ScheduledFuture<?> vozIdle;
+    private ScheduledFuture<?> toolsIdle;
     /** The voice tools' chain: cleanup, language, transcript, fillers, speakers. */
     public final AudioPipeline voice;
 
@@ -73,15 +81,19 @@ public final class AppContainer {
         models = new ModelRepository(appContext, settings, io, memory.totalMem);
         breaker = new CrashBreaker(new File(appContext.getNoBackupFilesDir(), "loading"));
         runtime = new ModelRuntimePool(appContext, models, breaker);
+        runtime.setUseListener(this::releaseToolsWhenIdle);
         emo = new EmoAdapter(runtime);
         redact = new RedactAdapter(runtime);
         toxic = new ToxicAdapter(runtime);
         tongue = new TongueAdapter(appContext);
         gist = new GistAdapter(runtime);
         capture = new AudioCaptureController(appContext);
-        voz = new VozAdapter(runtime, this::releaseVozWhenIdle);
+        voz = new VozAdapter(runtime);
         voice = new AudioPipeline(new ClearAdapter(runtime), new EarAdapter(runtime), voz,
                 new UhmAdapter(runtime), new WhoAdapter(runtime));
+        eye = new EyeAdapter(runtime);
+        moderator = new ModeratorAdapter(runtime);
+        shapes = new ShapesAdapter(runtime);
         // Results the user shared earlier are not kept around (see ShareResultController).
         io.execute(() -> ShareResultController.removeOldFiles(appContext));
         // Files may only be deleted once the model using them has been closed.
@@ -104,13 +116,19 @@ public final class AppContainer {
         }
     }
 
-    // Loaded, Voz holds close to 4 GB. It is given back once it has gone unused for a short
-    // while: long enough that dictating a few sentences in a row stays quick, short enough
-    // that the keyboard does not sit on that memory.
-    private synchronized void releaseVozWhenIdle() {
-        if (vozIdle != null) vozIdle.cancel(false);
-        vozIdle = timer.schedule(() -> inference.execute(() -> runtime.release("voz")),
-                VOZ_IDLE_SECONDS, TimeUnit.SECONDS);
+    // The models used while typing stay loaded, because suggestions must be quick. The
+    // voice, image and drawing models are used now and then and are heavy (Voz holds close to
+    // 4 GB, Eye about 1.5 GB), so they are given back once none of them has been used for a
+    // short while: long enough that a second dictation stays quick, short enough that the
+    // keyboard does not sit on that memory. Called from the inference thread on every use.
+    private synchronized void releaseToolsWhenIdle(String modelId) {
+        if (ModelRegistry.find(modelId).group == ModelDescriptor.Group.TEXT) return;
+        if (toolsIdle != null) toolsIdle.cancel(false);
+        toolsIdle = timer.schedule(() -> inference.execute(() -> {
+            for (ModelDescriptor model : ModelRegistry.all()) {
+                if (model.group != ModelDescriptor.Group.TEXT) runtime.release(model.id);
+            }
+        }), TOOL_IDLE_SECONDS, TimeUnit.SECONDS);
     }
 
     /** Frees every loaded model, for when the system is short of memory. */

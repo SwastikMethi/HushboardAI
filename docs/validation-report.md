@@ -282,3 +282,36 @@ Two things found while testing that are not the app's doing but shaped the tests
 - The first emulator ran out of storage (5.8 GB) and memory (3 GB) for the voice models, so testing moved to EMU-37B.
 
 Full-suite run at the end of the milestone (EMU-37B, with `-e clear true`): 119 instrumented tests; 107 passed, 12 skipped by design (the opt-in probes: file capture, the kill and offline probes, crash recovery, the refused-microphone flow, stock-app typing and the four screenshot tours, each run separately as listed above), none failed. Lint: 0 errors, 30 warnings (dependency-update notices and style hints). An earlier full run had one failure — the tab tap that landed on Android's clipboard preview, described above.
+
+## Milestone 7 — Image and drawing tools
+
+Unit tests (JVM): 160 passed in total. New or extended in this milestone: `VisionTest` 4 (how far a large picture is scaled down; which shapes are closed outlines), `SdkDefaultsProbeTest` 3, `ModelRegistryTest` 10 (all 13 models now have pinned files).
+
+All device rows ran on EMU-37B. No explicit imagery was created or downloaded for any test.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| Pinned files for Eye, Moderator and Shapes captured from real SDK downloads; revisions read from each native library | passed | EMU-37B | `ManifestCaptureTest` for eye, moderator, shapes; sizes asserted in `ModelRegistryTest` |
+| All 13 vendor artifacts in one build pass the metadata check, build and install | passed | host, EMU-37B | `:app:checkDebugAarMetadata assembleDebug installDebug` |
+| Eye through the app's own download: a real capture of the screen is called a screenshot, tags are ordered by confidence, nobody is detected | passed | EMU-37B | `VisionModelsTest.eye_describesARealScreenshot` (about 2 s cold, 0.8 s warm) |
+| Eye's memory is given back once it has sat unused | passed | EMU-37B | `VisionModelsTest.eye_givesItsMemoryBackOnceItHasSatUnused` (1.40 GB → 272 MB) — failed first, when only Voz was unloaded |
+| Moderator passes a harmless picture (score 0.30); its own threshold decides the flag | passed | EMU-37B | `VisionModelsTest.moderator_passesAHarmlessPictureAndItsThresholdDecidesTheFlag` |
+| Shapes: circle → ellipse, line → line, rectangle → rectangle with an outline where the stroke was; a random scrawl and a single tap are not turned into a shape | passed | EMU-37B | `VisionModelsTest.shapes_*` (3) |
+| Image tools: reached from the Models tab; lists the checks that will run; says so and disables choosing when none can | passed | EMU-37B | `ImageToolsScreenTest` (2) |
+| Image tools: a picked picture is shown with what Eye found and the sensitivity result | passed | EMU-37B | `ImageToolsScreenTest.aPickedPictureIsShownWithWhatTheModelsFound`; `docs/evidence/screenshots/m7_image_tools_result.png` |
+| Image tools: closing the picker without choosing changes nothing; a file that is not a picture gets a plain reason; a 6000×4500 picture is scaled down and still analysed | passed | EMU-37B | `ImageToolsScreenTest` (3) |
+| Image tools: an unflagged picture is shared straight away; a flagged one asks first, and declining shares nothing | passed | EMU-37B | `ImageToolsScreenTest` (2). The flag was forced by setting Moderator's threshold to zero |
+| Drawing screen: a stroke drawn by touch is recognised and tidied; Clear starts again; a tangle says "No clear shape" and can be retried; a recognised drawing is shared through the system sheet | passed | EMU-37B | `DrawingTest` (3); `m7_drawing_result.png` |
+| Keyboard: the draw tool shows only while Shapes is on, installed and allowed; never in a password field | passed | EMU-37B | `DrawingTest.theDrawToolIsOfferedOnlyWhereItCanRun` |
+| Keyboard: the drawing panel stays within the keyboard's own height, with the app still in view | passed | EMU-37B | `DrawingTest.theDrawingPanelStaysWithinTheKeyboardsOwnHeight` — failed first (the panel filled the screen); `m7_keyboard_draw_panel.png` |
+| Keyboard: a drawn shape is inserted into a field that takes pictures, as `image/png` the field can open, only when Insert is tapped | passed | EMU-37B | `DrawingTest.aShapeDrawnInTheKeyboardIsInsertedIntoAnEditorThatTakesPictures` (the debug host's picture field) |
+| Keyboard: in a field that takes no pictures the button says "Share…" and opens the share sheet; the field is not handed anything | passed | EMU-37B | `DrawingTest.whereTheEditorTakesNoPicturesTheShapeIsOfferedThroughTheShareSheet` |
+| Keyboard: leaving the drawing panel brings typing back untouched | passed | EMU-37B | `DrawingTest.leavingTheDrawingPanelBringsTypingBackUntouched` |
+| The catalog shows no model as a placeholder | passed | EMU-37B | `CompanionAppTest.theCatalogListsAllThirteenModelsWithHonestStates` |
+| Moderator on a picture it ought to flag | not run | — | No explicit imagery was used; the model's detection quality is unverified |
+| Eye on real photos (people, pets, places, documents, rotated camera pictures) | not run | — | One screenshot and one drawn picture were used |
+| The real system photo picker driven end to end | not run | — | The screen's pick handler is called directly with a file; the picker itself is the system's |
+| Inserting a drawing into a real chat app | blocked | PHONE | Needs WhatsApp, Telegram or Discord signed in; only the debug host was used |
+| A host that says it takes pictures but turns the insert down | not run | — | The fallback to the share sheet is in code (`KeyboardController.insertDrawing`); no such host was available |
+
+Full-suite run at the end of the milestone (EMU-37B, with `-e clear true`): 142 instrumented tests; 129 passed, 13 skipped by design (opt-in probes), none failed. Lint: 0 errors, 32 warnings.

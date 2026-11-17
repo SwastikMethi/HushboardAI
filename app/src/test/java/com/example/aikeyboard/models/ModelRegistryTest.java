@@ -66,6 +66,9 @@ public class ModelRegistryTest {
         assertEquals(10_738_698L, ModelRegistry.find("ear").totalBytes());
         assertEquals(23_919_472L, ModelRegistry.find("uhm").totalBytes());
         assertEquals(33_306_046L, ModelRegistry.find("who").totalBytes());
+        assertEquals(66_319_130L, ModelRegistry.find("eye").totalBytes());
+        assertEquals(9_618_016L, ModelRegistry.find("moderator").totalBytes());
+        assertEquals(976_447L, ModelRegistry.find("shapes").totalBytes());
     }
 
     @Test
@@ -74,6 +77,9 @@ public class ModelRegistryTest {
         // Measured: the app holds about 3.9 GB with Voz loaded.
         assertFalse(ModelRegistry.find("voz").fitsRam(4 * gib));
         assertTrue(ModelRegistry.find("voz").fitsRam(6 * gib));
+        // Measured: about 1.5 GB with Eye loaded.
+        assertFalse(ModelRegistry.find("eye").fitsRam(gib));
+        assertTrue(ModelRegistry.find("eye").fitsRam(3 * gib));
         assertTrue(ModelRegistry.find("emo").fitsRam(gib));
         assertTrue(ModelRegistry.find("who").fitsRam(gib));
     }
@@ -86,11 +92,16 @@ public class ModelRegistryTest {
     }
 
     @Test
-    public void aModelIsOnlyAvailableWhenItIsBundledOrHasPinnedFiles() {
-        assertTrue(ModelRegistry.find("emo").available());
-        assertTrue(ModelRegistry.find("tongue").available());
-        assertTrue(ModelRegistry.find("voz").available());
-        // Not yet captured: these must show as coming later, never as a working download.
-        assertFalse(ModelRegistry.find("eye").available());
+    public void everyModelInTheCatalogCanReallyBeInstalled() {
+        for (ModelDescriptor model : ModelRegistry.all()) {
+            assertTrue(model.id, model.available());
+        }
+    }
+
+    @Test
+    public void aModelWithNoPinnedFilesWouldBeListedAsComingLaterNotAsADownload() {
+        ModelDescriptor notCaptured = new ModelDescriptor("x", "X", Group.TEXT, 0, false,
+                false, "v1", java.util.List.of(), java.util.List.of());
+        assertFalse(notCaptured.available());
     }
 }

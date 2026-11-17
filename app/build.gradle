@@ -63,6 +63,9 @@ dependencies {
     implementation libs.desertant.ear
     implementation libs.desertant.uhm
     implementation libs.desertant.who
+    implementation libs.desertant.eye
+    implementation libs.desertant.moderator
+    implementation libs.desertant.shapes
 
     testImplementation libs.junit
 

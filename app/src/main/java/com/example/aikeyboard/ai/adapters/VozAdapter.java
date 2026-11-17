@@ -24,12 +24,9 @@ public final class VozAdapter implements ModelAdapter<AudioClip, Transcript> {
     private static final long TIMEOUT_MINUTES = 10;
 
     private final ModelRuntimePool pool;
-    private final Runnable afterUse;
 
-    /** @param afterUse runs after every transcription, so the owner can plan to unload */
-    public VozAdapter(ModelRuntimePool pool, Runnable afterUse) {
+    public VozAdapter(ModelRuntimePool pool) {
         this.pool = pool;
-        this.afterUse = afterUse;
     }
 
     @Override
@@ -39,15 +36,10 @@ public final class VozAdapter implements ModelAdapter<AudioClip, Transcript> {
 
     @Override
     public Transcript run(AudioClip audio, AppSettings settings) throws Exception {
-        Transcription result;
-        try {
-            Voz voz = pool.acquire(ID, Voz::new, Voz::isDownloaded);
-            result = DesertAntClient.<Transcription>run(
-                    c -> voz.transcribe(audio.samples, audio.sampleRate, c))
-                    .get(TIMEOUT_MINUTES, TimeUnit.MINUTES);
-        } finally {
-            afterUse.run();
-        }
+        Voz voz = pool.acquire(ID, Voz::new, Voz::isDownloaded);
+        Transcription result = DesertAntClient.<Transcription>run(
+                c -> voz.transcribe(audio.samples, audio.sampleRate, c))
+                .get(TIMEOUT_MINUTES, TimeUnit.MINUTES);
         pool.answered(ID);
         List<TimedWord> words = new ArrayList<>();
         for (Word word : result.getWords()) {

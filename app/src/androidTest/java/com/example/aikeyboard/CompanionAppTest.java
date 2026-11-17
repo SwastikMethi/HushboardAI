@@ -105,9 +105,11 @@ public class CompanionAppTest {
         }
         onView(statusOf("tongue")).perform(scrollTo())
                 .check(matches(withText(R.string.status_included)));
-        // No adapter yet: must say so rather than offer a download that does nothing.
-        onView(statusOf("eye")).perform(scrollTo())
-                .check(matches(withText(R.string.status_coming_later)));
+        // Every model has a working adapter now: none may be shown as a placeholder.
+        for (ModelDescriptor model : ModelRegistry.all()) {
+            onView(statusOf(model.id)).perform(scrollTo())
+                    .check(matches(not(withText(R.string.status_coming_later))));
+        }
         onView(withText(R.string.models_not_on_android)).perform(scrollTo())
                 .check(matches(isDisplayed()));
     }

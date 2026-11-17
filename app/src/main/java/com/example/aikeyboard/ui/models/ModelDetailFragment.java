@@ -107,15 +107,15 @@ public final class ModelDetailFragment extends PreferenceFragmentCompat {
                         if (view != null) view.post(() -> onResult.accept(result));
                     }));
             tryCategory.addPreference(tryIt);
-        } else if (model.group == ModelDescriptor.Group.VOICE) {
-            // Voice models are tried on real audio, in the screen built for that.
+        } else if (ModelLibraryFragment.toolsLabel(model.group) != 0) {
+            // Voice, image and drawing models are tried on real input, in their own screen.
             PreferenceCategory tryCategory = category(context, R.string.try_title);
             screen.addPreference(tryCategory);
             Preference open = plain(context);
             open.setKey("try_it"); // lets the screen scroll straight to this row
-            open.setTitle(R.string.open_voice_tools);
+            open.setTitle(ModelLibraryFragment.toolsLabel(model.group));
             open.setOnPreferenceClickListener(p -> {
-                ((MainActivity) requireActivity()).openVoiceTools();
+                ((MainActivity) requireActivity()).openToolsFor(model.group);
                 return true;
             });
             tryCategory.addPreference(open);

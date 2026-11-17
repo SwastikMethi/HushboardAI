@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public final class ModelRuntimePool {
@@ -32,11 +33,17 @@ public final class ModelRuntimePool {
     private final CrashBreaker breaker;
     private final Map<String, AutoCloseable> loaded = new HashMap<>();
     private final Set<String> answered = new HashSet<>();
+    private volatile Consumer<String> onUse = modelId -> { };
 
     public ModelRuntimePool(Context appContext, ModelRepository models, CrashBreaker breaker) {
         this.app = appContext;
         this.models = models;
         this.breaker = breaker;
+    }
+
+    /** Told a model's id each time it is about to be used, loaded already or not. */
+    public void setUseListener(Consumer<String> listener) {
+        onUse = listener;
     }
 
     /**
@@ -46,6 +53,7 @@ public final class ModelRuntimePool {
     @SuppressWarnings("unchecked") // Each id is always loaded through the same factory type.
     public <M extends AutoCloseable> M acquire(String modelId, Factory<M> factory,
             Predicate<M> filesAccepted) throws ModelUnavailableException {
+        onUse.accept(modelId);
         AutoCloseable existing = loaded.get(modelId);
         if (existing != null) return (M) existing;
         if (!models.isReady(modelId)) {

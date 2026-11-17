@@ -93,7 +93,8 @@ public final class SettingsRepository {
     private <T> void update(Preferences.Key<T> key, T value) {
         writes.execute(() -> {
             try {
-                store.updateDataAsync(preferences -> {
+                // Waiting here is the point: the next write starts only once this one is in.
+                Preferences written = store.updateDataAsync(preferences -> {
                     MutablePreferences mutable = preferences.toMutablePreferences();
                     mutable.set(key, value);
                     return Single.just(mutable);

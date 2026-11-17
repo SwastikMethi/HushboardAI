@@ -74,11 +74,12 @@ public final class ModelLibraryFragment extends Fragment {
             header.groupCaption.setText(caption);
             header.groupCaption.setVisibility(View.VISIBLE);
         }
-        if (group == Group.VOICE) {
-            header.groupOpen.setText(R.string.open_voice_tools);
+        int open = toolsLabel(group);
+        if (open != 0) {
+            header.groupOpen.setText(open);
             header.groupOpen.setVisibility(View.VISIBLE);
             header.groupOpen.setOnClickListener(
-                    v -> ((MainActivity) requireActivity()).openVoiceTools());
+                    v -> ((MainActivity) requireActivity()).openToolsFor(group));
         }
         LinearLayout card = new LinearLayout(requireContext());
         card.setOrientation(LinearLayout.VERTICAL);
@@ -102,6 +103,14 @@ public final class ModelLibraryFragment extends Fragment {
             }
             rows.put(model.id, row);
         }
+    }
+
+    /** The button that opens a group's own screen, or 0 for models used while typing. */
+    static int toolsLabel(Group group) {
+        if (group == Group.VOICE) return R.string.open_voice_tools;
+        if (group == Group.IMAGES) return R.string.open_image_tools;
+        if (group == Group.DRAWING) return R.string.open_drawing;
+        return 0;
     }
 
     @Override

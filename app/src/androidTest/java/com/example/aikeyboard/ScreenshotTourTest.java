@@ -173,6 +173,66 @@ public class ScreenshotTourTest {
     }
 
     @Test
+    public void imageAndDrawingStates() throws Exception {
+        for (String id : new String[] {"eye", "moderator", "shapes"}) {
+            TestModels.ensureInstalled(id);
+            settings.setModelEnabled(id, true);
+        }
+        setAi(true);
+        try {
+            java.io.File picture = new java.io.File(
+                    ApplicationProvider.getApplicationContext().getCacheDir(), "tour.png");
+            try (java.io.FileOutputStream out = new java.io.FileOutputStream(picture)) {
+                VisionModelsTest.harmlessPicture()
+                        .compress(android.graphics.Bitmap.CompressFormat.PNG, 90, out);
+            }
+            try (ActivityScenario<MainActivity> app =
+                         ActivityScenario.launch(MainActivity.class)) {
+                app.onActivity(MainActivity::openImageTools);
+                app.onActivity(a -> ((com.example.aikeyboard.ui.tools.ImageToolsFragment)
+                        a.getSupportFragmentManager().findFragmentById(R.id.screen))
+                        .onPicturePicked(android.net.Uri.fromFile(picture)));
+                assertNotNull("no image result", device.wait(
+                        Until.findObject(By.res(PKG, "image_sensitivity")), 60_000));
+                shot("14_image_tools_result");
+            }
+            try (ActivityScenario<MainActivity> app =
+                         ActivityScenario.launch(MainActivity.class)) {
+                app.onActivity(MainActivity::openDrawing);
+                drawTriangle("stroke_surface");
+                assertNotNull("no shape", device.wait(Until.findObject(
+                        By.res(PKG, "drawing_status").text("Triangle")), TIMEOUT_MS));
+                shot("15_drawing_result");
+            }
+            try (ActivityScenario<EditorTestActivity> host =
+                         ActivityScenario.launch(EditorTestActivity.class)) {
+                device.wait(Until.findObject(By.res(PKG, "field_rich")), TIMEOUT_MS).click();
+                device.wait(Until.findObject(By.res(PKG, "tool_draw")), TIMEOUT_MS).click();
+                drawTriangle("draw_surface");
+                assertNotNull("no shape", device.wait(Until.findObject(
+                        By.res(PKG, "draw_status").text("Triangle")), TIMEOUT_MS));
+                shot("16_keyboard_draw_panel");
+            }
+        } finally {
+            for (String id : new String[] {"eye", "moderator", "shapes"}) {
+                settings.setModelEnabled(id, false);
+            }
+            setAi(false);
+        }
+    }
+
+    private void drawTriangle(String surfaceId) {
+        android.graphics.Rect b = device.wait(
+                Until.findObject(By.res(PKG, surfaceId)), TIMEOUT_MS).getVisibleBounds();
+        android.graphics.Point[] points = {
+                new android.graphics.Point(b.centerX(), b.top + b.height() / 5),
+                new android.graphics.Point(b.left + b.width() * 4 / 5, b.top + b.height() * 4 / 5),
+                new android.graphics.Point(b.left + b.width() / 5, b.top + b.height() * 4 / 5),
+                new android.graphics.Point(b.centerX(), b.top + b.height() / 5)};
+        device.swipe(points, 12);
+    }
+
+    @Test
     public void companionScreens() throws Exception {
         try (ActivityScenario<MainActivity> app = ActivityScenario.launch(MainActivity.class)) {
             shot("04_keyboard_tab");

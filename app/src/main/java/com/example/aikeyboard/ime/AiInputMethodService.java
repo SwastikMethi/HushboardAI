@@ -141,6 +141,11 @@ public class AiInputMethodService extends InputMethodService {
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 
+    /** Offers something through the system share sheet, for a field that cannot take it. */
+    void share(Intent send) {
+        startActivity(Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+
     void keyFeedback(View view) {
         if (settings.haptics()) view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
         if (settings.keySound()) {

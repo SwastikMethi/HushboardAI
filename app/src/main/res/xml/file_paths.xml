@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The only folder other apps can be handed files from: results the user chose to share. -->
+<paths>
+    <cache-path
+        name="shared"
+        path="shared/" />
+</paths>

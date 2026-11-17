@@ -225,6 +225,15 @@
 
     <!-- Model settings -->
     <string name="setting_gist_limit">Number of topics</string>
+    <string name="setting_clear_strength">Cleanup strength (%)</string>
+    <string name="setting_clear_strength_summary">How strongly background noise is reduced</string>
+    <string name="setting_uhm_bias">What to flag</string>
+    <string name="setting_uhm_bias_summary">The model\'s own balance between missing fillers and flagging real words</string>
+    <string-array name="uhm_bias_labels">
+        <item>Only clear fillers</item>
+        <item>Balanced</item>
+        <item>Catch more, with more mistakes</item>
+    </string-array>
     <string name="try_language_unsure">Not sure. Closest guess: %1$s</string>
     <string name="setting_emo_limit">Number of suggestions</string>
     <string name="setting_emo_skin_tone">Skin tone</string>
@@ -261,4 +270,64 @@
         <item>Standard</item>
         <item>More alerts</item>
     </string-array>
+
+    <!-- Voice tools -->
+    <string name="open_voice_tools">Open voice tools</string>
+    <string name="voice_intro">Record or add a recording. It is processed on this device and kept only until you leave this screen.</string>
+    <string name="voice_steps">Will run: %1$s</string>
+    <string name="voice_no_steps">No voice model is on. Download one in Models and switch it on.</string>
+    <string name="voice_paused">AI is paused. Turn it on in Models to use voice tools.</string>
+    <string name="voice_step_clear">Clean up audio (Clear)</string>
+    <string name="voice_step_ear">Detect language (Ear)</string>
+    <string name="voice_step_voz">Transcribe (Voz)</string>
+    <string name="voice_step_uhm">Flag filler words (Uhm)</string>
+    <string name="voice_step_who">Label speakers (Who)</string>
+    <string name="voice_record">Record</string>
+    <string name="voice_stop">Stop</string>
+    <string name="voice_import">Add a recording</string>
+    <string name="voice_recording">Recording. Tap Stop when you are done (up to two minutes).</string>
+    <string name="voice_reading">Reading the recording…</string>
+    <string name="voice_working">Working: %1$s…</string>
+    <string name="voice_cancelled">Cancelled. Nothing was kept.</string>
+    <string name="voice_interrupted">Recording stopped because you left the app. Nothing was kept.</string>
+    <string name="voice_too_short">That was too short to use.</string>
+    <string name="voice_cut">Only the first two minutes were used.</string>
+    <string name="voice_unreadable">This file couldn\'t be read as audio.</string>
+    <string name="voice_mic_unavailable">The microphone couldn\'t be opened. Another app may be using it.</string>
+    <string name="voice_language">Language: %1$s</string>
+    <string name="voice_language_unsure">Language: possibly %1$s</string>
+    <string name="voice_no_transcript">No transcript: switch on Voz to get one.</string>
+    <string name="voice_no_speech">No speech was found.</string>
+    <plurals name="voice_fillers">
+        <item quantity="one">%1$d filler word is shown in [brackets]. Nothing is cut from the audio.</item>
+        <item quantity="other">%1$d filler words are shown in [brackets]. Nothing is cut from the audio.</item>
+    </plurals>
+    <string name="voice_cleaned">The audio was cleaned up before the other steps. You can play or share the cleaned version.</string>
+    <string name="voice_step_failed">%1$s couldn\'t run.</string>
+    <string name="voice_copy">Copy transcript</string>
+    <string name="voice_share">Share cleaned audio</string>
+    <string name="voice_play">Play cleaned audio</string>
+    <string name="voice_stop_playing">Stop playing</string>
+    <string name="voice_share_failed">The audio couldn\'t be prepared for sharing.</string>
+    <string name="status_needs_memory">Needs more memory than this device has</string>
+    <string name="status_stopped">Switched off after it stopped the app. Switch it on to try again.</string>
+
+    <!-- Microphone request -->
+    <string name="mic_title">Microphone</string>
+    <string name="mic_rationale">Recording starts only when you tap record, and the audio stays on this device.</string>
+    <string name="mic_refused">Microphone access is off, so recording can\'t start.</string>
+    <string name="mic_ask_again">Ask again</string>
+    <string name="mic_open_settings">Open settings</string>
+    <string name="mic_not_now">Not now</string>
+
+    <!-- Dictation in the keyboard -->
+    <string name="mic_button">Dictate</string>
+    <string name="dictation_listening">Listening…</string>
+    <string name="dictation_working">Transcribing…</string>
+    <string name="dictation_title">Transcript</string>
+    <string name="dictation_note">Check it before you insert it. It was transcribed on this device.</string>
+    <string name="dictation_insert">Insert</string>
+    <string name="dictation_nothing">No speech was heard</string>
+    <string name="dictation_failed">Couldn\'t transcribe that</string>
+    <string name="dictation_mic_unavailable">Microphone unavailable</string>
 </resources>

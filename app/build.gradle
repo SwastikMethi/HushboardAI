@@ -58,6 +58,11 @@ dependencies {
     implementation libs.desertant.toxic
     implementation libs.desertant.tongue
     implementation libs.desertant.gist
+    implementation libs.desertant.voz
+    implementation libs.desertant.clear
+    implementation libs.desertant.ear
+    implementation libs.desertant.uhm
+    implementation libs.desertant.who
 
     testImplementation libs.junit
 

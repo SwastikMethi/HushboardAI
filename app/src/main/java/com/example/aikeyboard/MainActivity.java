@@ -19,6 +19,7 @@ import com.example.aikeyboard.ui.onboarding.SetupFragment;
 import com.example.aikeyboard.ui.settings.AppPreferencesFragment;
 import com.example.aikeyboard.ui.settings.PrivacyFragment;
 import com.example.aikeyboard.ui.settings.SettingsFragment;
+import com.example.aikeyboard.ui.tools.VoiceToolsFragment;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -95,6 +96,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void openAppPreferences() {
         open(new AppPreferencesFragment());
+    }
+
+    public void openVoiceTools() {
+        open(new VoiceToolsFragment());
     }
 
     // A screen reached from a tab: Back returns to the tab it came from.

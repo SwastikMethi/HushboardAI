@@ -6,8 +6,15 @@ Every check is listed as **passed**, **failed**, **blocked** or **not run**. A c
 
 | ID | Target |
 |---|---|
-| EMU-37 | `Pixel_6_Pro` AVD, Android 17 (API 37), `google_apis_ps16k` arm64-v8a image, 16 KB pages, on an Apple Silicon Mac (macOS 26.4.1) |
+| EMU-37 | `Pixel_6_Pro` AVD, Android 17 (API 37), `google_apis_ps16k` arm64-v8a image, 16 KB pages, 3 GB memory, software GPU, on an Apple Silicon Mac (macOS 26.4.1). Used for milestones 0–5 |
+| EMU-37B | `AiKeyboard_Test` AVD: the same Android 17 image and 16 KB pages, with 8 GB memory and 16 GB storage, started with `-gpu host` (the Mac's GPU) unless a row says software GPU. Used from milestone 6 |
 | PHONE | Physical Android phone — not connected yet |
+
+EMU-37B exists because the voice models outgrew EMU-37: Voz needs about 3.9 GB of memory and 1.2 GB of storage, and Clear needs a real GPU. It is started with:
+
+```sh
+~/Library/Android/sdk/emulator/emulator -avd AiKeyboard_Test -gpu host -no-window -no-snapshot -no-boot-anim
+```
 
 ## Commands
 
@@ -31,6 +38,21 @@ adb shell cmd connectivity airplane-mode disable
 # Process death: start step 1, run `adb shell am force-stop com.example.aikeyboard` mid-download, then step 2.
 adb shell am instrument -w -e killProbe true -e class 'com.example.aikeyboard.ModelSmokeTest#killProbe_startDownload' com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 adb shell am instrument -w -e killProbe true -e class 'com.example.aikeyboard.ModelSmokeTest#killProbe_afterKillIsNotReadyAndRetryCompletes' com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
+
+# Clear: only where there is a real GPU (a phone, or an emulator started with -gpu host).
+adb shell am instrument -w -e clear true -e class 'com.example.aikeyboard.VoiceModelsTest' com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
+
+# Crash recovery with a model that really dies on the device (Clear on a software GPU, Voz on
+# too little memory). The first run is expected to end with "Process crashed".
+adb shell am instrument -w -e crashProbe run    -e crashModel clear -e class com.example.aikeyboard.CrashRecoveryProbeTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
+adb shell am instrument -w -e crashProbe verify -e crashModel clear -e class com.example.aikeyboard.CrashRecoveryProbeTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
+
+# Microphone refused: revoke first (this kills the app), then run.
+adb shell pm revoke com.example.aikeyboard android.permission.RECORD_AUDIO
+adb shell am instrument -w -e micDenied true -e class com.example.aikeyboard.MicPermissionFlowTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
+
+# Screenshots: written to /sdcard/Android/data/com.example.aikeyboard/files/tour
+adb shell am instrument -w -e screenshots true -e class com.example.aikeyboard.ScreenshotTourTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
 ## Milestone 0 — Compatibility spike
@@ -213,3 +235,50 @@ Unit tests (JVM): 129 passed in total. Extended in this milestone: `AiCoordinato
 | Topic quality across a range of messages | not run | — | One food sentence was used |
 
 Full-suite run at the end of the milestone: 74 instrumented tests; 66 passed, 7 skipped by design, 1 failed. The failure was a flaky scroll in a companion-app test (a fling still moving when the tap landed); the swipe was replaced with a direct scroll-to-row, a second timing assumption in the same class was fixed, and `CompanionAppTest` then passed 7 of 7 four runs in a row.
+
+## Milestone 6 — Voice tools
+
+Unit tests (JVM): 154 passed in total. New or extended in this milestone: `AudioPipelineTest` 12 (mix-down, resampling, WAV encoding, filler and speaker wording, what the preview shows), `VoicePipelineTest` 10 (step order, what each step is given, failure and cancel rules, with stand-in models), `SdkDefaultsProbeTest` 2, `ModelRegistryTest` 9. `VoicePipelineTest` was written after the pipeline; it was checked against a deliberately broken pipeline (cleaned audio not passed on) and failed as it should.
+
+All device rows ran on EMU-37B. Speech for the model tests is one English sentence written to a WAV file by Android's own text-to-speech, read back through the app's decoder; in the keyboard and Voice tools screen tests it stands in for the microphone (`FakeCapture`), with every model, the keyboard and the editor real.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| Pinned files for the five voice models captured from real SDK downloads | passed | EMU-37 | `ManifestCaptureTest` for voz, clear, ear, uhm, who; sizes asserted in `ModelRegistryTest` |
+| Voz through the app's own download; the sentence comes back word for word, with a time for every word | passed | EMU-37B | `VoiceModelsTest.voz_transcribesSynthesisedSpeech` (22 words; 4.3 s cold, about 1 s warm for 6.8 s of audio) |
+| Voz's memory is given back once it has sat unused | passed | EMU-37B | `VoiceModelsTest.voz_givesItsMemoryBackOnceItHasSatUnused` (resident memory 4.85 GB → 1.2 GB after 20 s) |
+| A model too big for the device is refused before any download and can never load | passed | EMU-37B | `ModelMemoryGuardTest` (2): Voz refused at 3 GiB, offered at 8 GiB; small models unaffected |
+| **Real crash, real recovery (out of memory):** Voz loaded on a 3 GB device, the system killed the app, and the next start switched Voz off and flagged it, files intact | passed | EMU-37 | `CrashRecoveryProbeTest` verify step after the kill; `lowmemorykiller` line in logcat |
+| **Real crash, real recovery (native crash):** Clear on a software GPU dies in the vendor GPU library; the next start switched it off and flagged it | passed | EMU-37B, software GPU | `CrashRecoveryProbeTest` run step ("Process crashed", SIGSEGV in `libLiteRtClGlAccelerator.so`), then the verify step |
+| A model switched off after a crash says so in the catalog until it is switched on again | passed | EMU-37B | `CompanionAppTest.aModelSwitchedOffAfterStoppingTheAppSaysSoUntilItIsSwitchedOnAgain` |
+| Clear cleans speech; the 48 kHz result still transcribes correctly through Voz | passed | EMU-37B | `VoiceModelsTest.clear_cleansSpeechAtItsOwnRateAndTheResultStillTranscribes` (`-e clear true`; about 0.5 s for 6.8 s) |
+| Ear identifies English and says it is reliable | passed | EMU-37B | `VoiceModelsTest.ear_hearsEnglish` |
+| Uhm runs on speech and does not flag a fluent sentence | passed | EMU-37B | `VoiceModelsTest.uhm_runsOnSpeechWithAndWithoutWords` |
+| Who marks turns in 20 s of speech (one speaker), and returns none for a 7 s clip without failing | passed | EMU-37B | `VoiceModelsTest.who_*` (2) |
+| The pipeline runs only the steps that are on and installed, in order, and reports each part; with Clear on it cleans first and keeps the cleaned audio | passed | EMU-37B | `VoiceModelsTest.thePipelineRunsTheChosenStepsAndReportsEachPart`, `thePipelineCleansFirstAndKeepsTheCleanedAudioForSharing` |
+| A failed step is named and the rest still run; later steps hear the cleaned audio; the filler step gets the transcript's words; a cancelled run returns nothing | passed | host + EMU-37B | `VoicePipelineTest` (10, stand-in models); `VoiceModelsTest.cancellingStopsThePipelineBetweenSteps` (real models) |
+| Recording from the real microphone: mono 16 kHz, stops itself at the limit, cancel discards, no second recording while one runs | passed | EMU-37B | `AudioCaptureTest` (4). The emulator's microphone delivers silence, so this proves the recorder, not what was said |
+| Imports: WAV and compressed (AAC) files are decoded to mono 16 kHz; a long file is cut at the limit; a file that is not audio is refused | passed | EMU-37B | `AudioImportTest` (4) |
+| Sharing: a readable WAV behind a one-off read grant; files over an hour old are removed | passed | EMU-37B | `AudioImportTest` (2) |
+| Keyboard: the microphone button shows only while Voz is on, installed and allowed; never in a password field | passed | EMU-37B | `KeyboardVoiceTest` (2) |
+| Keyboard: dictation is shown as Listening → transcript preview, and typed only when Insert is tapped | passed | EMU-37B | `KeyboardVoiceTest.dictationIsPreviewedAndOnlyInsertedOnATap`; `docs/evidence/screenshots/m6_dictation_*.png` |
+| Keyboard: Cancel discards the recording; hiding the keyboard closes the microphone | passed | EMU-37B | `KeyboardVoiceTest` (2) |
+| Voice tools: reached from the Models tab and from a voice model's own screen; lists only the steps that will run; says so when none can | passed | EMU-37B | `VoiceToolsScreenTest` (4) |
+| Voice tools: an imported recording is transcribed and previewed with its language; Copy puts the plain transcript on the clipboard | passed | EMU-37B | `VoiceToolsScreenTest.anImportedRecordingIsTranscribedPreviewedAndCanBeCopied`; `m6_voice_tools_result.png` |
+| Voice tools: Record → Stop runs the steps; Cancel drops a run's result; leaving the screen closes the microphone; a non-audio file gets a plain reason | passed | EMU-37B | `VoiceToolsScreenTest` (4) |
+| Voice tools: cleaned audio can be played, stopped, and shared through the system sheet | passed | EMU-37B | `VoiceToolsScreenTest.withClearOnTheCleanedAudioCanBeSharedThroughTheSystemSheet` (`-e clear true`) |
+| Microphone refused: explained with "Ask again"; a second refusal leads to the app's Settings page; allowing there lets recording start — from the keyboard and from Voice tools | passed | EMU-37B | `MicPermissionFlowTest` (opt-in; the permission is revoked over adb first) |
+| The permission screen steps aside when access is already granted | passed | EMU-37B | `AudioCaptureTest.thePermissionScreenStepsAsideWhenAccessIsAlreadyGranted` |
+| Quick writes to one setting land in the order they were made | passed | EMU-37B | `SettingsSyncTest.quickWritesToOneSettingLandInTheOrderTheyWereMade` — failed first (an earlier value landed last), then fixed |
+| Dictation with a real voice through a real microphone | blocked | PHONE | The emulator's microphone is silent |
+| Clear on a phone's GPU; Voz on phones with 6, 8 and 12 GB | blocked | PHONE | Emulator memory and a desktop GPU say nothing certain about phones |
+| Speech with real fillers (Uhm), a real multi-speaker recording (Who), other languages, a recording over two minutes | not run | — | Only the one synthesised English sentence was used |
+| Microphone taken by another app mid-recording; sharing with no storage left | not run | — | Handled in code (`AudioCaptureController`, the share error message); not driven |
+| Microphone permission revoked while the app is running | not run | — | Android ends the app's process when a permission is revoked; the next tap asks again |
+
+Two things found while testing that are not the app's doing but shaped the tests:
+
+- After "Copy transcript", Android shows its own clipboard preview with share buttons over the bottom-left of the screen for a few seconds. A later test's tap on a tab landed on its Quick Share button. The copy test now waits for the preview to go.
+- The first emulator ran out of storage (5.8 GB) and memory (3 GB) for the voice models, so testing moved to EMU-37B.
+
+Full-suite run at the end of the milestone (EMU-37B, with `-e clear true`): 119 instrumented tests; 107 passed, 12 skipped by design (the opt-in probes: file capture, the kill and offline probes, crash recovery, the refused-microphone flow, stock-app typing and the four screenshot tours, each run separately as listed above), none failed. Lint: 0 errors, 30 warnings (dependency-update notices and style hints). An earlier full run had one failure — the tab tap that landed on Android's clipboard preview, described above.

@@ -20,10 +20,17 @@
             android:orientation="horizontal"
             android:paddingHorizontal="4dp">
 
-            <!-- Balances the settings button so the AI control sits in the middle. -->
-            <Space
+            <!-- Shown only while transcription can really run. Hidden, it still takes its
+                 place, balancing the settings button so the AI control sits in the middle. -->
+            <ImageButton
+                android:id="@+id/tool_mic"
                 android:layout_width="48dp"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/mic_button"
+                android:focusable="false"
+                android:src="@drawable/ic_mic"
+                android:visibility="invisible" />
 
             <Space
                 android:layout_width="0dp"

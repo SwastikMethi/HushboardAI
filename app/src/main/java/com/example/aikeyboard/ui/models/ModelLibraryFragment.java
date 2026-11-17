@@ -74,6 +74,12 @@ public final class ModelLibraryFragment extends Fragment {
             header.groupCaption.setText(caption);
             header.groupCaption.setVisibility(View.VISIBLE);
         }
+        if (group == Group.VOICE) {
+            header.groupOpen.setText(R.string.open_voice_tools);
+            header.groupOpen.setVisibility(View.VISIBLE);
+            header.groupOpen.setOnClickListener(
+                    v -> ((MainActivity) requireActivity()).openVoiceTools());
+        }
         LinearLayout card = new LinearLayout(requireContext());
         card.setOrientation(LinearLayout.VERTICAL);
         card.setBackgroundResource(R.drawable.bg_card);
@@ -144,7 +150,11 @@ public final class ModelLibraryFragment extends Fragment {
                 break;
             case READY:
                 showSwitch = true;
-                text = getString(paused(model) ? R.string.status_paused : R.string.status_ready);
+                // A model the app switched off after it took the app down says so here, so
+                // the off switch is never a mystery.
+                text = getString(current.bool(AppSettings.modelCrashedKey(model.id), false)
+                        ? R.string.status_stopped
+                        : paused(model) ? R.string.status_paused : R.string.status_ready);
                 break;
             case NOT_INSTALLED:
                 action = R.string.action_download;
@@ -171,7 +181,8 @@ public final class ModelLibraryFragment extends Fragment {
                 text = getString(failureText(status.failure));
                 break;
             case INCOMPATIBLE:
-                text = getString(R.string.status_incompatible);
+                text = getString(models.tooBigForDevice(model.id)
+                        ? R.string.status_needs_memory : R.string.status_incompatible);
                 break;
             default:
                 text = getString(R.string.status_coming_later);

@@ -18,6 +18,12 @@ import java.util.List;
 
 public final class ModelRegistry {
 
+    // ponytail: one measurement, on an emulator: the app's resident memory peaked at 3.9 GB
+    // with Voz loaded, and a 3 GB device killed the app while loading it. 5 GiB refuses only
+    // the devices that certainly cannot hold it (sold as 4 GB and below); the crash breaker
+    // covers the uncertain middle. Re-measure on real phones before trusting this line.
+    private static final long VOZ_MIN_RAM_BYTES = 5L << 30;
+
     // Setting names shared with the adapters that read them.
     public static final String EMO_LIMIT = "limit";
     public static final String EMO_SKIN_TONE = "skin_tone";
@@ -30,6 +36,11 @@ public final class ModelRegistry {
     public static final String SENSITIVITY_STANDARD = "standard";
     public static final String SENSITIVITY_MORE = "more";
     public static final String GIST_LIMIT = "limit";
+    // Both defaults are the vendor SDK's own (checked by SdkDefaultsProbeTest).
+    public static final String CLEAR_STRENGTH = "strength";
+    public static final int CLEAR_STRENGTH_DEFAULT = 100;
+    public static final String UHM_BIAS = "bias";
+    public static final String UHM_BIAS_DEFAULT = "balanced";
 
     private static final List<ModelSettingDefinition> NO_SETTINGS = Collections.emptyList();
     private static final List<ModelFile> NOT_CAPTURED = Collections.emptyList();
@@ -110,11 +121,62 @@ public final class ModelRegistry {
                     Arrays.asList(
                             range(GIST_LIMIT, R.string.setting_gist_limit, 0, 1, 5, 1, 3))),
             // Voice
-            pending("voz", "Voz", Group.VOICE, R.string.model_voz_summary, false, "v0.5.0"),
-            pending("clear", "Clear", Group.VOICE, R.string.model_clear_summary, false, "v0.3.0"),
-            pending("ear", "Ear", Group.VOICE, R.string.model_ear_summary, false, "v0.2.0"),
-            pending("uhm", "Uhm", Group.VOICE, R.string.model_uhm_summary, false, "v1.2.0"),
-            pending("who", "Who", Group.VOICE, R.string.model_who_summary, true, "v0.3.4"),
+            new ModelDescriptor("voz", "Voz", Group.VOICE, R.string.model_voz_summary, false,
+                    false, "v0.5.0", Arrays.asList(
+                    new ModelFile("encoder.tflite", 1_207_525_456L,
+                            "1152abb5fce2cf50b57b1cd80a1bf70320c32b20656f835bfe08c7faa5c3f885"),
+                    new ModelFile("mel.tflite", 1_663_424L,
+                            "505d80fc1be255c115c715a6cffdb55e51ff22465bca820e5feb59f0cccabe09"),
+                    new ModelFile("decoder.tflite", 24_503_072L,
+                            "429ff2b574455733b388f1667d05d6764ac6086417b94d4cc24edabd25d52591"),
+                    new ModelFile("meta.litert.json", 579L,
+                            "a8ad38f4144d12445dce0e32a723859816596c1c667906c062df97c94a81e741"),
+                    new ModelFile("vocab.json", 78_654L,
+                            "3eb2f73e8853dce5156c2ed97c0b1bb84eb4ebd201eb1761d15977fc1ea31490"),
+                    new ModelFile("embedding.f16", 10_487_040L,
+                            "07163e5f6f8a68f9ffeed7a8ff770c68098c2db216232321912188bd614b9a72")),
+                    NO_SETTINGS, VOZ_MIN_RAM_BYTES),
+            new ModelDescriptor("clear", "Clear", Group.VOICE, R.string.model_clear_summary,
+                    false, false, "v0.3.0", Arrays.asList(
+                    new ModelFile("clear-studio.tflite", 49_285_108L,
+                            "fe2438e4e1137455298321ca952c5d3a4d7dde27eca6b8a495789723212fc79f")),
+                    Arrays.asList(
+                            range(CLEAR_STRENGTH, R.string.setting_clear_strength,
+                                    R.string.setting_clear_strength_summary, 0, 100, 10,
+                                    CLEAR_STRENGTH_DEFAULT))),
+            new ModelDescriptor("ear", "Ear", Group.VOICE, R.string.model_ear_summary, false,
+                    false, "v0.2.0", Arrays.asList(
+                    new ModelFile("ear.tflite", 10_671_552L,
+                            "a19b43892abe53afba50122a861b10fd76f312a5027a5c659b0738081135feeb"),
+                    new ModelFile("languages.json", 628L,
+                            "0a08f30dec26ad25730a1fa9375a5d693f5a159032d0cd7818007b7dbc3eae18"),
+                    new ModelFile("ear_meta.json", 2_190L,
+                            "538d66c747024d4ef2ae33aef273817c7baea21171430fef0c2713a66bb6af18"),
+                    new ModelFile("mel_filters.f32", 64_328L,
+                            "a3099fcba1a7f30f229b230011146ea0140db8de4f467b44aaa5de70bcc0f325")),
+                    NO_SETTINGS),
+            new ModelDescriptor("uhm", "Uhm", Group.VOICE, R.string.model_uhm_summary, false,
+                    false, "v1.2.0", Arrays.asList(
+                    new ModelFile("uhm.tflite", 23_919_472L,
+                            "9bb5eaa39bb56306ca58692242117b66728ccd169abe2f215ba50063ef0e8261")),
+                    Arrays.asList(
+                            choice(UHM_BIAS, R.string.setting_uhm_bias,
+                                    R.string.setting_uhm_bias_summary,
+                                    new String[] {"precision", "balanced", "recall"},
+                                    R.array.uhm_bias_labels, UHM_BIAS_DEFAULT))),
+            new ModelDescriptor("who", "Who", Group.VOICE, R.string.model_who_summary, true,
+                    false, "v0.3.4", Arrays.asList(
+                    new ModelFile("litert-int8/who.tflite", 30_574_096L,
+                            "083ab7ef3b3d3b9d7a1b5c701c91e24b5310b87caa1be20a343da6968346860e"),
+                    new ModelFile("litert-int8/who_meta.json", 4_090L,
+                            "6321db030dcff196a694610c047cb10f632ab95420746dae67723bd46c13c273"),
+                    new ModelFile("litert-int8/who_mel_banks.f32", 23_652L,
+                            "730d76d5d2099d964c705c82c4556e2b10792d287666aa97edb0633f88f08ce0"),
+                    new ModelFile("litert-int8/who_voice_banks.f32", 82_248L,
+                            "df33ff45ac021f5d014356b4e9ab4b9f91fadd836649962ee6e89eadfcd264e3"),
+                    new ModelFile("litert-int8/who_embed.f16", 2_621_960L,
+                            "2f2cb55e4370c30b3d5f0401bf421e018fcc8633f5d3aef225375704c60a8c1c")),
+                    NO_SETTINGS),
             // Images
             pending("eye", "Eye", Group.IMAGES, R.string.model_eye_summary, true, "v1.0.0"),
             pending("moderator", "Moderator", Group.IMAGES, R.string.model_moderator_summary,

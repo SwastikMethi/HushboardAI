@@ -14,6 +14,8 @@ import androidx.datastore.rxjava3.RxDataStore;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 import io.reactivex.rxjava3.core.Flowable;
@@ -25,6 +27,7 @@ public final class SettingsRepository {
     private final RxDataStore<Preferences> store;
     private final Flowable<AppSettings> stream;
     private final AtomicLong revision = new AtomicLong();
+    private final Executor writes = Executors.newSingleThreadExecutor();
     private volatile AppSettings latest = new AppSettings(0, Map.of());
     // Lives as long as the process: keeps `latest` current for synchronous readers.
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
@@ -83,12 +86,21 @@ public final class SettingsRepository {
         update(PreferencesKeys.stringSetKey(key), value);
     }
 
+    // The caller does not wait; observers hear about the change through the stream. Writes
+    // are applied one at a time in the order they were asked for: left to the store's own
+    // asynchronous calls, two quick writes to one setting could land in either order, and
+    // "AI off" must never be overtaken by an "on" from a moment before.
     private <T> void update(Preferences.Key<T> key, T value) {
-        // The write is asynchronous; observers hear about it through the stream.
-        Disposable ignored = store.updateDataAsync(preferences -> {
-            MutablePreferences mutable = preferences.toMutablePreferences();
-            mutable.set(key, value);
-            return Single.just(mutable);
-        }).subscribe(done -> { }, error -> { });
+        writes.execute(() -> {
+            try {
+                store.updateDataAsync(preferences -> {
+                    MutablePreferences mutable = preferences.toMutablePreferences();
+                    mutable.set(key, value);
+                    return Single.just(mutable);
+                }).blockingGet();
+            } catch (RuntimeException e) {
+                // The write failed (storage): the previous value stands and nothing is told.
+            }
+        });
     }
 }

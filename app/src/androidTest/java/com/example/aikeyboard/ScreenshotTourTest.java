@@ -128,6 +128,51 @@ public class ScreenshotTourTest {
     }
 
     @Test
+    public void voiceStates() throws Exception {
+        assumeTrue("no speech synthesiser", TestSpeech.english() != null);
+        for (String id : new String[] {"voz", "ear", "uhm", "who"}) {
+            TestModels.ensureInstalled(id);
+            settings.setModelEnabled(id, true);
+        }
+        getInstrumentation().getUiAutomation().grantRuntimePermission(
+                PKG, android.Manifest.permission.RECORD_AUDIO);
+        AppContainer container = TestModels.container();
+        com.example.aikeyboard.media.AudioCaptureController real = container.capture;
+        container.capture = new FakeCapture(TestSpeech.repeated(TestSpeech.english(), 3));
+        setAi(true);
+        try {
+            try (ActivityScenario<EditorTestActivity> host =
+                         ActivityScenario.launch(EditorTestActivity.class)) {
+                device.wait(Until.findObject(By.res(PKG, "field_plain")), TIMEOUT_MS).click();
+                device.wait(Until.findObject(By.res(PKG, "tool_mic")), TIMEOUT_MS).click();
+                assertNotNull(device.wait(Until.findObject(
+                        By.res(PKG, "suggestion_1").text("Listening…")), TIMEOUT_MS));
+                shot("10_dictation_listening");
+                device.findObject(By.res(PKG, "suggestion_2")).click();
+                assertNotNull("no transcript", device.wait(
+                        Until.findObject(By.res(PKG, "notice_detail")), 240_000));
+                shot("11_dictation_transcript");
+            }
+            try (ActivityScenario<MainActivity> app =
+                         ActivityScenario.launch(MainActivity.class)) {
+                app.onActivity(MainActivity::openVoiceTools);
+                device.wait(Until.findObject(By.res(PKG, "voice_record")), TIMEOUT_MS).click();
+                shot("12_voice_tools_recording");
+                device.findObject(By.res(PKG, "voice_record")).click();
+                assertNotNull("no result", device.wait(
+                        Until.findObject(By.res(PKG, "voice_transcript")), 240_000));
+                shot("13_voice_tools_result");
+            }
+        } finally {
+            container.capture = real;
+            for (String id : new String[] {"voz", "ear", "uhm", "who"}) {
+                settings.setModelEnabled(id, false);
+            }
+            setAi(false);
+        }
+    }
+
+    @Test
     public void companionScreens() throws Exception {
         try (ActivityScenario<MainActivity> app = ActivityScenario.launch(MainActivity.class)) {
             shot("04_keyboard_tab");

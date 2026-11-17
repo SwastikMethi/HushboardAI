@@ -23,6 +23,24 @@
             </intent-filter>
         </activity>
 
+        <!-- Asks for the microphone when the user taps record; the keyboard cannot ask itself. -->
+        <activity
+            android:name=".ui.tools.MicPermissionActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@style/Theme.AiKeyboard.Dialog" />
+
+        <!-- Lets a result the user chose to share be read by the app it is shared with. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Only the system may bind the keyboard; it runs in the app's default process. -->
         <service
             android:name=".ime.AiInputMethodService"

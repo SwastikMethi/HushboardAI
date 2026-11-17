@@ -25,4 +25,13 @@
         android:textAppearance="?attr/textAppearanceBodyMedium"
         android:textColor="?attr/colorOnSurfaceVariant"
         android:visibility="gone" />
+
+    <!-- Opens the group's own tool screen, where it has one. -->
+    <Button
+        android:id="@+id/group_open"
+        style="@style/Widget.Material3.Button.TonalButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:visibility="gone" />
 </LinearLayout>

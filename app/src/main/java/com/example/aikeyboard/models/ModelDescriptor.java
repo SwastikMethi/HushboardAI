@@ -35,10 +35,19 @@ public final class ModelDescriptor {
     /** Empty until this build has captured and verified the model's file list. */
     public final List<ModelFile> files;
     public final List<ModelSettingDefinition> settings;
+    /** Total device memory the model needs to load at all; 0 for models small enough anywhere. */
+    public final long minRamBytes;
 
     ModelDescriptor(String id, String name, Group group, int summary, boolean beta,
             boolean bundled, String revision, List<ModelFile> files,
             List<ModelSettingDefinition> settings) {
+        this(id, name, group, summary, beta, bundled, revision, files, settings, 0);
+    }
+
+    ModelDescriptor(String id, String name, Group group, int summary, boolean beta,
+            boolean bundled, String revision, List<ModelFile> files,
+            List<ModelSettingDefinition> settings, long minRamBytes) {
+        this.minRamBytes = minRamBytes;
         this.id = id;
         this.name = name;
         this.group = group;
@@ -59,6 +68,11 @@ public final class ModelDescriptor {
     /** Folder URL of the pinned revision; a file's URL is this plus its path. */
     public String baseUrl() {
         return "https://huggingface.co/desert-ant-labs/" + id + "/resolve/" + revision + "/";
+    }
+
+    /** Whether a device with this much memory in total can hold the model while it runs. */
+    public boolean fitsRam(long deviceRamBytes) {
+        return deviceRamBytes >= minRamBytes;
     }
 
     /** False means the catalog shows "Coming later": there is nothing real to download. */

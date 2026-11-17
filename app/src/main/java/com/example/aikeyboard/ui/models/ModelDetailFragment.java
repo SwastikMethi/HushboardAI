@@ -18,6 +18,7 @@ import androidx.preference.SeekBarPreference;
 import androidx.preference.SwitchPreferenceCompat;
 
 import com.example.aikeyboard.AppContainer;
+import com.example.aikeyboard.MainActivity;
 import com.example.aikeyboard.R;
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.models.ModelDescriptor;
@@ -106,6 +107,18 @@ public final class ModelDetailFragment extends PreferenceFragmentCompat {
                         if (view != null) view.post(() -> onResult.accept(result));
                     }));
             tryCategory.addPreference(tryIt);
+        } else if (model.group == ModelDescriptor.Group.VOICE) {
+            // Voice models are tried on real audio, in the screen built for that.
+            PreferenceCategory tryCategory = category(context, R.string.try_title);
+            screen.addPreference(tryCategory);
+            Preference open = plain(context);
+            open.setKey("try_it"); // lets the screen scroll straight to this row
+            open.setTitle(R.string.open_voice_tools);
+            open.setOnPreferenceClickListener(p -> {
+                ((MainActivity) requireActivity()).openVoiceTools();
+                return true;
+            });
+            tryCategory.addPreference(open);
         }
 
         PreferenceCategory storageCategory = category(context, R.string.detail_storage);

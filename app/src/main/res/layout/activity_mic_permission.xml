@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Small prompt behind the system's microphone request: why access is needed, and what to
+     do if it was refused. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:accessibilityHeading="true"
+        android:text="@string/mic_title"
+        android:textAppearance="?attr/textAppearanceTitleLarge" />
+
+    <TextView
+        android:id="@+id/mic_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:accessibilityLiveRegion="polite"
+        android:text="@string/mic_rationale"
+        android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/mic_close"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/mic_not_now" />
+
+        <Button
+            android:id="@+id/mic_action"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+    </LinearLayout>
+</LinearLayout>

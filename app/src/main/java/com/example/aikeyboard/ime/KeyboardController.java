@@ -4,8 +4,10 @@
 // again each time. Runs entirely on the main thread; model work is handed to the coordinator.
 package com.example.aikeyboard.ime;
 
+import android.Manifest;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.pm.PackageManager;
 import android.os.SystemClock;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -37,6 +39,7 @@ import com.example.aikeyboard.ime.KeyboardLayout.Layer;
 import com.example.aikeyboard.ime.view.KeyGridView;
 import com.example.aikeyboard.ime.view.SuggestionStripView;
 import com.example.aikeyboard.ime.view.SuggestionStripView.Kind;
+import com.example.aikeyboard.media.Voice.AudioClip;
 import com.example.aikeyboard.models.ModelDescriptor;
 import com.example.aikeyboard.models.ModelRegistry;
 
@@ -59,8 +62,13 @@ public final class KeyboardController implements KeyGridView.Listener,
     // Models that act while typing, in the order the AI panel lists them.
     private static final String[] PANEL_MODELS = {"emo", "redact", "toxic", "tongue", "gist"};
 
+    // Dictation is for a sentence or two; longer recordings belong in the Voice tools screen.
+    private static final int DICTATION_MAX_SECONDS = 60;
+
     /** What the strip is showing right now, which decides what its slots do. */
-    private enum Strip { EMPTY, WORDS, UNDO, NOTICE, EMOJI, MESSAGE, SETUP }
+    private enum Strip { EMPTY, WORDS, UNDO, NOTICE, EMOJI, MESSAGE, SETUP, LISTENING, TRANSCRIBING }
+
+    private enum Dictation { OFF, LISTENING, TRANSCRIBING }
 
     private final AiInputMethodService service;
     private final EditorBridge editor;
@@ -99,6 +107,14 @@ public final class KeyboardController implements KeyGridView.Listener,
     private List<TextEdit> undo = List.of();
     private String stripMessage;
 
+    private Dictation dictation = Dictation.OFF;
+    // Counts dictations, so a transcript that arrives after its dictation was cancelled, or
+    // after the field was left, is recognised and dropped.
+    private int dictationRun;
+    // The transcript being previewed; non-null while its panel is open. Never typed for the
+    // user: it goes into the field only when they tap Insert.
+    private String dictated;
+
     KeyboardController(AiInputMethodService service, EditorBridge editor,
             LocalWordSuggester suggester, AppContainer app) {
         this.service = service;
@@ -120,6 +136,7 @@ public final class KeyboardController implements KeyGridView.Listener,
         views.suggestions.setListener(this);
         views.toolSettings.setOnClickListener(
                 v -> service.openCompanionApp(MainActivity.TAB_SETTINGS));
+        views.toolMic.setOnClickListener(v -> startDictation());
         views.emojiPicker.setOnEmojiPickedListener(item -> editor.commitText(item.getEmoji()));
         views.emojiLetters.setOnClickListener(v -> {
             emojiShown = false;
@@ -177,6 +194,8 @@ public final class KeyboardController implements KeyGridView.Listener,
         settings = latest;
         coordinator.onSettings(latest);
         if (session != null) readEditor();
+        // Dictation switched off (or AI paused) mid-recording: the microphone closes now.
+        if (dictation != Dictation.OFF && !canDictate()) cancelDictation();
         render();
         if (justTurnedOn && views != null) views.aiToggle.playEnableSweep();
     }
@@ -224,8 +243,16 @@ public final class KeyboardController implements KeyGridView.Listener,
         if (views != null) views.keys.cancelTouches();
     }
 
-    // Drafts, proposals and the undo record live only as long as the field has the keyboard.
+    /** The keyboard left the screen: a recording must not carry on behind it. */
+    void onHidden() {
+        cancelDictation();
+        render();
+    }
+
+    // Drafts, proposals, the undo record and any dictation live only as long as the field
+    // has the keyboard.
     private void forgetSessionState() {
+        cancelDictation();
         reviewing = null;
         topics = null;
         reviewMessage = null;
@@ -302,7 +329,9 @@ public final class KeyboardController implements KeyGridView.Listener,
         renderStrip();
 
         views.aiToggle.setOn(settings.aiEnabled());
-        boolean reviewShown = reviewing != null || topics != null;
+        // INVISIBLE, not GONE: it keeps the AI control centred.
+        views.toolMic.setVisibility(canDictate() ? View.VISIBLE : View.INVISIBLE);
+        boolean reviewShown = reviewing != null || topics != null || dictated != null;
         boolean overlay = aiPanelShown || reviewShown;
         // Likewise INVISIBLE: the typing area keeps giving the panels their height.
         views.typingArea.setVisibility(overlay ? View.INVISIBLE : View.VISIBLE);
@@ -318,7 +347,17 @@ public final class KeyboardController implements KeyGridView.Listener,
     // completions, then emoji.
     private void renderStrip() {
         if (views == null) return;
-        if (!undo.isEmpty()) {
+        // A dictation the user started comes first: its Stop and Cancel must stay in reach.
+        if (dictation == Dictation.LISTENING) {
+            show(Strip.LISTENING, Kind.NOTICE, Arrays.asList(
+                    service.getString(R.string.dictation_listening),
+                    service.getString(R.string.voice_stop),
+                    service.getString(R.string.action_cancel)));
+        } else if (dictation == Dictation.TRANSCRIBING) {
+            show(Strip.TRANSCRIBING, Kind.NOTICE, Arrays.asList(
+                    service.getString(R.string.dictation_working),
+                    service.getString(R.string.action_cancel)));
+        } else if (!undo.isEmpty()) {
             show(Strip.UNDO, Kind.NOTICE, Arrays.asList(
                     service.getResources().getQuantityString(R.plurals.masked_items,
                             undo.size(), undo.size()),
@@ -413,8 +452,89 @@ public final class KeyboardController implements KeyGridView.Listener,
     private void closeReview() {
         reviewing = null;
         topics = null;
+        dictated = null;
         reviewMessage = null;
         render();
+    }
+
+    // ---- Dictation ----
+
+    // The microphone is offered only where AI may run and transcription really can.
+    private boolean canDictate() {
+        return verdict == Verdict.ALLOWED && settings.modelActive("voz")
+                && app.models.isReady("voz");
+    }
+
+    private void startDictation() {
+        if (session == null || dictation != Dictation.OFF || !canDictate()) return;
+        if (service.checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            // A keyboard cannot show the system's prompt; a small screen of the app does.
+            service.askForMicrophone();
+            return;
+        }
+        int run = ++dictationRun;
+        boolean started = app.capture.start(DICTATION_MAX_SECONDS, () -> {
+            if (run == dictationRun) finishDictation();
+        });
+        if (started) dictation = Dictation.LISTENING;
+        else stripMessage = service.getString(R.string.dictation_mic_unavailable);
+        render();
+    }
+
+    // The user tapped Stop, or the time limit was reached.
+    private void finishDictation() {
+        if (dictation != Dictation.LISTENING) return;
+        AudioClip clip = app.capture.stop();
+        if (clip == null || clip.seconds() < 0.3) {
+            dictation = Dictation.OFF;
+            stripMessage = service.getString(R.string.dictation_nothing);
+            render();
+            return;
+        }
+        dictation = Dictation.TRANSCRIBING;
+        int run = dictationRun;
+        AppSettings current = settings;
+        // The one inference thread; typing stays live on the main thread meanwhile.
+        app.inference.execute(() -> {
+            String text;
+            try {
+                text = app.voz.run(clip, current).text;
+            } catch (Exception e) {
+                text = null;
+            }
+            String heard = text;
+            ContextCompat.getMainExecutor(service).execute(() -> onDictated(run, heard));
+        });
+        render();
+    }
+
+    private void onDictated(int run, String text) {
+        // Cancelled, or the field was left, while the model was working: the text is dropped.
+        if (run != dictationRun || dictation != Dictation.TRANSCRIBING) return;
+        dictation = Dictation.OFF;
+        if (text == null) stripMessage = service.getString(R.string.dictation_failed);
+        else if (text.isEmpty()) stripMessage = service.getString(R.string.dictation_nothing);
+        else dictated = text;
+        render();
+    }
+
+    // Closes the microphone and makes any transcript still on its way unwanted. A model call
+    // that has already started cannot be interrupted; its result is simply never shown.
+    private void cancelDictation() {
+        if (dictation == Dictation.LISTENING) app.capture.cancel();
+        dictation = Dictation.OFF;
+        dictationRun++;
+        dictated = null;
+    }
+
+    private void renderTranscript() {
+        views.noticePanel.noticeTitle.setText(R.string.dictation_title);
+        views.noticePanel.noticeDetail.setText(dictated);
+        views.noticePanel.noticeNote.setText(R.string.dictation_note);
+        views.noticePanel.noticeMessage.setVisibility(View.GONE);
+        views.noticePanel.noticePrimary.setVisibility(View.VISIBLE);
+        views.noticePanel.noticePrimary.setText(R.string.dictation_insert);
     }
 
     private boolean maskingOffered() {
@@ -446,6 +566,10 @@ public final class KeyboardController implements KeyGridView.Listener,
     }
 
     private void renderReview() {
+        if (dictated != null) {
+            renderTranscript();
+            return;
+        }
         if (reviewing == null) {
             renderTopics();
             return;
@@ -491,6 +615,13 @@ public final class KeyboardController implements KeyGridView.Listener,
 
     private void onReviewAction() {
         if (session == null) return;
+        if (dictated != null) {
+            // The tap is the user's consent; the text goes in at the cursor as it is now.
+            editor.commitText(dictated);
+            dictated = null;
+            render();
+            return;
+        }
         if (reviewing == null) {
             if (topics == null) return;
             // Tags go in at the cursor, and only if the draft is still the one that was tagged.
@@ -661,6 +792,20 @@ public final class KeyboardController implements KeyGridView.Listener,
                 break;
             case SETUP:
                 service.openCompanionApp(MainActivity.TAB_MODELS);
+                break;
+            case LISTENING:
+                if (index == 1) {
+                    finishDictation();
+                } else if (index == 2) {
+                    cancelDictation();
+                    render();
+                }
+                break;
+            case TRANSCRIBING:
+                if (index == 1) {
+                    cancelDictation();
+                    render();
+                }
                 break;
             default:
                 break;

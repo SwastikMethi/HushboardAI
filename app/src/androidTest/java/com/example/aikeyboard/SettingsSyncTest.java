@@ -3,6 +3,7 @@
 package com.example.aikeyboard;
 
 import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentation;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -36,6 +37,23 @@ public class SettingsSyncTest {
 
     private static AppSettings last(List<AppSettings> seen) {
         return seen.get(seen.size() - 1);
+    }
+
+    @Test
+    public void quickWritesToOneSettingLandInTheOrderTheyWereMade() throws Exception {
+        // The master AI switch is a privacy control: "off" must never be overtaken by an
+        // "on" that was written a moment earlier.
+        String key = "test.write_order";
+        for (int round = 0; round < 40; round++) {
+            for (int i = 0; i < 12; i++) settings.setInt(key, i);
+            int last = 1000 + round;
+            settings.setInt(key, last);
+            assertTrue("the last write never arrived (round " + round + ")",
+                    TestModels.await(() -> settings.latest().integer(key, -1) == last, 5000));
+            Thread.sleep(40); // anything written earlier that is still on its way lands now
+            assertEquals("an earlier write landed after a later one (round " + round + ")",
+                    last, settings.latest().integer(key, -1));
+        }
     }
 
     @Test

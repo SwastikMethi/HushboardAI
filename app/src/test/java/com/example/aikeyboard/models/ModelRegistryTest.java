@@ -61,6 +61,21 @@ public class ModelRegistryTest {
         assertEquals(24_324_954L, ModelRegistry.find("redact").totalBytes());
         assertEquals(103_272_098L, ModelRegistry.find("toxic").totalBytes());
         assertEquals(84_574_548L, ModelRegistry.find("gist").totalBytes());
+        assertEquals(1_244_258_225L, ModelRegistry.find("voz").totalBytes());
+        assertEquals(49_285_108L, ModelRegistry.find("clear").totalBytes());
+        assertEquals(10_738_698L, ModelRegistry.find("ear").totalBytes());
+        assertEquals(23_919_472L, ModelRegistry.find("uhm").totalBytes());
+        assertEquals(33_306_046L, ModelRegistry.find("who").totalBytes());
+    }
+
+    @Test
+    public void theSpeechModelDeclaresTheMemoryItNeedsAndSmallModelsDeclareNone() {
+        long gib = 1L << 30;
+        // Measured: the app holds about 3.9 GB with Voz loaded.
+        assertFalse(ModelRegistry.find("voz").fitsRam(4 * gib));
+        assertTrue(ModelRegistry.find("voz").fitsRam(6 * gib));
+        assertTrue(ModelRegistry.find("emo").fitsRam(gib));
+        assertTrue(ModelRegistry.find("who").fitsRam(gib));
     }
 
     @Test
@@ -74,7 +89,8 @@ public class ModelRegistryTest {
     public void aModelIsOnlyAvailableWhenItIsBundledOrHasPinnedFiles() {
         assertTrue(ModelRegistry.find("emo").available());
         assertTrue(ModelRegistry.find("tongue").available());
+        assertTrue(ModelRegistry.find("voz").available());
         // Not yet captured: these must show as coming later, never as a working download.
-        assertFalse(ModelRegistry.find("voz").available());
+        assertFalse(ModelRegistry.find("eye").available());
     }
 }

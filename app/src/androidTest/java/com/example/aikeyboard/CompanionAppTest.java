@@ -18,6 +18,7 @@ import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assume.assumeTrue;
@@ -105,10 +106,32 @@ public class CompanionAppTest {
         onView(statusOf("tongue")).perform(scrollTo())
                 .check(matches(withText(R.string.status_included)));
         // No adapter yet: must say so rather than offer a download that does nothing.
-        onView(statusOf("voz")).perform(scrollTo())
+        onView(statusOf("eye")).perform(scrollTo())
                 .check(matches(withText(R.string.status_coming_later)));
         onView(withText(R.string.models_not_on_android)).perform(scrollTo())
                 .check(matches(isDisplayed()));
+    }
+
+    @Test
+    public void aModelSwitchedOffAfterStoppingTheAppSaysSoUntilItIsSwitchedOnAgain()
+            throws Exception {
+        app.close();
+        TestModels.ensureInstalled("emo");
+        // What the crash breaker records at the next start after a model took the app down.
+        settings.setModelEnabled("emo", false);
+        settings.setBoolean(AppSettings.modelCrashedKey("emo"), true);
+        String crashed = AppSettings.modelCrashedKey("emo");
+        assertTrue(TestModels.await(() -> settings.latest().bool(crashed, false), 5000));
+        app = ActivityScenario.launch(MainActivity.class);
+        openModels();
+
+        onView(statusOf("emo")).check(matches(withText(R.string.status_stopped)));
+
+        settings.setModelEnabled("emo", true);
+        assertTrue(TestModels.await(() -> !settings.latest().bool(crashed, false), 5000));
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
+        onView(statusOf("emo")).check(matches(not(withText(R.string.status_stopped))));
+        settings.setModelEnabled("emo", false);
     }
 
     @Test

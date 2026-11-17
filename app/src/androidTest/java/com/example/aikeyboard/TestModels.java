@@ -59,7 +59,8 @@ final class TestModels {
         Assume.assumeTrue("needs network to install " + modelId, online());
         try (ActivityScenario<MainActivity> app = ActivityScenario.launch(MainActivity.class)) {
             models.download(modelId);
-            if (!awaitStatus(modelId, s -> s.state == AssetState.READY, 5 * 60_000)) {
+            // Generous: the speech model alone is 1.2 GB.
+            if (!awaitStatus(modelId, s -> s.state == AssetState.READY, 40 * 60_000)) {
                 throw new AssertionError("model did not become ready: " + modelId + " state="
                         + models.status(modelId).state + " failure="
                         + models.status(modelId).failure);

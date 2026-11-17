@@ -22,6 +22,7 @@ import com.example.aikeyboard.R;
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
 import com.example.aikeyboard.databinding.KeyboardViewBinding;
+import com.example.aikeyboard.ui.tools.MicPermissionActivity;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -111,6 +112,13 @@ public class AiInputMethodService extends InputMethodService {
     }
 
     @Override
+    public void onWindowHidden() {
+        // Belt and braces with onFinishInputView: nothing records once the keyboard is gone.
+        controller.onHidden();
+        super.onWindowHidden();
+    }
+
+    @Override
     public boolean onEvaluateFullscreenMode() {
         // Never the full-screen "extract" editor: the user keeps seeing the app they type in.
         return false;
@@ -124,6 +132,12 @@ public class AiInputMethodService extends InputMethodService {
     void openCompanionApp(String tab) {
         startActivity(new Intent(this, MainActivity.class)
                 .putExtra(MainActivity.EXTRA_TAB, tab)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+
+    /** Opens the app's microphone request; a service cannot show the system prompt itself. */
+    void askForMicrophone() {
+        startActivity(new Intent(this, MicPermissionActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 

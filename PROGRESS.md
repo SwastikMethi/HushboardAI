@@ -10,7 +10,7 @@ The execution plan is `~/.claude/plans/i-have-added-a-whimsical-mist.md` (approv
 | 3 — First real Emo slice | Done (emulator). Device rows blocked | 87 unit tests, 60 instrumented tests. Real Emo suggestions in the keyboard, online and in airplane mode; stale results dropped; AI toggle and panel; crash breaker; per-app AI switches. Latency on a real device waits for the phone. |
 | 4 — Redact and Toxic | Done (emulator). Device rows blocked | 120 unit tests, 69 instrumented tests. Real Redact and Toxic in the keyboard: notice, review, guarded mask and undo, warn-only mode, dismiss; Send is never blocked. "Try it" in the companion app. |
 | 5 — Tongue and Gist | Done (emulator) | 129 unit tests, 74 instrumented tests. Tongue's hint makes the privacy check stand down for languages it does not cover, and says so. Gist tags a draft only on request; hashtags are inserted only on tap. |
-| 6 — Voice tools | Not started | — |
+| 6 — Voice tools | Done (emulator). Device rows blocked | 154 unit tests, 119 instrumented tests (107 passed, 12 opt-in probes skipped). All five voice models run for real: dictation in the keyboard (record → preview → Insert), and a Voice tools screen with record/import, steps, cancel, preview, copy, playback and sharing. Two real crashes (Voz out of memory, Clear on a software GPU) were survived by the crash breaker. A real voice through a real microphone, and Voz and Clear on phone hardware, wait for the phone. |
 | 7 — Image and drawing tools | Not started | — |
 | 8 — Visual and accessibility audit | Not started | — |
 | 9 — Complete-version hardening | Not started | — |
@@ -21,7 +21,7 @@ The execution plan is `~/.claude/plans/i-have-added-a-whimsical-mist.md` (approv
 - Gradle 9.4.1, Android Gradle Plugin 9.2.1, Java 17 source/target, compileSdk 36.1, targetSdk 36, minSdk 26, `arm64-v8a`.
 - Android SDK at `~/Library/Android/sdk` (path in the git-ignored `local.properties`).
 - Desert Ant SDK 4.3.0. Pinned model revisions and files are in `docs/model-compatibility.md`.
-- Test target so far: `Pixel_6_Pro` AVD, Android 17 (API 37), arm64-v8a, 16 KB pages. No physical device connected yet.
+- Test target for milestones 0–5: `Pixel_6_Pro` AVD, Android 17 (API 37), arm64-v8a, 16 KB pages. From milestone 6: the dedicated `AiKeyboard_Test` AVD (same image; 8 GB memory, 16 GB storage, started with `-gpu host`) — see ruling 40. No physical device connected yet.
 
 ## Rulings
 
@@ -71,6 +71,21 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 37. **Gist's useful action is "Tag this draft" → "Insert as hashtags".** Topics are computed only on that tap, shown first, and inserted at the cursor only on a second tap, built from each topic's fixed slug. Cost if wrong: a different action (copy, label) would be a small change.
 38. **Model file lists are captured with an opt-in probe that lets the SDK download once** (`ManifestCaptureTest`). It is development tooling, not a product path. Cost if wrong: none.
 
+39. **Voz is refused on devices with under 5 GiB of memory, and unloaded 20 seconds after its last use.** Measured on the emulator: the app's resident memory peaked at 3.9 GB with Voz loaded, and a 3 GB device killed the app while loading it (the crash breaker then switched Voz off — a real recovery, not a simulated one). The 5 GiB line refuses only devices that certainly cannot hold it; the breaker covers the uncertain middle. The 20 seconds keeps a second dictation quick without leaving 4 GB in the keyboard process. Cost if wrong: the line is from one emulator measurement — a 6 GB phone may still be killed once (then Voz is switched off with the reason shown), or a capable 4 GB-class device is refused. Re-measure on real phones.
+40. **Testing moved to a dedicated emulator, `AiKeyboard_Test`** (Android 17, 16 KB pages, 8 GB memory, 16 GB storage), defined by two new files under `~/.android/avd/`. The owner's `Pixel_6_Pro` AVD holds another of their apps and filled up; it was not resized or cleared. Cost if wrong: delete `AiKeyboard_Test.ini` and `AiKeyboard_Test.avd` to remove it.
+41. **Dictation in the keyboard is record → preview → Insert.** The microphone button shows only while Voz is switched on, installed and allowed in the field; a recording is capped at 60 seconds, stops when the keyboard leaves the screen, and its transcript is typed only when the user taps Insert. Longer audio and the other four voice models belong to the Voice tools screen. Cost if wrong: one extra tap per dictation compared with typing as you speak.
+42. **Voice tools process at most two minutes per recording or import**, in one batch (the SDK has no streaming call), and say so when a longer file was cut. Cost if wrong: raise `VoiceToolsFragment.MAX_SECONDS` once memory use on long audio has been measured on a phone.
+43. **Audio is converted to mono 16 kHz by linear interpolation with no low-pass filter.** Fine for speech; marked in the code as the thing to replace if music or export quality ever matters. Each model is told the sample rate of what it is given, so Clear's 48 kHz output passes straight on. Cost if wrong: aliasing on audio with content above 8 kHz.
+44. **Ear's language is shown as information only.** Voz takes no language parameter and its language list was not captured, so nothing is gated on the hint and nothing is claimed about which languages transcribe well. Cost if wrong: none; a mismatch shows as a poor transcript next to the detected language.
+45. **Who returns no turns for short clips, and the screen simply shows no speaker labels then.** Seen with the real model: nothing for 7 seconds of speech, turns for 20 seconds. Cost if wrong: none.
+46. **Shared audio is written to the app's cache and deleted once it is an hour old** (checked at each share and at each app start); recordings and transcripts are otherwise held in memory only and are gone when the screen is left. Cost if wrong: an app that reads the shared file more than an hour later finds it gone.
+47. **`AppContainer.capture` is replaceable.** Device tests put known speech where the microphone would be, so the keyboard and Voice tools flows can be checked against what was actually said; the real recorder has its own test on the emulator's microphone. Cost if wrong: none in the product — nothing in the app replaces it.
+48. **A file that cannot be read as audio gets one plain message**, whatever the underlying reason (no audio track, unsupported encoding, not a media file). Cost if wrong: less specific help for an unusual file.
+49. **Voice tools open from the Voice group on the Models tab and from each voice model's own screen** ("Try it"), since the handoff's three tabs give them no place of their own. Cost if wrong: a fourth tab is a small change.
+50. **Clear is offered everywhere and relies on the crash breaker where it cannot run.** It crashes natively on an emulator drawing in software and runs with a real GPU; its API has no CPU option and the app has no reliable way to tell in advance. A device where it fails loses the app once, then finds Clear switched off with the reason shown. The emulator is started with `-gpu host` so Clear can be tested at all. Cost if wrong: on a phone whose GPU delegate fails, the first use of Clear closes the app once.
+51. **A model the app switched off after a crash says so in the catalog** ("Switched off after it stopped the app. Switch it on to try again."), not only in the keyboard's AI panel. Voice models never appear in that panel, so without this the switch would just be mysteriously off. Cost if wrong: none.
+52. **Settings writes are applied one at a time, in the order they were made.** A test showed the data store's own asynchronous writes could land out of order (a value written earlier arrived last). Harmless at tapping speed, but the master AI switch is a privacy control, so order is now guaranteed by a single writer thread. Cost if wrong: none; a write waits its turn for a few milliseconds.
+
 ## Deviations from the handoff file list
 
 - `sdkbridge/DesertAntSuspendBridge.kt` and `sdkbridge/CancellableOperation.java`: not needed (ruling 3).
@@ -84,6 +99,7 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 - Added in milestone 3: `ai/CrashBreaker.java`, `ui/settings/AppPreferencesFragment.java` (as the handoff lists).
 - `ime/view/AiPanelView.java` → `res/layout/view_ai_panel.xml` plus `KeyboardController`, for the same reason as `KeyboardRootView`.
 - `ai/ModelInput.java`, `ModelResult.java`, `ActivityEvent.java`, `CapabilityRouter.java`: not created (ruling 28).
+- Milestone 6: `media/AudioImportController.java` → `media/AudioDecoder.java` (decoding is the whole job; the picker lives in the screen). Added: `media/Voice.java` (value types), `media/VoiceText.java` (how a transcript is worded), `ui/tools/MicPermissionActivity.java`, a FileProvider with `xml/file_paths.xml`. The Voice tools screen keeps its work in a ViewModel nested in `VoiceToolsFragment` so a run survives rotation.
 
 ## Open items carried forward
 
@@ -105,6 +121,12 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 - Not exercised yet: the copy-only preview (needs an editor that hides its text offset), the partial-draft wording (needs a draft over 1,000 characters), and model usefulness on a real sample set.
 - Not yet asserted by a test: the single enable sweep and its reduced-motion skip, model release under memory pressure, the per-app switches screen.
 
+- Milestone 6, **for the owner:** the app is still installed on your `Pixel_6_Pro` emulator from milestones 0–5, with about 1.4 GB of downloaded models, and that emulator is close to full. Nothing was removed from it. To get the space back: `adb uninstall com.example.aikeyboard` and `adb uninstall com.example.aikeyboard.test` while that emulator is running.
+- Voz's memory line (ruling 39) and Clear on real GPUs (ruling 50) both need the phone.
+- Not tried: speech with real fillers (Uhm), a real multi-speaker recording (Who), a recording longer than two minutes, audio in a language other than English, and how well dictation hears a real voice through a real microphone — the emulator's microphone delivers silence.
+- Not driven by a test: the two-minute cut message, the "microphone couldn't be opened" message (needs another app holding the microphone), sharing failing for lack of storage.
+- The Voice tools screen plays back the cleaned audio before it is shared, but not the original recording; what was heard is otherwise judged from the transcript.
+
 ## Next action
 
-Milestone 6: voice tools — Voz, Clear, Ear, Uhm and Who: read each API, capture files, record and import audio, the pipeline, preview, cancel and export.
+Milestone 7: image and drawing tools — Eye, Moderator and Shapes: capture files, adapters, the system photo picker, a stroke surface, preview and sharing.

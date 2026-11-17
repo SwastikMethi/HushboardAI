@@ -17,6 +17,14 @@
         <item name="switchPreferenceCompatStyle">@style/SettingsSwitchRow</item>
     </style>
 
+    <!-- A small prompt shown over whatever the user was doing (the microphone request). -->
+    <style name="Theme.AiKeyboard.Dialog" parent="Theme.Material3.Dark.Dialog.Alert">
+        <item name="colorPrimary">@color/accent_blue</item>
+        <item name="colorSurface">@color/surface_raised</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
     <!-- Settings rows use the app's Material switch instead of the older default one. -->
     <style name="SettingsSwitchRow" parent="Preference.SwitchPreferenceCompat.Material">
         <item name="widgetLayout">@layout/preference_switch</item>

@@ -45,7 +45,10 @@ public final class ModelRepository {
         DOWNLOADING,
         READY,
         FAILED,
-        /** Files are in place but the vendor runtime on this device will not accept them. */
+        /**
+         * Cannot run on this device: it needs more memory than the device has, or the vendor
+         * runtime here will not accept the installed files.
+         */
         INCOMPATIBLE
     }
 
@@ -70,6 +73,7 @@ public final class ModelRepository {
     private final Context app;
     private final SettingsRepository settings;
     private final ExecutorService io;
+    private final long deviceRamBytes;
     private final Map<String, ModelStatus> statuses = new ConcurrentHashMap<>();
     private final MutableLiveData<Map<String, ModelStatus>> live = new MutableLiveData<>();
     // Models whose transfer the user asked to stop, so a stopping worker knows to clean up.
@@ -77,14 +81,18 @@ public final class ModelRepository {
     private final Map<String, Long> lastProgressAt = new ConcurrentHashMap<>();
     private volatile Consumer<String> runtimeReleaser = modelId -> { };
 
-    public ModelRepository(Context appContext, SettingsRepository settings, ExecutorService io) {
+    /** @param deviceRamBytes the device's total memory, which decides what may load at all */
+    public ModelRepository(Context appContext, SettingsRepository settings, ExecutorService io,
+            long deviceRamBytes) {
         this.app = appContext;
         this.settings = settings;
         this.io = io;
+        this.deviceRamBytes = deviceRamBytes;
         for (ModelDescriptor model : ModelRegistry.all()) {
             statuses.put(model.id, new ModelStatus(model.bundled ? AssetState.INCLUDED
-                    : model.available() ? AssetState.NOT_INSTALLED : AssetState.UNAVAILABLE,
-                    0, model.totalBytes(), null));
+                    : !model.available() ? AssetState.UNAVAILABLE
+                    : !model.fitsRam(deviceRamBytes) ? AssetState.INCOMPATIBLE
+                    : AssetState.NOT_INSTALLED, 0, model.totalBytes(), null));
         }
         publish();
         io.execute(this::refreshFromDisk);
@@ -107,6 +115,12 @@ public final class ModelRepository {
                 && (status.state == AssetState.READY || status.state == AssetState.INCLUDED);
     }
 
+    /** True when the model needs more memory than this device has: it is never offered. */
+    public boolean tooBigForDevice(String modelId) {
+        ModelDescriptor model = ModelRegistry.find(modelId);
+        return model != null && !model.fitsRam(deviceRamBytes);
+    }
+
     /** App-private, excluded from backup, and not purged by the system like the cache is. */
     public File directory(ModelDescriptor model) {
         return new File(app.getNoBackupFilesDir(), "models/" + model.id + "/" + model.revision);
@@ -124,7 +138,8 @@ public final class ModelRepository {
      */
     public void refreshFromDisk() {
         for (ModelDescriptor model : ModelRegistry.all()) {
-            if (model.bundled || !model.available()) continue;
+            // A model too big for this device stays refused, whatever is on disk.
+            if (model.bundled || !model.available() || !model.fitsRam(deviceRamBytes)) continue;
             if (ModelDownloader.isComplete(directory(model), model.files)) {
                 set(model.id, AssetState.READY, model.totalBytes(), null);
             } else if (hasPendingWork(model)) {
@@ -150,7 +165,10 @@ public final class ModelRepository {
     /** Starts a download. Only ever called from a user action in the companion app. */
     public void download(String modelId) {
         ModelDescriptor model = ModelRegistry.find(modelId);
-        if (model == null || model.bundled || !model.available()) return;
+        if (model == null || model.bundled || !model.available()
+                || !model.fitsRam(deviceRamBytes)) {
+            return;
+        }
         cancelledByUser.remove(modelId);
         set(modelId, AssetState.QUEUED, 0, null);
         AppSettings current = settings.latest();

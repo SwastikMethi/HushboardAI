@@ -3,14 +3,23 @@
 // and all use the same instances.
 package com.example.aikeyboard;
 
+import android.app.ActivityManager;
 import android.content.Context;
 
 import com.example.aikeyboard.ai.CrashBreaker;
+import com.example.aikeyboard.ai.adapters.ClearAdapter;
+import com.example.aikeyboard.ai.adapters.EarAdapter;
 import com.example.aikeyboard.ai.adapters.EmoAdapter;
 import com.example.aikeyboard.ai.adapters.GistAdapter;
 import com.example.aikeyboard.ai.adapters.RedactAdapter;
 import com.example.aikeyboard.ai.adapters.TongueAdapter;
 import com.example.aikeyboard.ai.adapters.ToxicAdapter;
+import com.example.aikeyboard.ai.adapters.UhmAdapter;
+import com.example.aikeyboard.ai.adapters.VozAdapter;
+import com.example.aikeyboard.ai.adapters.WhoAdapter;
+import com.example.aikeyboard.media.AudioCaptureController;
+import com.example.aikeyboard.media.AudioPipeline;
+import com.example.aikeyboard.media.ShareResultController;
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
 import com.example.aikeyboard.models.ModelRepository;
@@ -22,10 +31,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 public final class AppContainer {
+
+    public static final int VOZ_IDLE_SECONDS = 20;
 
     public final SettingsRepository settings;
     public final ModelRepository models;
@@ -43,11 +55,22 @@ public final class AppContainer {
     public final ToxicAdapter toxic;
     public final TongueAdapter tongue;
     public final GistAdapter gist;
+    public final VozAdapter voz;
+    /**
+     * The microphone. Not final so a device test can put known speech where a microphone
+     * would be; the app itself never replaces it.
+     */
+    public AudioCaptureController capture;
+    private ScheduledFuture<?> vozIdle;
+    /** The voice tools' chain: cleanup, language, transcript, fillers, speakers. */
+    public final AudioPipeline voice;
 
     AppContainer(Context appContext) {
         DesertAntClient.silenceSdkLogs();
         settings = new SettingsRepository(appContext);
-        models = new ModelRepository(appContext, settings, io);
+        ActivityManager.MemoryInfo memory = new ActivityManager.MemoryInfo();
+        appContext.getSystemService(ActivityManager.class).getMemoryInfo(memory);
+        models = new ModelRepository(appContext, settings, io, memory.totalMem);
         breaker = new CrashBreaker(new File(appContext.getNoBackupFilesDir(), "loading"));
         runtime = new ModelRuntimePool(appContext, models, breaker);
         emo = new EmoAdapter(runtime);
@@ -55,6 +78,12 @@ public final class AppContainer {
         toxic = new ToxicAdapter(runtime);
         tongue = new TongueAdapter(appContext);
         gist = new GistAdapter(runtime);
+        capture = new AudioCaptureController(appContext);
+        voz = new VozAdapter(runtime, this::releaseVozWhenIdle);
+        voice = new AudioPipeline(new ClearAdapter(runtime), new EarAdapter(runtime), voz,
+                new UhmAdapter(runtime), new WhoAdapter(runtime));
+        // Results the user shared earlier are not kept around (see ShareResultController).
+        io.execute(() -> ShareResultController.removeOldFiles(appContext));
         // Files may only be deleted once the model using them has been closed.
         models.setRuntimeReleaser(this::releaseAndWait);
         disableModelsThatCrashed();
@@ -73,6 +102,15 @@ public final class AppContainer {
             settings.setBoolean(AppSettings.modelEnabledKey(modelId), false);
             settings.setBoolean(AppSettings.modelCrashedKey(modelId), true);
         }
+    }
+
+    // Loaded, Voz holds close to 4 GB. It is given back once it has gone unused for a short
+    // while: long enough that dictating a few sentences in a row stays quick, short enough
+    // that the keyboard does not sit on that memory.
+    private synchronized void releaseVozWhenIdle() {
+        if (vozIdle != null) vozIdle.cancel(false);
+        vozIdle = timer.schedule(() -> inference.execute(() -> runtime.release("voz")),
+                VOZ_IDLE_SECONDS, TimeUnit.SECONDS);
     }
 
     /** Frees every loaded model, for when the system is short of memory. */

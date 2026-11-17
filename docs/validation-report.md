@@ -415,6 +415,7 @@ An independent review of the whole branch found one critical problem, six import
 | A key pressed while the keyboard has no session starts one | not run | — | The code is there (`KeyboardController.onKey`); no test produces that order of events |
 | The keyboard carries on after a settings read error | not run | — | An error handler was added to the keyboard's subscription; no test forces the error |
 | Clean build after the fix pass: metadata check, debug APK, unit tests, lint | passed | host | `clean :app:checkDebugAarMetadata assembleDebug testDebugUnitTest lintDebug`: 161 tests, lint 0 errors and 37 warnings, `app/build/outputs/apk/debug/app-debug.apk` 700,096,810 bytes |
+| A fresh clone of the final commit builds by the README alone | passed | host | `git clone` of commit `90e6a9b` into an empty folder, `local.properties` written as the README says, then the README's build command: BUILD SUCCESSFUL, 161 unit tests, lint 0 errors, the same 700,096,810-byte APK |
 
 The whole device suite was run three times on that work (EMU-37B, with `-e clear true`):
 

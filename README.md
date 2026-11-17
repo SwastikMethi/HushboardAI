@@ -40,7 +40,7 @@ Use install-then-instrument rather than `connectedDebugAndroidTest`, which unins
 
 Things worth knowing before relying on it:
 
-- **Memory.** The speech model (Voz) needs about 4 GB while it runs and is refused on devices with under 5 GiB; the image model (Eye) needs about 1.5 GB. Both are unloaded shortly after use.
+- **Memory.** The speech model (Voz) needs about 5 GB while it runs (measured on a phone) and is refused on devices that report under 6.5 GiB of memory, which means phones sold as 6 GB and below; the image model (Eye) needs about 1.5 GB. Both are unloaded shortly after use.
 - **Emulators.** The stock emulator image has too little memory for Voz and its software GPU crashes Clear. The tests here ran on an emulator with 8 GB of memory started with `-gpu host`.
 - **License.** The models are Desert Ant Labs' and are used under their source-available license, which the project owner accepted. Their software makes a license check (about once a month per model); the app says so on its Privacy screen and shows a "Powered by Desert Ant Labs" credit in Settings.
 - **Not for a store yet.** The application id is `com.example.aikeyboard`, the build is debug-signed, and the APK size needs a packaging decision.

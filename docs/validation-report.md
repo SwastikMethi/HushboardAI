@@ -8,7 +8,7 @@ Every check is listed as **passed**, **failed**, **blocked** or **not run**. A c
 |---|---|
 | EMU-37 | `Pixel_6_Pro` AVD, Android 17 (API 37), `google_apis_ps16k` arm64-v8a image, 16 KB pages, 3 GB memory, software GPU, on an Apple Silicon Mac (macOS 26.4.1). Used for milestones 0–5 |
 | EMU-37B | `AiKeyboard_Test` AVD: the same Android 17 image and 16 KB pages, with 8 GB memory and 16 GB storage, started with `-gpu host` (the Mac's GPU) unless a row says software GPU. Used from milestone 6 |
-| PHONE | Physical Android phone — not connected yet |
+| PHONE | OnePlus CPH2423, Android 15 (API 35, build `CPH2423_15.0.0.2001(EX01)`), MediaTek MT6895Z with a Mali-G610 GPU, 12 GB memory (11.2 GiB reported), 4 KB pages, connected over USB. Connected on 18 Nov 2026, after the emulator work and the final review |
 
 EMU-37B exists because the voice models outgrew EMU-37: Voz needs about 3.9 GB of memory and 1.2 GB of storage, and Clear needs a real GPU. It is started with:
 
@@ -52,6 +52,10 @@ adb shell am instrument -w -e crashProbe verify -e crashModel clear -e class com
 adb shell pm revoke com.example.aikeyboard android.permission.RECORD_AUDIO
 adb shell pm clear-permission-flags com.example.aikeyboard android.permission.RECORD_AUDIO user-set user-fixed
 adb shell am instrument -w -e micDenied true -e class com.example.aikeyboard.MicPermissionFlowTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
+
+# Latency, for a named device. The keyboard must already be selected on it; results come back
+# as INSTRUMENTATION_STATUS lines (add -r).
+adb shell am instrument -w -r -e latency true -e class com.example.aikeyboard.LatencyProbeTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 
 # Screenshots: written to /sdcard/Android/data/com.example.aikeyboard/files/tour
 adb shell am instrument -w -e screenshots true -e class com.example.aikeyboard.ScreenshotTourTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
@@ -422,6 +426,32 @@ The whole device suite was run three times on that work (EMU-37B, with `-e clear
 1. 170 tests: 155 passed, 13 skipped, **2 failed**. Both were faults in the tests, not the app: a delete test that raced the run it was meant to interrupt, and an accessibility audit that used "close the keyboard" as its trigger and timed out waiting for the system seconds after a reinstall (it passed five times out of five alone). Both tests were corrected.
 2. 170 tests: 156 passed, 13 skipped, **1 failed**: the 80 bytes described above, a real fault in the downloader. Fixed, with a new test.
 3. 171 tests: **158 passed, 13 skipped by design (opt-in probes), none failed.**
+
+## Phone session (PHONE)
+
+Started 18 Nov 2026 on the owner's phone. This section is filled in as the session goes; rows still marked **blocked** wait for a step only the owner can take on the phone.
+
+Part 1 needed nothing from the owner: the debug APK was installed over adb (40 seconds) and the tests that run models, without touching the keyboard or any system setting, were run. The automated tests that select the keyboard or change a setting were not run on the phone at this stage.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| The debug APK installs and the models download over Wi-Fi | passed | PHONE | `adb install`; all 12 downloadable models fetched by the app's own downloader, 1.5 GB on disk |
+| Emo, Redact, Toxic, Gist and Tongue give real answers | passed | PHONE | `ModelSmokeTest`: 7 passed, 3 opt-in probes skipped |
+| Eye, Moderator and Shapes give real answers; Eye gives its memory back when idle | passed, one failed | PHONE | `VisionModelsTest`: 5 of 6 passed. **Failed:** `eye_describesARealScreenshot`. Eye called a capture of the phone's screen "illustration or art"; the test expects "screenshot", which is what it says on the emulator. A wrong label from the model on a real screen, not a crash |
+| Voz, Ear, Uhm and Who give real answers; the pipeline runs the chosen steps | passed | PHONE | `VoiceModelsTest`: 9 passed without Clear |
+| Clear runs on the phone's GPU and its output still transcribes | passed | PHONE | `VoiceModelsTest#clear_…` and `#thePipelineCleansFirst…` with `-e clear true`, on a Mali-G610. On the emulator's software GPU the same call crashes |
+| The memory guard, audio import and the editor bridge | passed | PHONE | `ModelMemoryGuardTest` 2, `AudioImportTest` 6, `EditorBridgeTest` 16 |
+| Peak memory with Voz loaded | measured | PHONE | The app's total (`dumpsys meminfo`, sampled every two seconds) peaked at 5.2 GB with Voz loaded and at 5.9 GB with Clear and the other voice models loaded as well. The emulator figure was 3.9 GB. The phone had 3.9 GB available beforehand and held it. The line below which Voz is refused was raised from 5 GiB to 6.5 GiB on this evidence (`ModelRegistryTest`, failed first) |
+| Peak memory with Eye and Moderator loaded | measured | PHONE | About 1.2 GB resident (1.5 GB on the emulator) |
+| Running the typing models sends and receives nothing | passed | PHONE | `HardeningTest.runningInstalledModelsOnTextSendsAndReceivesNothing`, on the phone's own Wi-Fi |
+| Running the voice, image and drawing models, Clear included, sends and receives nothing | passed | PHONE | `HardeningTest.runningTheVoiceImageAndDrawingModelsSendsAndReceivesNothing` with `-e clear true`: 0 bytes each way |
+| A finished download leaves no connection open | passed | PHONE | `HardeningTest.aFinishedDownloadLeavesNoConnectionOpen` |
+| A model loaded twice leaves no crash mark; models dropped under memory pressure load again; a delete waits for a run | passed | PHONE | Three `HardeningTest` methods |
+| How much the license check sends | not captured | PHONE | Each model's first load on this phone made the vendor's check. The traffic around Clear's first load was logged, but the phone's log had rolled over before it was read. Not repeated: it would cost a second activation |
+| Typing in WhatsApp, Telegram, Discord, a browser and a notes app | blocked | PHONE | Needs the owner to enable and select the keyboard |
+| Key handling time and time from last key to suggestion | blocked | PHONE | `LatencyProbeTest` is written and runs on the emulator; it needs the keyboard selected on the phone |
+| The keyboard's own automated tests on the phone | blocked | PHONE | They select the keyboard through adb, which is the owner's step to take first |
+| Dictation with a real voice; haptics and key sound; a pass with TalkBack | blocked | PHONE | Needs the owner |
 
 ## The handoff checklist, item by item
 

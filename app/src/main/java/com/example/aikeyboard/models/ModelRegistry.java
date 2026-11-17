@@ -18,11 +18,13 @@ import java.util.List;
 
 public final class ModelRegistry {
 
-    // ponytail: one measurement, on an emulator: the app's resident memory peaked at 3.9 GB
-    // with Voz loaded, and a 3 GB device killed the app while loading it. 5 GiB refuses only
-    // the devices that certainly cannot hold it (sold as 4 GB and below); the crash breaker
-    // covers the uncertain middle. Re-measure on real phones before trusting this line.
-    private static final long VOZ_MIN_RAM_BYTES = 5L << 30;
+    // ponytail: two measurements. On an emulator the app held 3.9 GB with Voz loaded and a
+    // 3 GB device killed it while loading. On a phone (OnePlus CPH2423, 12 GB) it held about
+    // 5 GB, 5.9 GB with Clear loaded as well. 6.5 GiB refuses the devices that certainly
+    // cannot hold that (sold as 6 GB and below, which report under 6 GiB) and admits those
+    // sold as 8 GB (about 7 GiB); the crash breaker covers the uncertain middle. Measure on
+    // an 8 GB phone before trusting the upper side of this line.
+    private static final long VOZ_MIN_RAM_BYTES = 13L << 29;
     // The same kind of line for Eye, which peaked at about 1.5 GB: refused only below 2 GiB.
     private static final long EYE_MIN_RAM_BYTES = 2L << 30;
 

@@ -333,10 +333,16 @@ public class HardeningTest {
         int uid = Process.myUid();
 
         // First use loads each model (and is when a license check would happen).
+        long loadSentBefore = TrafficStats.getUidTxBytes(uid);
+        long loadReceivedBefore = TrafficStats.getUidRxBytes(uid);
         app.inference.submit(everything).get(10, TimeUnit.MINUTES);
         Thread.sleep(5000);
         long sentBefore = TrafficStats.getUidTxBytes(uid);
         long receivedBefore = TrafficStats.getUidRxBytes(uid);
+        // Reported, not asserted: it depends on which models this device has loaded before.
+        Log.i(TAG, "loading the voice, image and drawing models: sentBytes="
+                + (sentBefore - loadSentBefore) + " receivedBytes="
+                + (receivedBefore - loadReceivedBefore));
 
         for (int i = 0; i < 3; i++) app.inference.submit(everything).get(10, TimeUnit.MINUTES);
         Thread.sleep(5000);

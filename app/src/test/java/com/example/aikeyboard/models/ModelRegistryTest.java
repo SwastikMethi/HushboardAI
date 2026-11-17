@@ -74,9 +74,11 @@ public class ModelRegistryTest {
     @Test
     public void theSpeechModelDeclaresTheMemoryItNeedsAndSmallModelsDeclareNone() {
         long gib = 1L << 30;
-        // Measured: the app holds about 3.9 GB with Voz loaded.
+        // Measured on a phone: the app holds about 5 GB with Voz loaded. A phone sold as
+        // 6 GB reports about 5.6 GiB and cannot hold that; one sold as 8 GB reports about 7.
         assertFalse(ModelRegistry.find("voz").fitsRam(4 * gib));
-        assertTrue(ModelRegistry.find("voz").fitsRam(6 * gib));
+        assertFalse(ModelRegistry.find("voz").fitsRam((long) (5.6 * gib)));
+        assertTrue(ModelRegistry.find("voz").fitsRam((long) (6.9 * gib)));
         // Measured: about 1.5 GB with Eye loaded.
         assertFalse(ModelRegistry.find("eye").fitsRam(gib));
         assertTrue(ModelRegistry.find("eye").fitsRam(3 * gib));

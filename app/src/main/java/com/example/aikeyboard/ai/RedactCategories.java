@@ -30,7 +30,18 @@ public final class RedactCategories {
         LABELS.put("online", List.of("URL", "IP_ADDRESS"));
     }
 
+    // The languages the vendor documents for Redact: the 24 official EU languages plus
+    // Norwegian (both written forms) and Icelandic. Nothing outside this list is claimed.
+    private static final Set<String> LANGUAGES = new HashSet<>(Arrays.asList(
+            "bg", "cs", "da", "de", "el", "en", "es", "et", "fi", "fr", "ga", "hr", "hu", "it",
+            "lt", "lv", "mt", "nl", "pl", "pt", "ro", "sk", "sl", "sv", "nb", "nn", "no", "is"));
+
     private RedactCategories() {}
+
+    /** Whether Redact is documented to cover this language code. */
+    public static boolean coversLanguage(String languageCode) {
+        return LANGUAGES.contains(languageCode);
+    }
 
     /** Vendor labels for every category the user has switched on. */
     public static Set<String> labels(AppSettings settings) {

@@ -9,7 +9,9 @@ import com.example.aikeyboard.AppContainer;
 import com.example.aikeyboard.R;
 import com.example.aikeyboard.ai.NoticeText;
 import com.example.aikeyboard.ai.RedactCategories;
+import com.example.aikeyboard.ai.Suggestion.LanguageHint;
 import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
+import com.example.aikeyboard.ai.Suggestion.TopicTag;
 import com.example.aikeyboard.ai.Suggestion.ToxicScores;
 import com.example.aikeyboard.ai.SuggestionPolicy;
 import com.example.aikeyboard.ai.ToxicPolicy;
@@ -18,6 +20,7 @@ import com.example.aikeyboard.models.ModelRegistry;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 final class ModelTryIt {
 
@@ -25,7 +28,8 @@ final class ModelTryIt {
 
     /** Whether this build can test the model from its detail screen. */
     static boolean supports(String modelId) {
-        return "emo".equals(modelId) || "redact".equals(modelId) || "toxic".equals(modelId);
+        return "emo".equals(modelId) || "redact".equals(modelId) || "toxic".equals(modelId)
+                || "tongue".equals(modelId) || "gist".equals(modelId);
     }
 
     /** Blocking; call on the inference thread. Throws whatever the model threw. */
@@ -40,6 +44,17 @@ final class ModelTryIt {
             lines.addAll(SuggestionPolicy.emoji(app.emo.run(text, settings), limit));
             nothing = R.string.try_nothing_emo;
             return lines.isEmpty() ? context.getString(nothing) : String.join("  ", lines);
+        }
+        if ("tongue".equals(modelId)) {
+            LanguageHint hint = app.tongue.run(text, settings);
+            String name = new Locale(hint.language).getDisplayLanguage();
+            // A guess is worded as a guess.
+            return hint.reliable ? name : context.getString(R.string.try_language_unsure, name);
+        }
+        if ("gist".equals(modelId)) {
+            for (TopicTag topic : app.gist.run(text, settings)) lines.add(topic.name);
+            return lines.isEmpty() ? context.getString(R.string.topics_none)
+                    : String.join("\n", lines);
         }
         if ("redact".equals(modelId)) {
             if (RedactCategories.labels(settings).isEmpty()) {

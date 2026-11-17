@@ -10,8 +10,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import com.example.aikeyboard.ai.Suggestion.EmojiCandidate;
+import com.example.aikeyboard.ai.Suggestion.LanguageHint;
 import com.example.aikeyboard.ai.Suggestion.Notice;
 import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
+import com.example.aikeyboard.ai.Suggestion.TopicTag;
 import com.example.aikeyboard.ai.Suggestion.ToxicScores;
 import com.example.aikeyboard.core.InputEligibility.Verdict;
 import com.example.aikeyboard.data.AppSettings;
@@ -117,10 +119,30 @@ public class AiCoordinatorTest {
         }
     };
 
+    private final Fake<LanguageHint> tongue = new Fake<LanguageHint>("tongue") {
+        @Override
+        LanguageHint answer(String text) {
+            if (text.contains("こんにちは")) return new LanguageHint("ja", true);
+            if (text.contains("konnichiwa")) return new LanguageHint("ja", false);
+            return new LanguageHint("en", true);
+        }
+    };
+
+    private final Fake<List<TopicTag>> gist = new Fake<List<TopicTag>>("gist") {
+        @Override
+        List<TopicTag> answer(String text) {
+            return List.of(new TopicTag("food-drink", "Food & Drink", 0.8));
+        }
+    };
+
     private static final class RecordingListener implements AiCoordinator.Listener {
         List<String> emoji = List.of();
         Notice notice;
         boolean setupNeeded;
+        LanguageHint language;
+        boolean redactSkipped;
+        List<TopicTag> topics;
+        DraftSnapshot topicsFor;
 
         @Override
         public void onSuggestions(List<String> emojiSuggestions, Notice latestNotice) {
@@ -131,6 +153,18 @@ public class AiCoordinatorTest {
         @Override
         public void onSetupNeeded(boolean needed) {
             setupNeeded = needed;
+        }
+
+        @Override
+        public void onLanguage(LanguageHint hint, boolean redactSkippedForIt) {
+            language = hint;
+            redactSkipped = redactSkippedForIt;
+        }
+
+        @Override
+        public void onTopics(DraftSnapshot draft, List<TopicTag> found) {
+            topicsFor = draft;
+            topics = found;
         }
     }
 
@@ -154,9 +188,98 @@ public class AiCoordinatorTest {
 
     @Before
     public void setUp() {
-        coordinator = new AiCoordinator(scheduler, Runnable::run, emo, redact, toxic,
-                id -> !notReady.contains(id), listener);
+        coordinator = new AiCoordinator(scheduler, Runnable::run, emo, redact, toxic, tongue,
+                gist, id -> !notReady.contains(id), listener);
         coordinator.onSettings(settings(true, "emo", "redact", "toxic"));
+    }
+
+    // ---- Language hint ----
+
+    @Test
+    public void aConfidentLanguageRedactDoesNotCoverSkipsRedactAndSaysSo() {
+        coordinator.onSettings(settings(true, "redact", "tongue"));
+        coordinator.onDraft(draft(1, "こんにちは anna@example.hu"), Verdict.ALLOWED);
+        scheduler.runLatest();
+
+        assertTrue("Redact must not be asked about a language it does not cover",
+                redact.inputs.isEmpty());
+        assertNull(listener.notice);
+        assertEquals("ja", listener.language.language);
+        assertTrue(listener.redactSkipped);
+    }
+
+    @Test
+    public void anUnsureLanguageGuessChangesNothing() {
+        coordinator.onSettings(settings(true, "redact", "tongue"));
+        coordinator.onDraft(draft(1, "konnichiwa anna@example.hu"), Verdict.ALLOWED);
+        scheduler.runLatest();
+
+        assertEquals(Notice.Kind.PRIVACY, listener.notice.kind);
+        assertFalse(listener.redactSkipped);
+    }
+
+    @Test
+    public void aCoveredLanguageRunsRedactAsUsual() {
+        coordinator.onSettings(settings(true, "redact", "tongue"));
+        coordinator.onDraft(draft(1, "mail anna@example.hu"), Verdict.ALLOWED);
+        scheduler.runLatest();
+
+        assertEquals(Notice.Kind.PRIVACY, listener.notice.kind);
+        assertEquals("en", listener.language.language);
+        assertFalse(listener.redactSkipped);
+    }
+
+    @Test
+    public void withTheLanguageHintOffRedactAlwaysRuns() {
+        coordinator.onSettings(settings(true, "redact"));
+        coordinator.onDraft(draft(1, "こんにちは anna@example.hu"), Verdict.ALLOWED);
+        scheduler.runLatest();
+
+        assertEquals(Notice.Kind.PRIVACY, listener.notice.kind);
+        assertTrue(tongue.inputs.isEmpty());
+        assertNull(listener.language);
+    }
+
+    // ---- Topics: only when asked ----
+
+    @Test
+    public void topicsAreComputedOnlyWhenTheUserAsks() {
+        coordinator.onSettings(settings(true, "gist"));
+        coordinator.onDraft(draft(1, "pizza and pasta tonight"), Verdict.ALLOWED);
+        scheduler.runLatest();
+        assertTrue("typing alone must not run the topic model", gist.inputs.isEmpty());
+
+        coordinator.requestTopics();
+        scheduler.last("gist").run();
+
+        assertEquals("Food & Drink", listener.topics.get(0).name);
+        assertEquals(1, listener.topicsFor.generation);
+    }
+
+    @Test
+    public void topicsForAnOlderDraftAreDropped() {
+        coordinator.onSettings(settings(true, "gist"));
+        coordinator.onDraft(draft(1, "pizza and pasta tonight"), Verdict.ALLOWED);
+        coordinator.requestTopics();
+        Runnable forOldDraft = scheduler.last("gist");
+        coordinator.onDraft(draft(2, "actually, the weather"), Verdict.ALLOWED);
+
+        forOldDraft.run();
+
+        assertNull(listener.topics);
+    }
+
+    @Test
+    public void topicsAreNotComputedWhereAiMayNotRunOrTheModelIsOff() {
+        coordinator.onSettings(settings(true, "gist"));
+        coordinator.onDraft(draft(1, "hunter2"), Verdict.PASSWORD_FIELD);
+        coordinator.requestTopics();
+        assertEquals(0, scheduler.count("gist"));
+
+        coordinator.onSettings(settings(true, "emo"));
+        coordinator.onDraft(draft(2, "pizza"), Verdict.ALLOWED);
+        coordinator.requestTopics();
+        assertEquals(0, scheduler.count("gist"));
     }
 
     // ---- Emoji ----

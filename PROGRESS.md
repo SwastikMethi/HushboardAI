@@ -9,7 +9,7 @@ The execution plan is `~/.claude/plans/i-have-added-a-whimsical-mist.md` (approv
 | 2 — Companion and assets | Done (emulator). Device rows blocked | 55 unit tests, 47 instrumented tests. Real downloads, a cancel that stops, pause on leaving Wi-Fi and resume, live settings sync, three-tab companion app with the privacy disclosure. |
 | 3 — First real Emo slice | Done (emulator). Device rows blocked | 87 unit tests, 60 instrumented tests. Real Emo suggestions in the keyboard, online and in airplane mode; stale results dropped; AI toggle and panel; crash breaker; per-app AI switches. Latency on a real device waits for the phone. |
 | 4 — Redact and Toxic | Done (emulator). Device rows blocked | 120 unit tests, 69 instrumented tests. Real Redact and Toxic in the keyboard: notice, review, guarded mask and undo, warn-only mode, dismiss; Send is never blocked. "Try it" in the companion app. |
-| 5 — Tongue and Gist | Not started | — |
+| 5 — Tongue and Gist | Done (emulator) | 129 unit tests, 74 instrumented tests. Tongue's hint makes the privacy check stand down for languages it does not cover, and says so. Gist tags a draft only on request; hashtags are inserted only on tap. |
 | 6 — Voice tools | Not started | — |
 | 7 — Image and drawing tools | Not started | — |
 | 8 — Visual and accessibility audit | Not started | — |
@@ -66,6 +66,11 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 33. **The undo offer lasts until the next key press.** It is guarded (the placeholders must still be exactly where they were put) and is forgotten when the field loses the keyboard. Cost if wrong: an undo wanted after more typing is not offered.
 34. **Tone notices offer no edit.** Review shows which kinds of wording were flagged and says the model is in beta; there is nothing to apply. Cost if wrong: none.
 
+35. **Tongue gates Redact only.** Redact's language list is the one the vendor documents precisely; Emo's and Toxic's exact lists were not captured, so nothing is claimed or gated for them. Cost if wrong: Emo or Toxic may run on a language they handle poorly.
+36. **Tongue's telemetry switch is left at the vendor default.** The SDK exposes `setSendsDeviceContext`; what "device context" contains is not established, and the license forbids disabling its check. Not touching it keeps the app within what the owner accepted. Cost if wrong: more device detail is sent than the Privacy screen describes — to be settled by reading the vendor's documentation.
+37. **Gist's useful action is "Tag this draft" → "Insert as hashtags".** Topics are computed only on that tap, shown first, and inserted at the cursor only on a second tap, built from each topic's fixed slug. Cost if wrong: a different action (copy, label) would be a small change.
+38. **Model file lists are captured with an opt-in probe that lets the SDK download once** (`ManifestCaptureTest`). It is development tooling, not a product path. Cost if wrong: none.
+
 ## Deviations from the handoff file list
 
 - `sdkbridge/DesertAntSuspendBridge.kt` and `sdkbridge/CancellableOperation.java`: not needed (ruling 3).
@@ -83,7 +88,7 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 ## Open items carried forward
 
 - Redact spans can start inside an emoji sequence; milestone 4 must widen spans to whole characters before editing.
-- Tongue's telemetry switch (`setSendsDeviceContext`) — what it sends is not established; decide in milestone 5.
+- Tongue's telemetry switch (`setSendsDeviceContext`) is left at the vendor default (ruling 36). **For the owner:** check the vendor's documentation for what "device context" contains.
 - Keep the SDK logger quiet so input text cannot reach logs (milestone 3, when the first model loads in the keyboard).
 - All-models APK is 703 MB. Reported to the owner; needs a packaging decision before any store release.
 
@@ -102,4 +107,4 @@ Decisions taken where the plan or handoff left a choice, each with what it costs
 
 ## Next action
 
-Milestone 5: Tongue (language hint, bundled) and Gist (topic tags) — read Gist's real API, capture its files, adapters, and a useful action for each.
+Milestone 6: voice tools — Voz, Clear, Ear, Uhm and Who: read each API, capture files, record and import audio, the pipeline, preview, cancel and export.

@@ -57,6 +57,7 @@ dependencies {
     implementation libs.desertant.redact
     implementation libs.desertant.toxic
     implementation libs.desertant.tongue
+    implementation libs.desertant.gist
 
     testImplementation libs.junit
 

@@ -60,6 +60,7 @@ public class ModelRegistryTest {
         assertEquals(10_962_213L, ModelRegistry.find("emo").totalBytes());
         assertEquals(24_324_954L, ModelRegistry.find("redact").totalBytes());
         assertEquals(103_272_098L, ModelRegistry.find("toxic").totalBytes());
+        assertEquals(84_574_548L, ModelRegistry.find("gist").totalBytes());
     }
 
     @Test

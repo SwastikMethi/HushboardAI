@@ -4,10 +4,12 @@ package com.example.aikeyboard.ai;
 import com.example.aikeyboard.ai.Suggestion.EmojiCandidate;
 import com.example.aikeyboard.ai.Suggestion.Notice;
 import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
+import com.example.aikeyboard.ai.Suggestion.TopicTag;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 
 public final class SuggestionPolicy {
 
@@ -26,6 +28,16 @@ public final class SuggestionPolicy {
             if (!shown.contains(candidate.emoji)) shown.add(candidate.emoji);
         }
         return shown;
+    }
+
+    /** Topics as hashtags to insert, built from each topic's fixed slug: " #fooddrink #travel". */
+    public static String hashtags(List<TopicTag> topics) {
+        StringBuilder tags = new StringBuilder();
+        for (TopicTag topic : topics) {
+            String word = topic.slug.replaceAll("[^\\p{L}\\p{N}]", "").toLowerCase(Locale.ROOT);
+            if (!word.isEmpty()) tags.append(" #").append(word);
+        }
+        return tags.toString();
     }
 
     /**

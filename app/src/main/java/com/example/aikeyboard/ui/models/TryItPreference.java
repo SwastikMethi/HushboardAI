@@ -34,6 +34,7 @@ public final class TryItPreference extends Preference {
         super(context);
         this.runner = runner;
         setLayoutResource(R.layout.preference_try_it);
+        setKey("try_it"); // lets the screen scroll straight to this row; nothing is stored
         setSelectable(false);
         setPersistent(false);
     }

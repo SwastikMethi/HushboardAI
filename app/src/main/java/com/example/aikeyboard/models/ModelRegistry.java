@@ -29,6 +29,7 @@ public final class ModelRegistry {
     public static final String SENSITIVITY_FEWER = "fewer";
     public static final String SENSITIVITY_STANDARD = "standard";
     public static final String SENSITIVITY_MORE = "more";
+    public static final String GIST_LIMIT = "limit";
 
     private static final List<ModelSettingDefinition> NO_SETTINGS = Collections.emptyList();
     private static final List<ModelFile> NOT_CAPTURED = Collections.emptyList();
@@ -92,7 +93,22 @@ public final class ModelRegistry {
                                     R.array.sensitivity_labels, SENSITIVITY_STANDARD))),
             new ModelDescriptor("tongue", "Tongue", Group.TEXT, R.string.model_tongue_summary,
                     false, true, "bundled", NOT_CAPTURED, NO_SETTINGS),
-            pending("gist", "Gist", Group.TEXT, R.string.model_gist_summary, false, "v2.2.0"),
+            new ModelDescriptor("gist", "Gist", Group.TEXT, R.string.model_gist_summary, false,
+                    false, "v2.2.0", Arrays.asList(
+                    new ModelFile("gist.tflite", 13_034_484L,
+                            "5ec5fd0f2015690432e5834ae33cfc48a11fa69a1947af3f2b8fe37e7b60ee51"),
+                    new ModelFile("gist_tokenizer.bin", 4_625_812L,
+                            "95081ee4239ab56b27f1df505e159a64156cbd4d700147d7ea7f50ec46cadad3"),
+                    new ModelFile("gist_embedding.i8", 66_905_344L,
+                            "a55b64cf8d31eac062b49c4a04848363803a03acc2cdfc8b841c4d11177629e8"),
+                    new ModelFile("gist_embedding.json", 67L,
+                            "74654d0da2733d645b1dce917157019eda9f4539abff544a8d2b039482b253ca"),
+                    new ModelFile("gist_config.json", 823L,
+                            "4a5e5a73c0e9d7e5dcee44a68316ce2b01775c1bd06ce892e7175c05ba3f3905"),
+                    new ModelFile("taxonomy.json", 8_018L,
+                            "ad94b05564ffd4af1e102984fbd54751b699ce7cfce49b9c8854f0feb4157d0a")),
+                    Arrays.asList(
+                            range(GIST_LIMIT, R.string.setting_gist_limit, 0, 1, 5, 1, 3))),
             // Voice
             pending("voz", "Voz", Group.VOICE, R.string.model_voz_summary, false, "v0.5.0"),
             pending("clear", "Clear", Group.VOICE, R.string.model_clear_summary, false, "v0.3.0"),

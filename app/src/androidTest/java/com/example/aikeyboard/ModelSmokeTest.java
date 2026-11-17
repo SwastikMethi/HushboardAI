@@ -38,6 +38,8 @@ import java.util.concurrent.TimeUnit;
 import ai.desertant.emo.Emo;
 import ai.desertant.emo.EmoSuggestion;
 import ai.desertant.emo.EmojiSkinTone;
+import ai.desertant.gist.Gist;
+import ai.desertant.gist.Topic;
 import ai.desertant.redact.Redact;
 import ai.desertant.redact.Redaction;
 import ai.desertant.redact.RedactionItem;
@@ -189,6 +191,31 @@ public class ModelSmokeTest {
             assertFalse(threat.getScores().isEmpty());
             assertTrue("a plain threat should be flagged", threat.isToxic());
             assertFalse("a friendly message should not be flagged", benign.isToxic());
+        }
+    }
+
+    @Test
+    public void gist_tagsAMessageFromItsFixedListAndRespectsTheLimit() throws Exception {
+        File dir = TestModels.installedDir("gist");
+        try (Gist gist = new Gist(context, dir.getAbsolutePath())) {
+            assertTrue("the SDK must accept the files the app downloaded", gist.isDownloaded());
+            String text = "We had pizza and pasta for dinner at the new Italian restaurant";
+            long t0 = SystemClock.elapsedRealtime();
+            List<Topic> three = DesertAntClient.<List<Topic>>run(
+                    c -> gist.classify(text, 3, null, c)).get(2, TimeUnit.MINUTES);
+            long t1 = SystemClock.elapsedRealtime();
+            List<Topic> one = DesertAntClient.<List<Topic>>run(
+                    c -> gist.classify(text, 1, null, c)).get(1, TimeUnit.MINUTES);
+            StringBuilder sb = new StringBuilder();
+            for (Topic t : three) {
+                sb.append(t.getSlug()).append('/').append(t.getName()).append('(')
+                        .append(t.getScore()).append(") ");
+            }
+            Log.i(TAG, "gist coldMs=" + (t1 - t0) + " warmMs="
+                    + (SystemClock.elapsedRealtime() - t1) + " topics=" + sb);
+            assertFalse("a clear food message should get a topic", three.isEmpty());
+            assertTrue(three.size() <= 3);
+            assertTrue("the second argument is the number of topics", one.size() <= 1);
         }
     }
 

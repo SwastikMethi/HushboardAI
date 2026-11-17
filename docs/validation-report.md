@@ -192,3 +192,24 @@ Unit tests (JVM): 120 passed in total. New or extended in this milestone: `AiCoo
 | Notice latency after a pause | blocked | PHONE | Needs the physical device. Emulator: Redact about 33 ms, Toxic about 25 ms, plus the 400–450 ms pause. |
 
 Full-suite run at the end of the milestone: 69 instrumented tests, all green; 62 executed and passed, 7 skipped by design (offline probe, kill probe ×2, stock-app probe, screenshot tour ×3).
+
+## Milestone 5 — Tongue and Gist
+
+Unit tests (JVM): 129 passed in total. Extended in this milestone: `AiCoordinatorTest` 26, `ModelRulesTest` 11.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| Gist's pinned files captured from a real SDK download | passed | EMU-37 | `ManifestCaptureTest` with `-e captureModel gist`: six files, 84,574,548 bytes |
+| Gist through the app's own download; the SDK accepts the files; topics for a clear message; the limit is respected | passed | EMU-37 | `ModelSmokeTest.gist_tagsAMessageFromItsFixedListAndRespectsTheLimit` ("Food & Cooking" 0.998; about 1 s cold, 4 ms warm) |
+| A confident language outside Redact's coverage skips Redact and is reported | passed | host | `AiCoordinatorTest.aConfidentLanguageRedactDoesNotCoverSkipsRedactAndSaysSo` |
+| An unsure language guess changes nothing; a covered language runs Redact; hint off always runs it | passed | host | `AiCoordinatorTest` (three tests) |
+| Redact's documented languages only (24 EU + Norwegian + Icelandic) | passed | host | `ModelRulesTest.redactCoversEuropeanLanguagesOnly` |
+| Topics are computed only when asked; late topics for an older draft are dropped; never where AI may not run | passed | host | `AiCoordinatorTest` (three tests) |
+| Real Tongue: Japanese text → no privacy notice; the panel says "Looks like Japanese" and "Does not cover Japanese" | passed | EMU-37 | `KeyboardAiTest.aLanguageThePrivacyCheckDoesNotCoverIsSkippedAndThePanelSaysSo` |
+| With the hint off, the same text is still checked | passed | EMU-37 | `KeyboardAiTest.withTheLanguageHintOffTheSameTextIsStillChecked` |
+| Real Gist: "Tag this draft" shows topics without changing anything; "Insert as hashtags" adds them at the cursor | passed | EMU-37 | `KeyboardAiTest.topicsAreComputedOnlyOnRequestAndInsertedOnlyOnTap` |
+| "Try it" for Tongue and Gist in the companion app | not run | — | Implemented through the same path as the Redact "Try it" test; not driven separately |
+| Language hint on short or mixed-script text on a device | not run | — | The rule (unsure hints change nothing) is unit-tested with a fake; real short and mixed inputs were not sampled |
+| Topic quality across a range of messages | not run | — | One food sentence was used |
+
+Full-suite run at the end of the milestone: 74 instrumented tests; 66 passed, 7 skipped by design, 1 failed. The failure was a flaky scroll in a companion-app test (a fling still moving when the tap landed); the swipe was replaced with a direct scroll-to-row, a second timing assumption in the same class was fixed, and `CompanionAppTest` then passed 7 of 7 four runs in a row.

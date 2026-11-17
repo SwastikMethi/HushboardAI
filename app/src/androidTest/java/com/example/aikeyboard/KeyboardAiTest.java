@@ -55,6 +55,10 @@ public class KeyboardAiTest {
         device.executeShellCommand("settings put secure show_ime_with_hard_keyboard 1");
         settings.setStringSet(AppSettings.BLOCKED_APPS, Set.of());
         settings.setModelEnabled("emo", true);
+        // Each test turns on the other models it needs; none may leak in from a previous one.
+        for (String other : new String[] {"redact", "toxic", "tongue", "gist"}) {
+            settings.setModelEnabled(other, false);
+        }
         setAi(true);
         scenario = ActivityScenario.launch(EditorTestActivity.class);
     }
@@ -295,6 +299,77 @@ public class KeyboardAiTest {
         assertEquals(android.view.inputmethod.EditorInfo.IME_ACTION_SEND,
                 EditorTestActivity.lastEditorAction);
         assertEquals(threat, text(R.id.field_send));
+    }
+
+    // ---- Tongue and Gist ----
+
+    private static final String JAPANESE_WITH_EMAIL =
+            "メールアドレスは anna@example.hu です。明日の会議についてご連絡ください。よろしくお願いします。 ";
+
+    private void use(String modelId, boolean on) throws Exception {
+        if (on) TestModels.ensureInstalled(modelId);
+        settings.setModelEnabled(modelId, on);
+        assertTrue(TestModels.await(() -> settings.latest().modelEnabled(modelId) == on, 5000));
+    }
+
+    private void relaunchHost() {
+        // Installing a model may have put the companion app on screen in place of the host.
+        scenario.close();
+        scenario = ActivityScenario.launch(EditorTestActivity.class);
+    }
+
+    @Test
+    public void aLanguageThePrivacyCheckDoesNotCoverIsSkippedAndThePanelSaysSo() throws Exception {
+        useRedact(ModelRegistry.REDACT_MODE_WARN);
+        use("tongue", true);
+        focus("field_plain");
+        given(R.id.field_plain, JAPANESE_WITH_EMAIL);
+
+        assertNull("Redact must not be run on a language it does not cover", device.wait(
+                Until.findObject(By.res(PKG, "suggestion_1").text("Personal information detected")),
+                3000));
+        device.findObject(By.res(PKG, "ai_toggle")).click();
+        assertNotNull("the panel should name the detected language", device.wait(
+                Until.findObject(By.res(PKG, "ai_model_status").text("Looks like Japanese")),
+                TIMEOUT_MS));
+        assertNotNull("the panel should say the privacy check was skipped", device.findObject(
+                By.res(PKG, "ai_model_status").text("Does not cover Japanese")));
+    }
+
+    @Test
+    public void withTheLanguageHintOffTheSameTextIsStillChecked() throws Exception {
+        useRedact(ModelRegistry.REDACT_MODE_WARN);
+        use("tongue", false);
+        focus("field_plain");
+        given(R.id.field_plain, JAPANESE_WITH_EMAIL);
+
+        assertNotNull("without the hint, the privacy check runs as usual",
+                slot("suggestion_1", "Personal information detected"));
+    }
+
+    @Test
+    public void topicsAreComputedOnlyOnRequestAndInsertedOnlyOnTap() throws Exception {
+        use("gist", true);
+        use("redact", false);
+        relaunchHost();
+        String draft = "We had pizza and pasta for dinner at the new Italian restaurant ";
+        focus("field_plain");
+        given(R.id.field_plain, draft);
+
+        device.findObject(By.res(PKG, "ai_toggle")).click();
+        UiObject2 tag = device.wait(Until.findObject(By.res(PKG, "ai_panel_tag")), TIMEOUT_MS);
+        assertNotNull("no Tag action in the AI panel", tag);
+        tag.click();
+
+        assertNotNull("the topics panel did not open", device.wait(Until.findObject(
+                By.res(PKG, "notice_title").text("Topics in this draft")), TIMEOUT_MS));
+        String topics = device.findObject(By.res(PKG, "notice_detail")).getText();
+        assertFalse("expected at least one topic", topics.equals("No topic stood out."));
+        assertEquals("showing topics changes nothing", draft, text(R.id.field_plain));
+
+        device.findObject(By.res(PKG, "notice_primary").text("Insert as hashtags")).click();
+        assertTrue("hashtags were not inserted: " + text(R.id.field_plain), TestModels.await(
+                () -> text(R.id.field_plain).startsWith(draft + " #"), 5000));
     }
 
     @Test

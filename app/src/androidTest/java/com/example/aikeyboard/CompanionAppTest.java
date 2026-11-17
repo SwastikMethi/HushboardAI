@@ -7,7 +7,6 @@ import static androidx.test.espresso.Espresso.pressBack;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.replaceText;
 import static androidx.test.espresso.action.ViewActions.scrollTo;
-import static androidx.test.espresso.action.ViewActions.swipeUp;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
 import static androidx.test.espresso.matcher.ViewMatchers.hasDescendant;
 import static androidx.test.espresso.matcher.ViewMatchers.isDescendantOfA;
@@ -25,8 +24,10 @@ import static org.junit.Assume.assumeTrue;
 
 import android.view.View;
 
+import androidx.preference.PreferenceFragmentCompat;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
+import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
@@ -68,6 +69,15 @@ public class CompanionAppTest {
 
     private void openModels() {
         onView(withId(R.id.tab_models)).perform(click());
+    }
+
+    // Brings a settings row on screen by its key. A swipe would still be moving when the next
+    // tap lands; this asks the list itself and is settled before the test continues.
+    private void scrollToRow(String key) {
+        app.onActivity(activity -> ((PreferenceFragmentCompat) activity
+                .getSupportFragmentManager().findFragmentById(R.id.screen))
+                .scrollToPreference(key));
+        InstrumentationRegistry.getInstrumentation().waitForIdleSync();
     }
 
     private boolean setting(String key) throws InterruptedException {
@@ -136,7 +146,14 @@ public class CompanionAppTest {
         assertTrue("the model choice must survive a pause",
                 settings.latest().modelEnabled("emo"));
         assertFalse(settings.latest().modelActive("emo"));
-        onView(statusOf("emo")).check(matches(withText(R.string.status_paused)));
+        // The screen hears about the change a moment after the store does.
+        String[] status = new String[1];
+        assertTrue("the row should say Paused, but says: " + status[0], TestModels.await(() -> {
+            app.onActivity(a -> status[0] = ((android.widget.TextView) a
+                    .findViewById(R.id.model_groups).findViewWithTag("model_row_emo")
+                    .findViewById(R.id.model_status)).getText().toString());
+            return "Paused".equals(status[0]);
+        }, 5000));
     }
 
     @Test
@@ -156,7 +173,7 @@ public class CompanionAppTest {
         app = ActivityScenario.launch(MainActivity.class);
         openModels();
         onView(row("redact")).perform(scrollTo(), click());
-        onView(withId(androidx.preference.R.id.recycler_view)).perform(swipeUp());
+        scrollToRow("try_it");
 
         onView(withId(R.id.try_input)).perform(replaceText("Email me at alex@example.com"));
         onView(withId(R.id.try_run)).perform(click());
@@ -175,7 +192,7 @@ public class CompanionAppTest {
     public void thePrivacyScreenDisclosesTheLicenseCheck() {
         onView(withId(R.id.tab_settings)).perform(click());
         // Privacy sits near the end of the list; rows off screen do not exist until scrolled to.
-        onView(withId(androidx.preference.R.id.recycler_view)).perform(swipeUp());
+        scrollToRow("privacy");
         onView(withText(R.string.settings_privacy)).perform(click());
         onView(withText(containsString("License check"))).perform(scrollTo())
                 .check(matches(isDisplayed()));

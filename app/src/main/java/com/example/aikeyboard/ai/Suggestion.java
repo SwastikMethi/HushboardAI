@@ -54,6 +54,32 @@ public final class Suggestion {
         }
     }
 
+    /** The language model's best guess for a piece of text. A hint, never a translation. */
+    public static final class LanguageHint {
+        /** Language code as the model reports it, e.g. "fr". */
+        public final String language;
+        /** False for short or mixed text, where the guess must not change any behaviour. */
+        public final boolean reliable;
+
+        public LanguageHint(String language, boolean reliable) {
+            this.language = language;
+            this.reliable = reliable;
+        }
+    }
+
+    /** One topic from the topic model's fixed list. */
+    public static final class TopicTag {
+        public final String slug;
+        public final String name;
+        public final double score;
+
+        public TopicTag(String slug, String name, double score) {
+            this.slug = slug;
+            this.name = name;
+            this.score = score;
+        }
+    }
+
     /** The one thing the keyboard may draw attention to at a time. A signal, not a verdict. */
     public static final class Notice {
         public enum Kind { PRIVACY, TONE }

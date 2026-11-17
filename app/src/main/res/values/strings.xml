@@ -42,6 +42,14 @@
     <string name="ai_model_not_downloaded">Not downloaded</string>
     <string name="ai_model_crashed">Turned off after it stopped the keyboard</string>
     <string name="strip_setup_models">Set up AI models</string>
+    <string name="ai_panel_tag">Tag this draft</string>
+    <string name="ai_language_looks">Looks like %1$s</string>
+    <string name="ai_language_unsure">Not sure of the language yet</string>
+    <string name="ai_redact_uncovered">Does not cover %1$s</string>
+    <string name="topics_title">Topics in this draft</string>
+    <string name="topics_none">No topic stood out.</string>
+    <string name="topics_note">Chosen from a fixed list of topics. Nothing is changed unless you choose to.</string>
+    <string name="topics_insert">Insert as hashtags</string>
 
     <!-- Keyboard: notices, review and undo. Notices are prompts to look again, never verdicts. -->
     <string name="notice_privacy">Personal information detected</string>
@@ -216,6 +224,8 @@
     <string name="model_shapes_summary">Shape cleanup</string>
 
     <!-- Model settings -->
+    <string name="setting_gist_limit">Number of topics</string>
+    <string name="try_language_unsure">Not sure. Closest guess: %1$s</string>
     <string name="setting_emo_limit">Number of suggestions</string>
     <string name="setting_emo_skin_tone">Skin tone</string>
     <string-array name="skin_tone_labels">

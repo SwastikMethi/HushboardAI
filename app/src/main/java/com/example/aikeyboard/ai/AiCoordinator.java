@@ -5,8 +5,10 @@
 package com.example.aikeyboard.ai;
 
 import com.example.aikeyboard.ai.Suggestion.EmojiCandidate;
+import com.example.aikeyboard.ai.Suggestion.LanguageHint;
 import com.example.aikeyboard.ai.Suggestion.Notice;
 import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
+import com.example.aikeyboard.ai.Suggestion.TopicTag;
 import com.example.aikeyboard.ai.Suggestion.ToxicScores;
 import com.example.aikeyboard.core.InputEligibility.Verdict;
 import com.example.aikeyboard.data.AppSettings;
@@ -14,6 +16,7 @@ import com.example.aikeyboard.models.ModelRegistry;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -33,23 +36,50 @@ public final class AiCoordinator {
 
         /** True when AI is on but a chosen model has no files yet. */
         void onSetupNeeded(boolean needed);
+
+        /**
+         * The language hint for the current draft (null when off or not computed yet), and
+         * whether the privacy check was skipped because it does not cover that language.
+         */
+        void onLanguage(LanguageHint hint, boolean redactSkipped);
+
+        /** Topics the user asked for, for the draft they asked about. */
+        void onTopics(DraftSnapshot draft, List<TopicTag> topics);
     }
 
     private static final String EMO = "emo";
     private static final String REDACT = "redact";
     private static final String TOXIC = "toxic";
+    private static final String TONGUE = "tongue";
+    private static final String GIST = "gist";
+    private static final String[] AUTOMATIC = {EMO, REDACT, TOXIC, TONGUE};
     // Pauses after the last keystroke before each model looks. Starting values, to be tuned
     // on real devices; the suggestion-frequency setting scales them.
     private static final long EMO_PAUSE_MS = 150;
     private static final long REDACT_PAUSE_MS = 400;
     private static final long TOXIC_PAUSE_MS = 450;
+    private static final long TONGUE_PAUSE_MS = 400;
     private static final int EMO_CONTEXT_CHARS = 200;
+
+    /** What the privacy check came back with. */
+    private static final class RedactOutcome {
+        final List<SensitiveSpan> spans;
+        /** True when the check was not run because the language is outside its coverage. */
+        final boolean skippedForLanguage;
+
+        RedactOutcome(List<SensitiveSpan> spans, boolean skippedForLanguage) {
+            this.spans = spans;
+            this.skippedForLanguage = skippedForLanguage;
+        }
+    }
 
     private final Scheduler scheduler;
     private final Executor main;
     private final ModelAdapter<String, List<EmojiCandidate>> emo;
     private final ModelAdapter<String, List<SensitiveSpan>> redact;
     private final ModelAdapter<String, ToxicScores> toxic;
+    private final ModelAdapter<String, LanguageHint> tongue;
+    private final ModelAdapter<String, List<TopicTag>> gist;
     private final Predicate<String> modelReady;
     private final Listener listener;
 
@@ -61,6 +91,8 @@ public final class AiCoordinator {
     private List<EmojiCandidate> emojiFound = List.of();
     private List<SensitiveSpan> spansFound = List.of();
     private List<String> toneFound = List.of();
+    private LanguageHint languageFound;
+    private boolean redactSkipped;
     // The draft text each kind of notice was dismissed for; it stays away until that changes.
     private String privacyDismissedFor;
     private String toneDismissedFor;
@@ -69,12 +101,16 @@ public final class AiCoordinator {
             ModelAdapter<String, List<EmojiCandidate>> emo,
             ModelAdapter<String, List<SensitiveSpan>> redact,
             ModelAdapter<String, ToxicScores> toxic,
+            ModelAdapter<String, LanguageHint> tongue,
+            ModelAdapter<String, List<TopicTag>> gist,
             Predicate<String> modelReady, Listener listener) {
         this.scheduler = scheduler;
         this.main = main;
         this.emo = emo;
         this.redact = redact;
         this.toxic = toxic;
+        this.tongue = tongue;
+        this.gist = gist;
         this.modelReady = modelReady;
         this.listener = listener;
     }
@@ -118,10 +154,25 @@ public final class AiCoordinator {
         publish();
     }
 
+    /**
+     * The user asked for topics for the draft as it is now. This is the only way the topic
+     * model ever runs: typing alone never triggers it.
+     */
+    public void requestTopics() {
+        if (current == null || verdict != Verdict.ALLOWED || !usable(GIST)) return;
+        if (current.text.trim().isEmpty()) return;
+        DraftSnapshot forDraft = current;
+        String text = current.text;
+        run(GIST, 0, () -> gist.run(text, settings), List.<TopicTag>of(),
+                topics -> listener.onTopics(forDraft, topics));
+    }
+
     private void forgetResults() {
         emojiFound = List.of();
         spansFound = List.of();
         toneFound = List.of();
+        languageFound = null;
+        redactSkipped = false;
     }
 
     private Notice notice() {
@@ -134,6 +185,7 @@ public final class AiCoordinator {
         int limit = settings.integer(
                 AppSettings.modelSettingKey(EMO, ModelRegistry.EMO_LIMIT), 3);
         listener.onSuggestions(SuggestionPolicy.emoji(emojiFound, limit), notice());
+        listener.onLanguage(languageFound, redactSkipped);
     }
 
     private void analyse() {
@@ -142,28 +194,47 @@ public final class AiCoordinator {
             listener.onSetupNeeded(false);
             return;
         }
-        boolean missing = false;
-        for (String id : new String[] {EMO, REDACT, TOXIC}) {
+        boolean missing = settings.modelActive(GIST) && !modelReady.test(GIST);
+        for (String id : AUTOMATIC) {
             missing |= settings.modelActive(id) && !modelReady.test(id);
         }
         listener.onSetupNeeded(missing);
-        if (current.text.trim().isEmpty()) return;
+        String text = current.text;
+        if (text.trim().isEmpty()) return;
+        AppSettings under = settings;
+        boolean languageHints = usable(TONGUE);
 
         if (usable(EMO)) {
             // Emoji fit the last thing said, so only recent text before the cursor is used.
             String before = current.textBeforeCursor();
             String recent = before.substring(Math.max(0, before.length() - EMO_CONTEXT_CHARS));
             if (!recent.trim().isEmpty()) {
-                run(EMO, EMO_PAUSE_MS, emo, recent, List.of(), found -> emojiFound = found);
+                run(EMO, EMO_PAUSE_MS, () -> emo.run(recent, under), List.<EmojiCandidate>of(),
+                        found -> emojiFound = found);
             }
         }
+        if (languageHints) {
+            run(TONGUE, TONGUE_PAUSE_MS, () -> tongue.run(text, under), (LanguageHint) null,
+                    hint -> languageFound = hint);
+        }
         if (usable(REDACT)) {
-            run(REDACT, REDACT_PAUSE_MS, redact, current.text, List.of(),
-                    found -> spansFound = found);
+            run(REDACT, REDACT_PAUSE_MS, () -> {
+                // A confident hint that the text is in a language the privacy check does
+                // not cover means: do not run it, and say so. An unsure hint changes nothing.
+                LanguageHint hint = languageHints ? tongue.run(text, under) : null;
+                if (hint != null && hint.reliable
+                        && !RedactCategories.coversLanguage(hint.language)) {
+                    return new RedactOutcome(List.of(), true);
+                }
+                return new RedactOutcome(redact.run(text, under), false);
+            }, new RedactOutcome(List.of(), false), outcome -> {
+                spansFound = outcome.spans;
+                redactSkipped = outcome.skippedForLanguage;
+            });
         }
         if (usable(TOXIC)) {
-            run(TOXIC, TOXIC_PAUSE_MS, toxic, current.text, null, scores -> toneFound =
-                    scores == null ? List.of()
+            run(TOXIC, TOXIC_PAUSE_MS, () -> toxic.run(text, under), (ToxicScores) null,
+                    scores -> toneFound = scores == null ? List.of()
                             : ToxicPolicy.flagged(scores.scores, scores.thresholds, settings));
         }
     }
@@ -174,15 +245,15 @@ public final class AiCoordinator {
         return settings.modelActive(modelId) && modelReady.test(modelId);
     }
 
-    private <O> void run(String modelId, long pauseMs, ModelAdapter<String, O> adapter,
-            String text, O onFailure, Consumer<O> keep) {
+    private <O> void run(String key, long pauseMs, Callable<O> work, O onFailure,
+            Consumer<O> keep) {
         DraftSnapshot forDraft = current;
         AppSettings underSettings = settings;
         long pause = (long) (pauseMs * settings.debounceScale());
-        scheduler.schedule(modelId, pause, () -> {
+        scheduler.schedule(key, pause, () -> {
             O result;
             try {
-                result = adapter.run(text, underSettings);
+                result = work.call();
             } catch (Exception e) {
                 result = onFailure; // a failing model shows nothing; typing is unaffected
             }

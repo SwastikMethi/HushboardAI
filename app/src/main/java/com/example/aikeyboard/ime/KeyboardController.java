@@ -21,8 +21,11 @@ import com.example.aikeyboard.ai.DraftSnapshot;
 import com.example.aikeyboard.ai.InferenceScheduler;
 import com.example.aikeyboard.ai.NoticeText;
 import com.example.aikeyboard.ai.RedactionPlan;
+import com.example.aikeyboard.ai.Suggestion.LanguageHint;
 import com.example.aikeyboard.ai.Suggestion.Notice;
 import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
+import com.example.aikeyboard.ai.Suggestion.TopicTag;
+import com.example.aikeyboard.ai.SuggestionPolicy;
 import com.example.aikeyboard.core.InputEligibility;
 import com.example.aikeyboard.core.InputEligibility.Verdict;
 import com.example.aikeyboard.core.TextEdit;
@@ -54,7 +57,7 @@ public final class KeyboardController implements KeyGridView.Listener,
     private static final int DRAFT_BEFORE = 1000;
     private static final int DRAFT_AFTER = 200;
     // Models that act while typing, in the order the AI panel lists them.
-    private static final String[] PANEL_MODELS = {"emo", "redact", "toxic"};
+    private static final String[] PANEL_MODELS = {"emo", "redact", "toxic", "tongue", "gist"};
 
     /** What the strip is showing right now, which decides what its slots do. */
     private enum Strip { EMPTY, WORDS, UNDO, NOTICE, EMOJI, MESSAGE, SETUP }
@@ -87,6 +90,12 @@ public final class KeyboardController implements KeyGridView.Listener,
     // Session-local only: gone when the field loses the keyboard, never stored.
     private Notice reviewing;
     private String reviewMessage;
+    // Topics the user asked for, with the draft they were computed from. Non-null while the
+    // topics panel is open.
+    private List<TopicTag> topics;
+    private DraftSnapshot topicsFor;
+    private LanguageHint language;
+    private boolean redactSkipped;
     private List<TextEdit> undo = List.of();
     private String stripMessage;
 
@@ -99,7 +108,7 @@ public final class KeyboardController implements KeyGridView.Listener,
         this.settings = app.settings.latest();
         coordinator = new AiCoordinator(new InferenceScheduler(app.timer, app.inference),
                 ContextCompat.getMainExecutor(service), app.emo, app.redact, app.toxic,
-                app.models::isReady, this);
+                app.tongue, app.gist, app.models::isReady, this);
         coordinator.onSettings(settings);
     }
 
@@ -129,9 +138,10 @@ public final class KeyboardController implements KeyGridView.Listener,
 
         views.noticePanel.noticeBack.setOnClickListener(v -> closeReview());
         views.noticePanel.noticeDismiss.setOnClickListener(v -> {
-            coordinator.dismissNotice();
+            if (reviewing != null) coordinator.dismissNotice();
             closeReview();
         });
+        views.aiPanel.aiPanelTag.setOnClickListener(v -> coordinator.requestTopics());
         views.noticePanel.noticePrimary.setOnClickListener(v -> onReviewAction());
         buildPanelRows();
         render();
@@ -203,6 +213,7 @@ public final class KeyboardController implements KeyGridView.Listener,
         session.bumpGeneration();
         // Whatever was being reviewed was for the text as it was; it may not be applied now.
         reviewing = null;
+        topics = null;
         readEditor();
         render();
     }
@@ -216,6 +227,7 @@ public final class KeyboardController implements KeyGridView.Listener,
     // Drafts, proposals and the undo record live only as long as the field has the keyboard.
     private void forgetSessionState() {
         reviewing = null;
+        topics = null;
         reviewMessage = null;
         undo = List.of();
         stripMessage = null;
@@ -262,6 +274,22 @@ public final class KeyboardController implements KeyGridView.Listener,
         renderStrip();
     }
 
+    @Override
+    public void onLanguage(LanguageHint hint, boolean skipped) {
+        language = hint;
+        redactSkipped = skipped;
+        if (views != null && aiPanelShown) renderAiPanel();
+    }
+
+    @Override
+    public void onTopics(DraftSnapshot draft, List<TopicTag> found) {
+        topics = found;
+        topicsFor = draft;
+        reviewMessage = null;
+        aiPanelShown = false;
+        render();
+    }
+
     private void render() {
         if (views == null) return;
         views.keys.setRows(KeyboardLayout.rows(layer));
@@ -274,7 +302,7 @@ public final class KeyboardController implements KeyGridView.Listener,
         renderStrip();
 
         views.aiToggle.setOn(settings.aiEnabled());
-        boolean reviewShown = reviewing != null;
+        boolean reviewShown = reviewing != null || topics != null;
         boolean overlay = aiPanelShown || reviewShown;
         // Likewise INVISIBLE: the typing area keeps giving the panels their height.
         views.typingArea.setVisibility(overlay ? View.INVISIBLE : View.VISIBLE);
@@ -330,10 +358,30 @@ public final class KeyboardController implements KeyGridView.Listener,
             boolean crashed = settings.bool(AppSettings.modelCrashedKey(modelId), false);
             row.aiModelSwitch.setVisibility(ready ? View.VISIBLE : View.GONE);
             row.aiModelSwitch.setChecked(settings.modelEnabled(modelId));
-            row.aiModelStatus.setVisibility(!ready || crashed ? View.VISIBLE : View.GONE);
-            row.aiModelStatus.setText(ready ? R.string.ai_model_crashed
-                    : R.string.ai_model_not_downloaded);
+            String status = !ready ? service.getString(R.string.ai_model_not_downloaded)
+                    : crashed ? service.getString(R.string.ai_model_crashed)
+                    : languageStatus(modelId);
+            row.aiModelStatus.setVisibility(status == null ? View.GONE : View.VISIBLE);
+            row.aiModelStatus.setText(status);
         }
+        // Topics are computed only on this tap, and only where AI may run at all.
+        boolean canTag = verdict == Verdict.ALLOWED && settings.modelActive("gist")
+                && app.models.isReady("gist");
+        views.aiPanel.aiPanelTag.setVisibility(canTag ? View.VISIBLE : View.GONE);
+    }
+
+    // What the language hint means for a row, or null. The hint is a guess, shown as one.
+    private String languageStatus(String modelId) {
+        if (language == null || !settings.modelActive(modelId)) return null;
+        String name = new Locale(language.language).getDisplayLanguage();
+        if ("tongue".equals(modelId)) {
+            return language.reliable ? service.getString(R.string.ai_language_looks, name)
+                    : service.getString(R.string.ai_language_unsure);
+        }
+        if ("redact".equals(modelId) && redactSkipped) {
+            return service.getString(R.string.ai_redact_uncovered, name);
+        }
+        return null;
     }
 
     // Says why AI is unavailable in this field, without ever showing the field's contents.
@@ -364,6 +412,7 @@ public final class KeyboardController implements KeyGridView.Listener,
 
     private void closeReview() {
         reviewing = null;
+        topics = null;
         reviewMessage = null;
         render();
     }
@@ -374,7 +423,33 @@ public final class KeyboardController implements KeyGridView.Listener,
                 ModelRegistry.REDACT_MODE_WARN));
     }
 
+    private void renderTopics() {
+        StringBuilder detail = new StringBuilder();
+        for (TopicTag topic : topics) {
+            if (detail.length() > 0) detail.append('\n');
+            detail.append(topic.name);
+        }
+        String note = service.getString(R.string.topics_note);
+        if (topicsFor.partial) {
+            note = service.getString(R.string.review_scope_partial) + " " + note;
+        }
+        views.noticePanel.noticeTitle.setText(R.string.topics_title);
+        views.noticePanel.noticeDetail.setText(
+                topics.isEmpty() ? service.getString(R.string.topics_none) : detail);
+        views.noticePanel.noticeNote.setText(note);
+        views.noticePanel.noticeMessage.setText(reviewMessage);
+        views.noticePanel.noticeMessage.setVisibility(
+                reviewMessage == null ? View.GONE : View.VISIBLE);
+        views.noticePanel.noticePrimary.setVisibility(
+                topics.isEmpty() ? View.GONE : View.VISIBLE);
+        views.noticePanel.noticePrimary.setText(R.string.topics_insert);
+    }
+
     private void renderReview() {
+        if (reviewing == null) {
+            renderTopics();
+            return;
+        }
         boolean privacy = reviewing.kind == Notice.Kind.PRIVACY;
         StringBuilder detail = new StringBuilder();
         if (privacy) {
@@ -415,7 +490,19 @@ public final class KeyboardController implements KeyGridView.Listener,
     }
 
     private void onReviewAction() {
-        if (reviewing == null || session == null) return;
+        if (session == null) return;
+        if (reviewing == null) {
+            if (topics == null) return;
+            // Tags go in at the cursor, and only if the draft is still the one that was tagged.
+            if (topicsFor.sameMoment(lastSnapshot)) {
+                editor.commitText(SuggestionPolicy.hashtags(topics));
+                topics = null;
+            } else {
+                reviewMessage = service.getString(R.string.review_changed);
+            }
+            render();
+            return;
+        }
         if (reviewing.draft.offset < 0) {
             ClipboardManager clipboard = service.getSystemService(ClipboardManager.class);
             clipboard.setPrimaryClip(ClipData.newPlainText(

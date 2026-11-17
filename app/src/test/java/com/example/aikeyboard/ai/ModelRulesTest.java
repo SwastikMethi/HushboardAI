@@ -65,6 +65,24 @@ public class ModelRulesTest {
         assertNull("organisations are not offered", RedactCategories.categoryOf("ORG"));
     }
 
+    @Test
+    public void redactCoversEuropeanLanguagesOnly() {
+        for (String covered : new String[] {"en", "hu", "de", "el", "bg", "nb", "is"}) {
+            assertTrue(covered, RedactCategories.coversLanguage(covered));
+        }
+        for (String notCovered : new String[] {"ja", "hi", "zh", "ar", "ru"}) {
+            assertTrue(notCovered, !RedactCategories.coversLanguage(notCovered));
+        }
+    }
+
+    @Test
+    public void topicsBecomeHashtagsFromTheirFixedSlugs() {
+        assertEquals(" #fooddrink #travel", SuggestionPolicy.hashtags(Arrays.asList(
+                new Suggestion.TopicTag("food-drink", "Food & Drink", 0.8),
+                new Suggestion.TopicTag("travel", "Travel", 0.4))));
+        assertEquals("", SuggestionPolicy.hashtags(List.of()));
+    }
+
     private static final Map<String, Double> MODEL_THRESHOLDS =
             Map.of("hateful", 0.46, "abusive", 0.44, "threat", 0.35);
 

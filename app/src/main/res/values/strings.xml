@@ -393,4 +393,26 @@
     <string name="shape_heart">Heart</string>
     <string name="shape_cloud">Cloud</string>
     <string name="shape_other">Drawing</string>
+
+    <!-- Kids Chat: a demo chat for children, two pretend users on one phone -->
+    <string name="chat_title">Kids Chat</string>
+    <string name="chat_who">Who is typing</string>
+    <string name="chat_user_one" translatable="false">Mia</string>
+    <string name="chat_user_two" translatable="false">Leo</string>
+    <string name="chat_empty">Say hi! Every message is checked on this phone before it is sent.</string>
+    <string name="chat_hint">Type a message</string>
+    <string name="chat_send">Send</string>
+    <string name="chat_checking">Checking the message</string>
+    <string name="chat_said">%1$s: %2$s</string>
+    <string name="chat_unkind">This message has unkind words. Change it to send.</string>
+    <string name="chat_unchecked">This message couldn\'t be checked, so it wasn\'t sent. Try again.</string>
+    <string name="chat_personal_title">This message has personal details</string>
+    <string name="chat_personal_typed_label">You typed</string>
+    <string name="chat_personal_masked_label">Safer to send</string>
+    <string name="chat_send_masked">Send like this</string>
+    <string name="chat_change">Change it</string>
+    <string name="chat_send_written">Send as written</string>
+    <string name="chat_locked">Kids Chat checks every message on this phone before it is sent. It needs three small models first: for unkind words, personal details and pictures.</string>
+    <string name="chat_download">Download the checks</string>
+    <string name="chat_downloading">Downloading the checks…</string>
 </resources>

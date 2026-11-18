@@ -28,6 +28,22 @@
             </intent-filter>
         </activity>
 
+        <!-- Kids Chat: a demo chat for children, with two pretend users on one phone. It has
+             its own icon on the home screen and its own task, so it opens and sits in the
+             recent-apps list like an app of its own. -->
+        <activity
+            android:name=".ui.chat.ChatActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_chat"
+            android:label="@string/chat_title"
+            android:taskAffinity="${applicationId}.chat"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <!-- Asks for the microphone when the user taps record; the keyboard cannot ask itself.
              No task affinity, so that when the keyboard opens it over another app, closing
              it returns to that app and not to this app's own screens. -->

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kids Chat icon foreground: a speech bubble with three dots. The middle 66dp of the
+     108dp canvas is the part every launcher shows. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M40,36h28a8,8 0 0,1 8,8v14a8,8 0 0,1 -8,8H50l-10,9v-9a8,8 0 0,1 -8,-8V44a8,8 0 0,1 8,-8z"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineJoin="round"
+        android:strokeWidth="3" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M44,51h0.01M54,51h0.01M64,51h0.01"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round"
+        android:strokeWidth="4.5" />
+</vector>

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Words the kids' chat never sends, whatever the tone model says: that model judges
+     abusive, hateful and threatening wording and has no category for swearing. Lower case,
+     one spelling per entry, matched as whole words only. Add words here; nothing else needs
+     to change. -->
+<resources>
+    <string-array name="chat_blocked_words" translatable="false">
+        <item>arse</item>
+        <item>arsehole</item>
+        <item>ass</item>
+        <item>asses</item>
+        <item>asshole</item>
+        <item>assholes</item>
+        <item>bastard</item>
+        <item>bastards</item>
+        <item>bitch</item>
+        <item>bitches</item>
+        <item>bitchy</item>
+        <item>bollocks</item>
+        <item>bullshit</item>
+        <item>cock</item>
+        <item>cocks</item>
+        <item>cunt</item>
+        <item>cunts</item>
+        <item>dick</item>
+        <item>dickhead</item>
+        <item>dicks</item>
+        <item>douche</item>
+        <item>douchebag</item>
+        <item>dumbass</item>
+        <item>fck</item>
+        <item>fuck</item>
+        <item>fucked</item>
+        <item>fucker</item>
+        <item>fuckers</item>
+        <item>fucking</item>
+        <item>fucks</item>
+        <item>fuk</item>
+        <item>jackass</item>
+        <item>motherfucker</item>
+        <item>motherfuckers</item>
+        <item>piss</item>
+        <item>pissed</item>
+        <item>prick</item>
+        <item>pricks</item>
+        <item>pussy</item>
+        <item>shit</item>
+        <item>shits</item>
+        <item>shitting</item>
+        <item>shitty</item>
+        <item>slut</item>
+        <item>sluts</item>
+        <item>stfu</item>
+        <item>twat</item>
+        <item>wanker</item>
+        <item>wankers</item>
+        <item>whore</item>
+        <item>whores</item>
+        <item>wtf</item>
+    </string-array>
+</resources>

@@ -1,5 +1,5 @@
-// What the kids' chat checks before anything is sent: unkind wording, personal details and
-// nudity. The rules are fixed here and do not follow the keyboard's settings, so they cannot
+// What the kids' chat checks before anything is sent: unkind wording, a language it cannot
+// read, personal details and nudity. The rules are fixed here and do not follow the keyboard's settings, so they cannot
 // be loosened from the Settings tab. No screen code.
 package com.example.aikeyboard.ui.chat;
 
@@ -9,6 +9,7 @@ import android.graphics.Bitmap;
 import com.example.aikeyboard.AppContainer;
 import com.example.aikeyboard.R;
 import com.example.aikeyboard.ai.ModelAdapter;
+import com.example.aikeyboard.ai.Suggestion.LanguageHint;
 import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
 import com.example.aikeyboard.ai.Suggestion.ToxicScores;
 import com.example.aikeyboard.ai.ToxicPolicy;
@@ -42,6 +43,7 @@ public final class ChatChecks {
             "email", "email", "phone", "phone number", "payment", "bank number",
             "ids", "ID number", "names", "name", "addresses", "address", "online", "link");
     private static final String HIDDEN_OTHER = "hidden";
+    private static final String ENGLISH = "en";
 
     /** What may happen to a typed message. */
     public enum Outcome {
@@ -51,6 +53,8 @@ public final class ChatChecks {
         UNKIND,
         /** Personal details found: the sender is shown the masked version first. */
         PERSONAL,
+        /** Surely not English, the only language the checks were tried on: it is not sent. */
+        OTHER_LANGUAGE,
         /** A check could not run: it is not sent. */
         UNCHECKED
     }
@@ -69,25 +73,29 @@ public final class ChatChecks {
     private final ModelAdapter<String, ToxicScores> toxic;
     private final ModelAdapter<String, List<SensitiveSpan>> redact;
     private final ModelAdapter<Bitmap, Sensitivity> moderator;
+    private final ModelAdapter<String, LanguageHint> tongue;
     private final Set<String> blockedWords;
     private final AppSettings rules;
 
     /** @param blockedWords lower-case words that are never sent, whatever the model says */
     public ChatChecks(ModelAdapter<String, ToxicScores> toxic,
             ModelAdapter<String, List<SensitiveSpan>> redact,
-            ModelAdapter<Bitmap, Sensitivity> moderator, Set<String> blockedWords,
+            ModelAdapter<Bitmap, Sensitivity> moderator,
+            ModelAdapter<String, LanguageHint> tongue, Set<String> blockedWords,
             AppSettings rules) {
         this.toxic = toxic;
         this.redact = redact;
         this.moderator = moderator;
+        this.tongue = tongue;
         this.blockedWords = blockedWords;
         this.rules = rules;
     }
 
     /** The checks over the app's own models and its built-in word list. */
     public static ChatChecks with(AppContainer app, Context context, AppSettings rules) {
-        return new ChatChecks(app.toxic, app.redact, app.moderator, new HashSet<>(Arrays.asList(
-                context.getResources().getStringArray(R.array.chat_blocked_words))), rules);
+        return new ChatChecks(app.toxic, app.redact, app.moderator, app.tongue,
+                new HashSet<>(Arrays.asList(context.getResources()
+                        .getStringArray(R.array.chat_blocked_words))), rules);
     }
 
     /**
@@ -95,6 +103,7 @@ public final class ChatChecks {
      * details cover addresses and links on top of the keyboard's defaults (email, phone,
      * payment, IDs); names stay off, or nearly every message ("hi Leo") would be stopped and
      * the card would be tapped past unread. The picture check keeps the model's own line.
+     * Up to four emoji ideas are asked for, one more than the keyboard's default.
      */
     public static AppSettings kidRules() {
         Map<String, Object> rules = new HashMap<>();
@@ -102,6 +111,7 @@ public final class ChatChecks {
                 ModelRegistry.SENSITIVITY_MORE);
         rules.put(AppSettings.modelSettingKey("redact", "cat_addresses"), true);
         rules.put(AppSettings.modelSettingKey("redact", "cat_online"), true);
+        rules.put(AppSettings.modelSettingKey("emo", ModelRegistry.EMO_LIMIT), 4);
         return new AppSettings(0, rules);
     }
 
@@ -111,6 +121,13 @@ public final class ChatChecks {
         if (text.length() > MESSAGE_LIMIT) return new TextVerdict(Outcome.UNCHECKED, null);
         if (hasBlockedWord(text)) return new TextVerdict(Outcome.UNKIND, null);
         try {
+            // The word list and the models were only tried on English. A message the
+            // language model is sure is in another language cannot be vouched for; a mere
+            // guess, as on short or mixed text, changes nothing.
+            LanguageHint language = tongue.run(text, rules);
+            if (language.reliable && !ENGLISH.equals(language.language)) {
+                return new TextVerdict(Outcome.OTHER_LANGUAGE, null);
+            }
             ToxicScores tone = toxic.run(text, rules);
             if (!ToxicPolicy.flagged(tone.scores, tone.thresholds, rules).isEmpty()) {
                 return new TextVerdict(Outcome.UNKIND, null);

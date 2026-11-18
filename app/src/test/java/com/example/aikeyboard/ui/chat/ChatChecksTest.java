@@ -10,6 +10,7 @@ import android.graphics.Bitmap;
 
 import com.example.aikeyboard.ai.ModelAdapter;
 import com.example.aikeyboard.ai.RedactCategories;
+import com.example.aikeyboard.ai.Suggestion.LanguageHint;
 import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
 import com.example.aikeyboard.ai.Suggestion.ToxicScores;
 import com.example.aikeyboard.data.AppSettings;
@@ -31,8 +32,38 @@ public class ChatChecksTest {
     private final Stub<String, List<SensitiveSpan>> redact = new Stub<>("redact", List.of());
     private final Stub<Bitmap, Sensitivity> moderator =
             new Stub<>("moderator", new Sensitivity(0.02, false));
-    private final ChatChecks checks = new ChatChecks(toxic, redact, moderator,
+    private final Stub<String, LanguageHint> tongue =
+            new Stub<>("tongue", new LanguageHint("en", true));
+    private final ChatChecks checks = new ChatChecks(toxic, redact, moderator, tongue,
             Set.of("darn"), ChatChecks.kidRules());
+
+    @Test
+    public void aMessageThatIsSurelyNotEnglishIsNotSent() {
+        tongue.result = new LanguageHint("hi", true);
+
+        assertEquals(Outcome.OTHER_LANGUAGE, checks.text("bahut sundar ghar hai").outcome);
+    }
+
+    @Test
+    public void aGuessAtAnotherLanguageIsNotEnoughToRefuseAMessage() {
+        tongue.result = new LanguageHint("fr", false);
+
+        assertEquals(Outcome.CLEAR, checks.text("Bonjour Leo").outcome);
+    }
+
+    @Test
+    public void aListedWordIsRefusedWhateverTheLanguage() {
+        tongue.result = new LanguageHint("fr", true);
+
+        assertEquals(Outcome.UNKIND, checks.text("darn, c'est dommage").outcome);
+    }
+
+    @Test
+    public void aMessageWhoseLanguageCouldNotBeToldIsNotSent() {
+        tongue.fail = true;
+
+        assertEquals(Outcome.UNCHECKED, checks.text("see you after school").outcome);
+    }
 
     @Test
     public void aListedWordIsRefusedWhateverItsCaseOrPunctuation() {

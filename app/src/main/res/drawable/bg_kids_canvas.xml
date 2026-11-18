@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kids Chat: the paper of the drawing pad. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="16dp" />
+    <solid android:color="@color/kids_card" />
+    <stroke
+        android:width="2dp"
+        android:color="@color/kids_sky" />
+</shape>

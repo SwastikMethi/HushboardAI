@@ -23,8 +23,10 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.Spanned;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -37,6 +39,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.example.aikeyboard.ai.ModelAdapter;
+import com.example.aikeyboard.ai.Suggestion.LanguageHint;
 import com.example.aikeyboard.ai.Suggestion.ToxicScores;
 import com.example.aikeyboard.ai.ToxicPolicy;
 import com.example.aikeyboard.data.AppSettings;
@@ -47,6 +50,7 @@ import com.example.aikeyboard.ui.chat.ChatActivity;
 import com.example.aikeyboard.ui.chat.ChatChecks;
 import com.example.aikeyboard.ui.chat.ChatChecks.Outcome;
 import com.example.aikeyboard.ui.chat.ChatChecks.TextVerdict;
+import com.example.aikeyboard.ui.chat.KidsDrawView;
 import com.example.aikeyboard.ui.chat.LockChipSpan;
 
 import org.junit.After;
@@ -73,6 +77,8 @@ public class KidsChatTest {
     private static final String THREAT = "I will find you and hurt you, you worthless idiot";
     private static final String WITH_EMAIL = "My email is mia@example.com";
     private static final String MASKED_EMAIL = "My email is [email]";
+    // "After school today I went to the park to play football", in Hindi.
+    private static final String IN_HINDI = "आज स्कूल के बाद मैं पार्क में फुटबॉल खेलने गया था";
 
     // What the tone model is asked about when measuring, strongest first. None holds a slur.
     private static final String[] SAMPLES = {
@@ -159,6 +165,11 @@ public class KidsChatTest {
 
         assertEquals(Outcome.PERSONAL, verdict.outcome);
         assertTrue(verdict.masked, verdict.masked.endsWith(MASKED_EMAIL));
+    }
+
+    @Test
+    public void aMessageInHindiIsToldApartAndNotSent() throws Exception {
+        assertEquals(Outcome.OTHER_LANGUAGE, check(IN_HINDI).outcome);
     }
 
     // ---- The screen ----
@@ -383,7 +394,8 @@ public class KidsChatTest {
         openChat();
         Stub<String, ToxicScores> toxic = new Stub<>("toxic", null);
         toxic.fail = true;
-        use(new ChatChecks(toxic, app.redact, app.moderator, Set.of(), ChatChecks.kidRules()));
+        use(new ChatChecks(toxic, app.redact, app.moderator, app.tongue, Set.of(),
+                ChatChecks.kidRules()));
 
         say("See you tomorrow");
 
@@ -399,7 +411,8 @@ public class KidsChatTest {
         openChat();
         Stub<Bitmap, Sensitivity> moderator = new Stub<>("moderator", null);
         moderator.fail = true;
-        use(new ChatChecks(app.toxic, app.redact, moderator, Set.of(), ChatChecks.kidRules()));
+        use(new ChatChecks(app.toxic, app.redact, moderator, app.tongue, Set.of(),
+                ChatChecks.kidRules()));
 
         pick(Uri.fromFile(harmless()));
 
@@ -416,7 +429,8 @@ public class KidsChatTest {
                 Map.of("hateful", 0.0, "abusive", 0.0, "threat", 0.0),
                 Map.of("hateful", 0.5, "abusive", 0.5, "threat", 0.5)));
         toxic.hold = new CountDownLatch(1);
-        use(new ChatChecks(toxic, app.redact, app.moderator, Set.of(), ChatChecks.kidRules()));
+        use(new ChatChecks(toxic, app.redact, app.moderator, app.tongue, Set.of(),
+                ChatChecks.kidRules()));
 
         say("See you tomorrow");
         // The check is still running: the field is open and something else is typed.
@@ -462,6 +476,98 @@ public class KidsChatTest {
         }
     }
 
+    @Test
+    public void aMessageInAnotherLanguageIsNotSentAndTheHelperSaysWhy() throws Exception {
+        openChat();
+
+        say(IN_HINDI);
+
+        assertTrue("no tip; notice: " + shown(R.id.chat_notice), TestModels.await(
+                () -> shown(R.id.chat_notice).equals(
+                        context.getString(R.string.chat_other_language)), RUN_MS));
+        assertEquals(context.getString(R.string.chat_other_language_more),
+                shown(R.id.chat_notice_more));
+        assertEquals(0, sent());
+        assertEquals(IN_HINDI, shown(R.id.chat_input));
+    }
+
+    @Test
+    public void emojiIdeasFollowWhatIsTypedAndATapAddsOneWithoutSending() throws Exception {
+        TestModels.ensureInstalled("emo");
+        openChat();
+        String typed = "I love playing football with my friends";
+
+        onView(withId(R.id.chat_input)).perform(replaceText(typed));
+
+        assertTrue("no emoji ideas appeared",
+                TestModels.await(() -> !shown(R.id.chat_idea_one).isEmpty(), RUN_MS));
+        String idea = shown(R.id.chat_idea_one);
+        onView(withId(R.id.chat_idea_one)).perform(click());
+        assertEquals(typed + idea, shown(R.id.chat_input));
+        assertEquals("a tap on an idea sends nothing", 0, sent());
+    }
+
+    @Test
+    public void aDrawingIsTidiedAndSentLikeAPicture() throws Exception {
+        TestModels.ensureInstalled("shapes");
+        openChat();
+        onView(withId(R.id.chat_draw)).perform(click());
+        onView(withId(R.id.chat_pad)).check(matches(isDisplayed()));
+        onView(withId(R.id.chat_send_drawing)).check(matches(not(isEnabled())));
+
+        drawACircle();
+
+        String tidied = context.getString(R.string.chat_pad_tidied,
+                context.getString(R.string.chat_shape_round));
+        assertTrue("the circle was not tidied; hint: " + shown(R.id.chat_pad_hint),
+                TestModels.await(() -> shown(R.id.chat_pad_hint).equals(tidied), RUN_MS));
+        onView(withId(R.id.chat_send_drawing)).perform(click());
+
+        assertTrue("not sent; notice: " + shown(R.id.chat_notice),
+                TestModels.await(() -> sent() == 1, RUN_MS));
+        assertTrue("the message shows no picture", showsPicture(0));
+        onView(withId(R.id.chat_pad)).check(matches(not(isDisplayed())));
+        onView(withId(R.id.chat_input)).check(matches(isDisplayed()));
+    }
+
+    @Test
+    public void undoTakesOffTheLastStrokeAndStartAgainEmptiesThePad() {
+        openChat();
+        onView(withId(R.id.chat_draw)).perform(click());
+        drawALine(0.2f);
+        drawALine(0.6f);
+        assertEquals(2, strokes());
+
+        onView(withId(R.id.chat_undo)).perform(click());
+        assertEquals(1, strokes());
+
+        onView(withId(R.id.chat_clear)).perform(click());
+        assertEquals(0, strokes());
+        onView(withId(R.id.chat_send_drawing)).check(matches(not(isEnabled())));
+    }
+
+    @Test
+    public void gettingReadyAlsoFetchesTheEmojiAndShapeModels() throws Exception {
+        assumeTrue("needs network to put the models back", TestModels.online());
+        app.models.delete("moderator");
+        app.models.delete("shapes");
+        try {
+            assertTrue(TestModels.awaitStatus("shapes",
+                    status -> status.state == AssetState.NOT_INSTALLED, 30_000));
+            assertTrue(TestModels.awaitStatus("moderator",
+                    status -> status.state == AssetState.NOT_INSTALLED, 30_000));
+            openChat();
+
+            onView(withId(R.id.chat_download)).perform(click());
+
+            assertTrue("the shape model was not fetched", TestModels.awaitStatus("shapes",
+                    status -> status.state == AssetState.READY, RUN_MS));
+        } finally {
+            TestModels.ensureInstalled("moderator");
+            TestModels.ensureInstalled("shapes");
+        }
+    }
+
     private void openChat() {
         chat = ActivityScenario.launch(ChatActivity.class);
         getInstrumentation().waitForIdleSync();
@@ -495,6 +601,53 @@ public class KidsChatTest {
             RecyclerView list = activity.findViewById(R.id.chat_messages);
             if (list.getAdapter() != null) count[0] = list.getAdapter().getItemCount();
         });
+        return count[0];
+    }
+
+    /** A finger drawing a circle in the middle of the pad. */
+    private void drawACircle() {
+        chat.onActivity(activity -> {
+            View pad = activity.findViewById(R.id.chat_canvas);
+            float radius = Math.min(pad.getWidth(), pad.getHeight()) * 0.3f;
+            float[][] points = new float[49][];
+            for (int i = 0; i <= 48; i++) {
+                double angle = 2 * Math.PI * i / 48;
+                points[i] = new float[] {pad.getWidth() / 2f + radius * (float) Math.cos(angle),
+                        pad.getHeight() / 2f + radius * (float) Math.sin(angle)};
+            }
+            touch(pad, points);
+        });
+    }
+
+    /** A finger drawing a line across the pad, at a height given as a share of the pad's. */
+    private void drawALine(float down) {
+        chat.onActivity(activity -> {
+            View pad = activity.findViewById(R.id.chat_canvas);
+            float[][] points = new float[17][];
+            for (int i = 0; i <= 16; i++) {
+                points[i] = new float[] {pad.getWidth() * (0.2f + 0.6f * i / 16),
+                        pad.getHeight() * down};
+            }
+            touch(pad, points);
+        });
+    }
+
+    private static void touch(View view, float[][] points) {
+        long start = SystemClock.uptimeMillis();
+        for (int i = 0; i < points.length; i++) {
+            int action = i == 0 ? MotionEvent.ACTION_DOWN
+                    : i == points.length - 1 ? MotionEvent.ACTION_UP : MotionEvent.ACTION_MOVE;
+            MotionEvent event = MotionEvent.obtain(start, start + i * 10L, action,
+                    points[i][0], points[i][1], 0);
+            view.dispatchTouchEvent(event);
+            event.recycle();
+        }
+    }
+
+    private int strokes() {
+        int[] count = {0};
+        chat.onActivity(activity -> count[0] =
+                ((KidsDrawView) activity.findViewById(R.id.chat_canvas)).strokeCount());
         return count[0];
     }
 
@@ -652,6 +805,38 @@ public class KidsChatTest {
             Log.i(TAG, "place " + (i + 1) + ": " + line);
             Bundle status = new Bundle();
             status.putString("chat.place" + (i + 1), line);
+            getInstrumentation().sendStatus(0, status);
+        }
+    }
+
+    // Measurement, not a check: which messages the language rule stops. Run with
+    // -e chatprobe true.
+    @Test
+    public void whatTheLanguageRuleMakesOfTheSamples() throws Exception {
+        assumeTrue("measurement only: pass -e chatprobe true", "true".equals(
+                InstrumentationRegistry.getArguments().getString("chatprobe")));
+        String[] samples = {
+                "Do you want to play football after school?",
+                "ok",
+                "Hahaha",
+                "Hi Leo",
+                "Pizza party at Aarav's house",
+                IN_HINDI,
+                "Aaj school ke baad park mein football khelne chalein?",
+                "Kal milte hain, bye",
+                "Tu pagal hai kya",
+                "Je suis allé au parc avec mes amis après l'école",
+                "Hola amigo, ¿quieres jugar al fútbol después de la escuela?",
+                "Guten Morgen",
+        };
+        for (int i = 0; i < samples.length; i++) {
+            String sample = samples[i];
+            LanguageHint hint = app.tongue.run(sample, ChatChecks.kidRules());
+            String line = "language=" + hint.language + " sure=" + hint.reliable
+                    + " chat=" + check(sample).outcome;
+            Log.i(TAG, "language " + (i + 1) + ": " + line);
+            Bundle status = new Bundle();
+            status.putString("chat.language" + (i + 1), line);
             getInstrumentation().sendStatus(0, status);
         }
     }

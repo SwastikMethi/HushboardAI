@@ -116,6 +116,29 @@
         <item name="android:textSize">20sp</item>
     </style>
 
+    <!-- One emoji idea: a round button big enough for a small finger. -->
+    <style name="KidsIdea">
+        <item name="android:layout_width">52dp</item>
+        <item name="android:layout_height">52dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+        <item name="android:background">@drawable/bg_kids_idea</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/kids_ink</item>
+        <item name="android:textSize">24sp</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+
+    <!-- A crayon on the drawing pad: a dot of its colour inside a finger-sized button. -->
+    <style name="KidsCrayon">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:background">@null</item>
+        <item name="android:padding">8dp</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:src">@drawable/bg_kids_round</item>
+    </style>
+
     <!-- A big button with a picture and a word on it. -->
     <style name="KidsButton" parent="Widget.Material3.Button.Icon">
         <item name="android:fontFamily">@font/baloo2_medium</item>

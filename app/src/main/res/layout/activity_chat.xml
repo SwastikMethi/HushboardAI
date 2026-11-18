@@ -329,6 +329,34 @@
         </LinearLayout>
     </LinearLayout>
 
+    <!-- Emoji that fit what is being typed, from the emoji model. A tap adds one to the
+         message; nothing is sent by it. -->
+    <LinearLayout
+        android:id="@+id/chat_ideas"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingBottom="8dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/chat_idea_one"
+            style="@style/KidsIdea" />
+
+        <TextView
+            android:id="@+id/chat_idea_two"
+            style="@style/KidsIdea" />
+
+        <TextView
+            android:id="@+id/chat_idea_three"
+            style="@style/KidsIdea" />
+
+        <TextView
+            android:id="@+id/chat_idea_four"
+            style="@style/KidsIdea" />
+    </LinearLayout>
+
     <!-- Shown while a message is being checked. It keeps its place when hidden, so the
          conversation does not jump on every message. -->
     <com.google.android.material.progressindicator.LinearProgressIndicator
@@ -360,6 +388,16 @@
             android:contentDescription="@string/chat_picture"
             android:src="@drawable/ic_kids_picture" />
 
+        <ImageButton
+            android:id="@+id/chat_draw"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_kids_round"
+            android:backgroundTint="@color/kids_sky"
+            android:contentDescription="@string/chat_draw"
+            android:src="@drawable/ic_kids_brush" />
+
         <!-- Marked "no personalised learning": this app's own keyboard keeps its AI quiet in
              such a field, so a child is not warned twice about the same message. -->
         <EditText
@@ -367,7 +405,7 @@
             style="@style/KidsText"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="8dp"
+            android:layout_marginHorizontal="6dp"
             android:layout_weight="1"
             android:background="@drawable/bg_kids_field"
             android:hint="@string/chat_hint"
@@ -388,5 +426,123 @@
             android:backgroundTint="@color/kids_sun"
             android:contentDescription="@string/chat_send"
             android:src="@drawable/ic_kids_send" />
+    </LinearLayout>
+
+    <!-- The drawing pad. While it is open it takes the place of the bar above and of the
+         keyboard: crayons, the paper, and the way back or onwards. -->
+    <LinearLayout
+        android:id="@+id/chat_pad"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_kids_pad"
+        android:orientation="vertical"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/chat_crayon_one"
+                style="@style/KidsCrayon"
+                android:contentDescription="@string/chat_crayon_pink"
+                app:tint="@color/kids_mia" />
+
+            <ImageButton
+                android:id="@+id/chat_crayon_two"
+                style="@style/KidsCrayon"
+                android:contentDescription="@string/chat_crayon_sea"
+                app:tint="@color/kids_leo" />
+
+            <ImageButton
+                android:id="@+id/chat_crayon_three"
+                style="@style/KidsCrayon"
+                android:contentDescription="@string/chat_crayon_yellow"
+                app:tint="@color/kids_sun" />
+
+            <ImageButton
+                android:id="@+id/chat_crayon_four"
+                style="@style/KidsCrayon"
+                android:contentDescription="@string/chat_crayon_green"
+                app:tint="@color/kids_leaf" />
+
+            <ImageButton
+                android:id="@+id/chat_crayon_five"
+                style="@style/KidsCrayon"
+                android:contentDescription="@string/chat_crayon_blue"
+                app:tint="@color/kids_ink" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <ImageButton
+                android:id="@+id/chat_undo"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_kids_round"
+                android:backgroundTint="@color/kids_sky"
+                android:contentDescription="@string/chat_undo"
+                android:src="@drawable/ic_kids_undo" />
+
+            <ImageButton
+                android:id="@+id/chat_clear"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/bg_kids_round"
+                android:backgroundTint="@color/kids_sky"
+                android:contentDescription="@string/chat_clear"
+                android:src="@drawable/ic_kids_bin" />
+        </LinearLayout>
+
+        <com.example.aikeyboard.ui.chat.KidsDrawView
+            android:id="@+id/chat_canvas"
+            android:layout_width="match_parent"
+            android:layout_height="220dp"
+            android:layout_marginTop="8dp"
+            android:background="@drawable/bg_kids_canvas"
+            android:contentDescription="@string/chat_canvas" />
+
+        <TextView
+            android:id="@+id/chat_pad_hint"
+            style="@style/KidsText.Small"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:accessibilityLiveRegion="polite"
+            android:gravity="center"
+            android:text="@string/chat_pad_hint" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/chat_pad_close"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_kids_round"
+                android:backgroundTint="@color/kids_sky"
+                android:contentDescription="@string/chat_pad_close"
+                android:src="@drawable/ic_kids_close" />
+
+            <Button
+                android:id="@+id/chat_send_drawing"
+                style="@style/KidsButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/chat_send_drawing"
+                app:icon="@drawable/ic_kids_send" />
+        </LinearLayout>
     </LinearLayout>
 </LinearLayout>

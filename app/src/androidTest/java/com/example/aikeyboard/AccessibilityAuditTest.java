@@ -164,7 +164,7 @@ public class AccessibilityAuditTest {
 
     @Test
     public void kidsChatPassesTheAccessibilityChecksInEachOfItsStates() throws Exception {
-        for (String id : new String[] {"toxic", "redact", "moderator"}) {
+        for (String id : new String[] {"toxic", "redact", "moderator", "emo"}) {
             TestModels.ensureInstalled(id);
         }
         try (ActivityScenario<ChatActivity> chat = ActivityScenario.launch(ChatActivity.class)) {
@@ -182,6 +182,16 @@ public class AccessibilityAuditTest {
             // The personal-details card with its three buttons.
             sayInChat("My email is mia@example.com");
             assertTrue(TestModels.await(() -> isShowing(chat, R.id.chat_personal), 60_000));
+            onView(isRoot()).perform(audit());
+
+            // Emoji ideas above the field, and the drawing pad with its crayons.
+            onView(withId(R.id.chat_change)).perform(click());
+            onView(withId(R.id.chat_input)).perform(
+                    ViewActions.replaceText("I love playing football with my friends"));
+            assertTrue(TestModels.await(() -> isShowing(chat, R.id.chat_ideas), 60_000));
+            onView(isRoot()).perform(audit());
+            onView(withId(R.id.chat_draw)).perform(click());
+            assertTrue(TestModels.await(() -> isShowing(chat, R.id.chat_pad), 60_000));
             onView(isRoot()).perform(audit());
         }
     }

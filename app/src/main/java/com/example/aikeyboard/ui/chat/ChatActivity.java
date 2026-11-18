@@ -1,5 +1,6 @@
 // Kids Chat: a demo of a chat for young children, with two pretend users on one phone, each
-// with a face and a colour of their own. A message
+// with a face and a colour of their own. They can type, with emoji ideas as they go, send a
+// picture, or draw on a pad that tidies their shapes. A message
 // is checked on the phone before it is sent (see ChatChecks): unkind wording is refused,
 // personal details are shown masked first, and a picture the nudity check flags is refused.
 // The conversation lives in memory only and is gone when the screen is closed; nothing typed
@@ -12,13 +13,17 @@ import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Editable;
 import android.text.InputFilter;
+import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ImageButton;
+import android.widget.TextView;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -39,22 +44,36 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.aikeyboard.AppContainer;
 import com.example.aikeyboard.MainActivity;
 import com.example.aikeyboard.R;
+import com.example.aikeyboard.ai.Suggestion.EmojiCandidate;
+import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.databinding.ActivityChatBinding;
 import com.example.aikeyboard.databinding.ItemChatMessageBinding;
 import com.example.aikeyboard.media.ImageImport;
+import com.example.aikeyboard.media.Vision.RecognizedShape;
 import com.example.aikeyboard.models.ModelRepository.AssetState;
 import com.example.aikeyboard.ui.chat.ChatChecks.Outcome;
 import com.example.aikeyboard.ui.chat.ChatChecks.TextVerdict;
+import com.example.aikeyboard.ui.tools.ShapeRecognizer;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public final class ChatActivity extends AppCompatActivity {
 
     // Every one of these must be installed before anything can be sent.
     private static final String[] SAFETY_MODELS = {"toxic", "redact", "moderator"};
+    // Small extras fetched along with them. Nothing waits for these: emoji ideas and tidy
+    // shapes simply appear once their model is on the phone.
+    private static final String[] EXTRA_MODELS = {"emo", "shapes"};
+    // How long after the last key emoji ideas are looked for.
+    private static final long IDEAS_PAUSE_MS = 400;
+    private static final int[] CRAYONS = {R.color.kids_mia, R.color.kids_leo, R.color.kids_sun,
+            R.color.kids_leaf, R.color.kids_ink};
     // A face is this big when it is that child's turn, and this big when it is not.
     private static final int FACE_BIG_DP = 60;
     private static final int FACE_SMALL_DP = 48;
@@ -89,9 +108,11 @@ public final class ChatActivity extends AppCompatActivity {
         final String masked;
         /** True from when a message has gone until the screen has emptied the field. */
         final boolean clearInput;
+        /** Emoji that fit what is in the field; empty when there is nothing to suggest. */
+        final List<String> ideas;
 
         State(List<Message> messages, int typing, boolean checking, int notice, String typed,
-                String masked, boolean clearInput) {
+                String masked, boolean clearInput, List<String> ideas) {
             this.messages = messages;
             this.typing = typing;
             this.checking = checking;
@@ -99,6 +120,7 @@ public final class ChatActivity extends AppCompatActivity {
             this.typed = typed;
             this.masked = masked;
             this.clearInput = clearInput;
+            this.ideas = ideas;
         }
     }
 
@@ -107,6 +129,7 @@ public final class ChatActivity extends AppCompatActivity {
 
         private final AppContainer app;
         private final Executor main;
+        private final AppSettings rules;
         /**
          * The checks every message passes. Not final so a device test can put a harmless
          * picture under rules that refuse it, there being no explicit picture in this
@@ -122,6 +145,10 @@ public final class ChatActivity extends AppCompatActivity {
         private String typed;
         private String masked;
         private boolean clearInput;
+        private List<String> ideas = List.of();
+        // What the field held when ideas were last asked for, and the pause before asking.
+        private String drafted = "";
+        private ScheduledFuture<?> ideasDue;
         // Set when the screen is left for good: a check still running reports to nobody.
         private boolean left;
 
@@ -129,7 +156,8 @@ public final class ChatActivity extends AppCompatActivity {
             super(application);
             app = AppContainer.from(application);
             main = ContextCompat.getMainExecutor(application);
-            checks = ChatChecks.with(app, application, ChatChecks.kidRules());
+            rules = ChatChecks.kidRules();
+            checks = ChatChecks.with(app, application, rules);
             publish();
         }
 
@@ -164,7 +192,9 @@ public final class ChatActivity extends AppCompatActivity {
                         masked = verdict.masked;
                     } else {
                         notice = verdict.outcome == Outcome.UNKIND ? R.string.chat_unkind
-                                : R.string.chat_unchecked;
+                                : verdict.outcome == Outcome.OTHER_LANGUAGE
+                                        ? R.string.chat_other_language
+                                        : R.string.chat_unchecked;
                     }
                     publish();
                 });
@@ -188,12 +218,59 @@ public final class ChatActivity extends AppCompatActivity {
                     main.execute(() -> pictureChecked(null, R.string.chat_picture_unreadable));
                     return;
                 }
-                app.inference.execute(() -> {
-                    boolean allowed = checks.pictureAllowed(picture);
-                    main.execute(() -> pictureChecked(allowed ? picture : null,
-                            R.string.chat_picture_refused));
-                });
+                check(picture);
             });
+        }
+
+        /** Checks a drawing from the pad like any picture, and sends it if it passes. */
+        void sendDrawing(Bitmap drawing) {
+            if (busy()) return;
+            checking = true;
+            notice = 0;
+            publish();
+            check(drawing);
+        }
+
+        private void check(Bitmap picture) {
+            app.inference.execute(() -> {
+                boolean allowed = checks.pictureAllowed(picture);
+                main.execute(() -> pictureChecked(allowed ? picture : null,
+                        R.string.chat_picture_refused));
+            });
+        }
+
+        /**
+         * Told what is in the field each time it changes. After a short pause the emoji model
+         * is asked what fits, if it is on the phone. Ideas stay up while more is typed, so the
+         * row does not come and go, and are replaced when the answer for the new words is in.
+         */
+        void drafted(String text) {
+            String draft = text.trim();
+            if (draft.equals(drafted)) return;
+            drafted = draft;
+            if (ideasDue != null) ideasDue.cancel(false);
+            if (draft.isEmpty()) {
+                if (!ideas.isEmpty()) {
+                    ideas = List.of();
+                    publish();
+                }
+                return;
+            }
+            if (!app.models.isReady("emo")) return;
+            ideasDue = app.timer.schedule(() -> app.inference.execute(() -> {
+                List<String> found = new ArrayList<>();
+                try {
+                    for (EmojiCandidate idea : app.emo.run(draft, rules)) found.add(idea.emoji);
+                } catch (Exception e) {
+                    // No ideas this time. Nothing depends on them.
+                }
+                main.execute(() -> {
+                    // Typed on since, or gone: these ideas were for other words.
+                    if (left || !draft.equals(drafted)) return;
+                    ideas = found;
+                    publish();
+                });
+            }), IDEAS_PAUSE_MS, TimeUnit.MILLISECONDS);
         }
 
         // How a picture's check ends: it joins the conversation, or the sender is told why not.
@@ -243,12 +320,13 @@ public final class ChatActivity extends AppCompatActivity {
 
         private void publish() {
             state.setValue(new State(List.copyOf(messages), typing, checking, notice, typed,
-                    masked, clearInput));
+                    masked, clearInput, ideas));
         }
 
         @Override
         protected void onCleared() {
             left = true;
+            if (ideasDue != null) ideasDue.cancel(false);
         }
     }
 
@@ -256,6 +334,16 @@ public final class ChatActivity extends AppCompatActivity {
     private AppContainer app;
     private Session session;
     private final Messages list = new Messages();
+    private TextView[] ideas;
+    private ImageButton[] crayons;
+    // The drawing pad is the screen's own business: closed again when the screen is rebuilt.
+    private boolean padOpen;
+    private final OnBackPressedCallback backClosesThePad = new OnBackPressedCallback(false) {
+        @Override
+        public void handleOnBackPressed() {
+            showPad(false);
+        }
+    };
 
     // The system's photo picker: the app is handed the one picture chosen and nothing else,
     // and needs no storage permission.
@@ -307,8 +395,112 @@ public final class ChatActivity extends AppCompatActivity {
                 new PickVisualMediaRequest.Builder().setMediaType(
                         ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build()));
 
+        ideas = new TextView[] {views.chatIdeaOne, views.chatIdeaTwo, views.chatIdeaThree,
+                views.chatIdeaFour};
+        for (TextView idea : ideas) idea.setOnClickListener(v -> addToMessage(idea.getText()));
+        views.chatInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence text, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence text, int start, int before, int count) {}
+
+            @Override
+            public void afterTextChanged(Editable text) {
+                session.drafted(text.toString());
+            }
+        });
+
+        crayons = new ImageButton[] {views.chatCrayonOne, views.chatCrayonTwo,
+                views.chatCrayonThree, views.chatCrayonFour, views.chatCrayonFive};
+        for (int i = 0; i < crayons.length; i++) {
+            int crayon = i;
+            crayons[i].setOnClickListener(v -> pickCrayon(crayon));
+        }
+        views.chatDraw.setOnClickListener(v -> showPad(true));
+        views.chatPadClose.setOnClickListener(v -> showPad(false));
+        views.chatUndo.setOnClickListener(v -> views.chatCanvas.undo());
+        views.chatClear.setOnClickListener(v -> views.chatCanvas.clear());
+        views.chatSendDrawing.setOnClickListener(v -> sendDrawing());
+        views.chatCanvas.setListener(new KidsDrawView.Listener() {
+            @Override
+            public void onStroke(Object stroke, List<float[]> points) {
+                tidy(stroke, points);
+            }
+
+            @Override
+            public void onChanged() {
+                if (views.chatCanvas.isEmpty()) views.chatPadHint.setText(R.string.chat_pad_hint);
+                render();
+            }
+        });
+        getOnBackPressedDispatcher().addCallback(this, backClosesThePad);
+
         session.state().observe(this, state -> render());
         app.models.statuses().observe(this, statuses -> render());
+    }
+
+    // An emoji idea goes in where the child is typing. Nothing is sent by it.
+    private void addToMessage(CharSequence emoji) {
+        Editable message = views.chatInput.getText();
+        // At the cursor while the child is typing there; at the end otherwise.
+        int at = views.chatInput.hasFocus()
+                ? Math.max(0, views.chatInput.getSelectionStart()) : message.length();
+        message.insert(at, emoji);
+    }
+
+    private void showPad(boolean open) {
+        padOpen = open;
+        backClosesThePad.setEnabled(open);
+        if (open) {
+            getSystemService(InputMethodManager.class)
+                    .hideSoftInputFromWindow(views.chatInput.getWindowToken(), 0);
+            // Each child starts with the crayon of their own colour.
+            pickCrayon(session.state().getValue().typing);
+        }
+        render();
+    }
+
+    private void pickCrayon(int crayon) {
+        views.chatCanvas.setColor(getColor(CRAYONS[crayon]));
+        for (int i = 0; i < crayons.length; i++) {
+            crayons[i].setBackgroundResource(i == crayon ? R.drawable.bg_kids_ring : 0);
+            crayons[i].setBackgroundTintList(i == crayon
+                    ? ColorStateList.valueOf(getColor(R.color.kids_ink)) : null);
+            crayons[i].setSelected(i == crayon);
+        }
+    }
+
+    // Asks the shape model about a stroke the child has just finished. Without the model, or
+    // when it sees no shape, the stroke stays as it was drawn.
+    private void tidy(Object stroke, List<float[]> points) {
+        if (!app.models.isReady("shapes")) return;
+        app.inference.execute(() -> {
+            RecognizedShape shape;
+            try {
+                shape = app.shapes.run(points, ChatChecks.kidRules());
+            } catch (Exception e) {
+                return;
+            }
+            if (shape == null) return;
+            runOnUiThread(() -> {
+                if (isDestroyed()) return;
+                views.chatCanvas.tidy(stroke, shape);
+                views.chatPadHint.setText(getString(R.string.chat_pad_tidied, nameOf(shape)));
+            });
+        });
+    }
+
+    // A shape's name in words a young child knows.
+    private String nameOf(RecognizedShape shape) {
+        if ("ellipse".equals(shape.kind)) return getString(R.string.chat_shape_round);
+        return getString(ShapeRecognizer.nameOf(shape.kind)).toLowerCase(Locale.ROOT);
+    }
+
+    private void sendDrawing() {
+        session.sendDrawing(views.chatCanvas.render());
+        views.chatCanvas.clear();
+        showPad(false);
     }
 
     /** What the picker reports: the chosen picture, or null when it was closed without one. */
@@ -318,10 +510,12 @@ public final class ChatActivity extends AppCompatActivity {
 
     // A download is only ever started by this tap, as everywhere else in the app.
     private void downloadMissingModels() {
-        for (String id : SAFETY_MODELS) {
-            AssetState model = app.models.status(id).state;
-            if (model == AssetState.NOT_INSTALLED || model == AssetState.FAILED) {
-                app.models.download(id);
+        for (String[] ids : new String[][] {SAFETY_MODELS, EXTRA_MODELS}) {
+            for (String id : ids) {
+                AssetState model = app.models.status(id).state;
+                if (model == AssetState.NOT_INSTALLED || model == AssetState.FAILED) {
+                    app.models.download(id);
+                }
             }
         }
     }
@@ -343,7 +537,24 @@ public final class ChatActivity extends AppCompatActivity {
         views.chatLocked.setVisibility(ready ? View.GONE : View.VISIBLE);
         views.chatTop.setVisibility(chat);
         views.chatMiddle.setVisibility(chat);
-        views.chatBar.setVisibility(chat);
+        // The drawing pad stands in for the bar while it is open; the card for private
+        // details comes before either.
+        boolean pad = padOpen && ready && !deciding;
+        views.chatPad.setVisibility(pad ? View.VISIBLE : View.GONE);
+        views.chatBar.setVisibility(ready && !pad ? View.VISIBLE : View.GONE);
+        views.chatSendDrawing.setEnabled(!views.chatCanvas.isEmpty() && !state.checking);
+
+        boolean showIdeas = ready && !pad && !deciding && !state.ideas.isEmpty();
+        views.chatIdeas.setVisibility(showIdeas ? View.VISIBLE : View.GONE);
+        for (int i = 0; i < ideas.length; i++) {
+            boolean has = i < state.ideas.size();
+            ideas[i].setVisibility(has ? View.VISIBLE : View.GONE);
+            if (has) {
+                ideas[i].setText(state.ideas.get(i));
+                ideas[i].setContentDescription(
+                        getString(R.string.chat_idea_add, state.ideas.get(i)));
+            }
+        }
         views.chatLockedText.setText(fetching ? R.string.chat_downloading : R.string.chat_locked);
         views.chatDownload.setEnabled(!fetching);
 
@@ -382,6 +593,8 @@ public final class ChatActivity extends AppCompatActivity {
         views.chatSend.setAlpha(free ? 1f : 0.4f);
         views.chatPicture.setEnabled(free);
         views.chatPicture.setAlpha(free ? 1f : 0.4f);
+        views.chatDraw.setEnabled(free);
+        views.chatDraw.setAlpha(free ? 1f : 0.4f);
 
         if (state.clearInput) {
             views.chatInput.setText("");
@@ -421,6 +634,7 @@ public final class ChatActivity extends AppCompatActivity {
     // The second line of a tip: what to do about it.
     private static int whatToDoAbout(int notice) {
         if (notice == R.string.chat_unkind) return R.string.chat_unkind_more;
+        if (notice == R.string.chat_other_language) return R.string.chat_other_language_more;
         if (notice == R.string.chat_picture_refused) return R.string.chat_picture_refused_more;
         if (notice == R.string.chat_picture_unreadable) {
             return R.string.chat_picture_unreadable_more;

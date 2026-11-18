@@ -56,14 +56,18 @@ Everything is checked on the phone before it is sent:
 | A message with a swear word | A built-in word list, `app/src/main/res/values/chat_blocked_words.xml` | Not sent. It stays in the field, and the helper says "Let's use kind words" |
 | A message with abusive, hateful or threatening wording | Toxic, at its strictest setting | Not sent, with the same tip |
 | A message with an email address, phone number, payment or ID number, street address or web link | Redact | A card shows a safer message with each private detail behind a lock chip (as plain text: `[email]`, `[phone number]`, `[address]`). The child picks **Send the safe one**, **Change my message** or **Send mine anyway** |
-| A picture | Moderator, which scores nudity | Not sent if flagged, with a line saying so |
+| A message that is surely not in English | Tongue, which names the language | Not sent. The helper says "I can only read English" |
+| A picture, or a drawing from the pad | Moderator, which scores nudity | Not sent if flagged, with a line saying so |
 
-A message can be up to 1,000 characters, the range the checks were tried over. If a check cannot run, nothing is sent. Until Toxic, Redact and Moderator are installed, a getting-ready screen stands in for the chat: it asks for a grown-up, and has a **Get ready** button and a way to the Models screen. The rules are fixed in `ChatChecks.kidRules()` and do not follow the keyboard's settings, so they cannot be loosened from the Settings tab.
+Two more models are there for fun and do not decide anything. While a child types, up to four emoji that fit the message appear above the field (Emo); a tap adds one. A brush button opens a drawing pad with five crayons, undo and a bin, and each stroke the shape model recognises (Shapes) is redrawn tidy: a wobbly circle comes out round. So Kids Chat uses six of the 13 models.
+
+A message can be up to 1,000 characters, the range the checks were tried over. If a check cannot run, nothing is sent. Until Toxic, Redact and Moderator are installed, a getting-ready screen stands in for the chat: it asks for a grown-up, and has a **Get ready** button and a way to the Models screen. The button also fetches the emoji and shape models, which nothing waits for. The rules are fixed in `ChatChecks.kidRules()` and do not follow the keyboard's settings, so they cannot be loosened from the Settings tab.
 
 This is a demo, not a safety product. Its limits:
 
 - **Toxic is a beta model.** It misses slang. At the strict setting used here it refused one friendly message out of ten samples ("You killed it in the match today, great job!").
 - **The word list is short and literal.** 52 English entries, whole words in their exact spelling, so "sh1t" passes. It holds no slurs; those are left to the model's "hateful" category. Add words to the file to extend it.
+- **The language rule is blunt.** It refuses full sentences in other languages, Hinglish in English letters included (the language model takes it for Dutch or Irish, and is sure of it), and lets very short messages through to checks that cannot read them. A short insult in Hinglish was sent.
 - **Redact covers European languages only**, and names are deliberately not treated as personal details, or nearly every message would be stopped. A city or state on its own does raise the card ("We went to London on Saturday").
 - **Moderator scores nudity only**, not violence or anything else. No explicit picture was ever shown to it in this project; its refusal was tested with a harmless drawing and a threshold of zero.
 - **Send mine anyway** lets a personal detail out by the child's own choice. That was the project owner's decision.
@@ -71,7 +75,7 @@ This is a demo, not a safety product. Its limits:
 
 Kids Chat uses two typefaces under the SIL Open Font License: Baloo 2 for names and buttons, and Andika, which is drawn for people learning to read, for messages. Their licence texts are in [docs/licenses](docs/licenses). The faces and the sun are drawn for this app; the small icons are Material Icons (Apache 2.0).
 
-What was tested is in [docs/validation-report.md](docs/validation-report.md) under "Kids Chat demo" and "Kids Chat, redesigned for young children"; the decisions are rulings 111 to 137 in [PROGRESS.md](PROGRESS.md).
+What was tested is in [docs/validation-report.md](docs/validation-report.md) under "Kids Chat demo", "Kids Chat, redesigned for young children" and "Kids Chat: emoji ideas, a drawing pad and a language rule"; the decisions are rulings 111 to 143 in [PROGRESS.md](PROGRESS.md).
 
 This package contains the implementation plan, UI references, and instructions for building an Android AI keyboard with a companion settings app. **Java is selected as the primary language.**
 

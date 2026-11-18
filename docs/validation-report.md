@@ -61,9 +61,10 @@ adb shell am instrument -w -r -e latency true -e class com.example.aikeyboard.La
 # the device's own pictures. Put one in the emulator's gallery first.
 adb shell am instrument -w -e picker true -e class 'com.example.aikeyboard.KeyboardImageTest#theSystemsPickerHandsAChosenPictureBackToTheKeyboard' com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 
-# Kids Chat, two measurements: what the tone model alone makes of ten sample messages under the
-# chat's rules, and how far into a long message the two text models still see. Results come
-# back as INSTRUMENTATION_STATUS lines.
+# Kids Chat's measurements: what the tone model alone makes of ten sample messages, how far
+# into a long message the two text models still see, whether naming a place raises the card,
+# and which messages the language rule stops. Results come back as INSTRUMENTATION_STATUS
+# lines.
 adb shell am instrument -w -r -e chatprobe true -e class com.example.aikeyboard.KidsChatTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 
 # Screenshots: written to /sdcard/Android/data/com.example.aikeyboard/files/tour
@@ -639,6 +640,45 @@ The owner tried the first version on the phone, said it looked like a demo, and 
 After the redesign: 178 unit tests, lint 0 errors and 40 warnings (one more than before, the same note about `accessibilityHeading`), a 701.8 MB debug APK, and all 216 device tests on the emulator (EMU-37B, `-e clear true`): 196 passed, 20 skipped by design (the 17 as before and the chat's three measurements), none failed.
 
 That took four runs, not one. The full run stopped at its 175th test, `ModelSmokeTest.sdkDownload_cancelReleasesCallerButTransferRunsOn`, an older test of the vendor's own downloader that waits, with no time limit, for a 100 MB transfer from Hugging Face. The transfer stalled at 44 MB while the emulator's connection was dropping packets. The run was ended there with 174 tests finished (161 passed, 13 skipped); the 41 tests it had not reached were run next (34 passed, 7 skipped); and the stalled test passed by itself a few minutes later. Nothing in that test touches Kids Chat, and it passed in each of the three full runs earlier the same day.
+
+## Kids Chat: emoji ideas, a drawing pad and a language rule (18 Nov 2026)
+
+Three more of the 13 models, chosen by the owner as the small ones to start with and built from a mockup they approved: Emo for emoji ideas, Shapes for a drawing pad, and Tongue for a rule that a message surely not in English is not sent. Kids Chat now uses six models. Nothing here has been on the phone.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| A message that is surely not English is not sent; a guess at another language is not enough; a listed word is refused whatever the language; a message whose language could not be told is not sent | failed, then passed | unit | Four `ChatChecksTest` tests. Two failed before the rule existed; the two that guard against refusing too much passed throughout |
+| Hindi in its own script is told apart by the real language model and not sent | passed | EMU-37B | `KidsChatTest.aMessageInHindiIsToldApartAndNotSent`, first run |
+| On the screen, a message in another language is not sent and the helper says why | passed, and seen failing | EMU-37B | `KidsChatTest.aMessageInAnotherLanguageIsNotSentAndTheHelperSaysWhy`, failed against a copy of the screen broken on purpose to send such messages |
+| Emoji ideas follow what is typed, and a tap adds one without sending | passed, and seen failing | EMU-37B | `KidsChatTest.emojiIdeasFollowWhatIsTypedAndATapAddsOneWithoutSending`, with the real emoji model; failed against a copy broken on purpose to drop the ideas |
+| A circle drawn with a finger is tidied, and the drawing is sent like a picture | passed, and seen failing | EMU-37B | `KidsChatTest.aDrawingIsTidiedAndSentLikeAPicture`, with the real shape model and touch events sent to the paper; failed against a copy broken on purpose not to tidy |
+| Undo takes off the last stroke; "Start again" empties the pad and switches Send off | passed, and seen failing | EMU-37B | `KidsChatTest.undoTakesOffTheLastStrokeAndStartAgainEmptiesThePad`, failed against a copy whose undo did nothing |
+| "Get ready" also fetches the emoji and shape models | passed, and seen failing | EMU-37B | `KidsChatTest.gettingReadyAlsoFetchesTheEmojiAndShapeModels`: Shapes and Moderator deleted, the button tapped, Shapes back. Failed against a copy that fetched only the three required models |
+| The screen passes the accessibility checks with the emoji row up and with the drawing pad open | passed | EMU-37B | Two more states in `AccessibilityAuditTest.kidsChatPassesTheAccessibilityChecksInEachOfItsStates`, first run |
+| By hand, set beside the mockup: emoji ideas for "Yes! I love football"; a house drawn with four crayons, each stroke tidied; a French sentence refused with the tip | passed by hand | EMU-37B | Driven over adb, the strokes as touch events. `docs/evidence/screenshots/kids_chat_emoji_ideas.png`, `kids_chat_drawing_pad.png`, `kids_chat_other_language.png` |
+| On the phone | not run | PHONE | The phone has the redesign without these three |
+| A drawing kept while the phone is turned; emoji ideas with a keyboard other than this project's; large text; a real child | not run | — | A drawing is known not to survive turning the phone |
+
+Which messages the language rule stops. "Sure" is whether the language model was confident; the rule acts only then:
+
+| Message | Language named | Sure | Chat |
+|---|---|---|---|
+| Do you want to play football after school? | English | yes | sent |
+| ok | English | no | sent |
+| Hahaha | Czech | no | sent |
+| Hi Leo | Latin | no | sent |
+| Pizza party at Aarav's house | English | no | the private-details card |
+| आज स्कूल के बाद मैं पार्क में फुटबॉल खेलने गया था | Hindi | yes | **not sent** |
+| Aaj school ke baad park mein football khelne chalein? | Dutch | yes | **not sent** |
+| Kal milte hain, bye | Irish | yes | **not sent** |
+| Tu pagal hai kya | Tagalog | no | sent |
+| Je suis allé au parc avec mes amis après l'école | French | yes | **not sent** |
+| Hola amigo, ¿quieres jugar al fútbol después de la escuela? | Spanish | yes | **not sent** |
+| Guten Morgen | German | no | sent |
+
+Read with care: twelve messages written for this test. They show three things. Full sentences in another language are stopped, which is what the rule is for. Hinglish in English letters is stopped too, though for the wrong reason: the model has no name for it and is sure it is Dutch or Irish. And short messages pass whatever their language: "Tu pagal hai kya", a Hinglish insult, was sent, because the checks that come after cannot read it. For children who write Hinglish, the rule means being told "I can only read English" most of the time.
+
+After the three additions: 182 unit tests, lint 0 errors and 40 warnings (unchanged), a 701.8 MB debug APK, and the whole suite on the emulator (EMU-37B, `-e clear true`) in one run: 223 run, 202 passed, 21 skipped by design (the 17 as before and the chat's four measurements), none failed.
 
 ## The handoff checklist, item by item
 

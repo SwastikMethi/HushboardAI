@@ -95,4 +95,19 @@ public class AudioCaptureTest {
             assertEquals(Activity.RESULT_OK, screen.getResult().getResultCode());
         }
     }
+
+    // The keyboard opens these while another app is in front. A screen that shared this
+    // app's task would bring the app's own screens forward with it, and closing it would
+    // leave the user there instead of where they were typing: seen with the microphone
+    // screen opened from another app's field while this app was open in the background.
+    @Test
+    public void theScreensTheKeyboardOpensHaveATaskOfTheirOwn() throws Exception {
+        for (Class<?> screen : new Class<?>[] {MicPermissionActivity.class,
+                com.example.aikeyboard.ui.tools.ImagePickActivity.class}) {
+            android.content.pm.ActivityInfo declared = context.getPackageManager()
+                    .getActivityInfo(new android.content.ComponentName(context, screen), 0);
+            assertNull(screen.getSimpleName() + " would join the app's own task",
+                    declared.taskAffinity);
+        }
+    }
 }

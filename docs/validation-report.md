@@ -525,6 +525,19 @@ Asked for by the owner during the phone session: a picture button on the keyboar
 
 After the feature, with sending: 161 unit tests, lint 0 errors and 37 warnings, and the whole suite on the emulator (EMU-37B, `-e clear true`): 184 run, 167 passed, 17 skipped by design (13 opt-in probes, the three latency measurements and the real-picker test), none failed.
 
+## Microphone screen's return path (18 Nov 2026)
+
+Noticed while building the picture panel, fixed at the owner's request.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| With AI Keyboard open in the background, the microphone screen opened from another app's field returns to that field when closed | failed, then passed | EMU-37B | By hand over adb, in Settings search with the microphone not yet allowed: microphone button, refuse in the system dialog, Close. Before: the screen that came up was AI Keyboard's own. After giving the microphone screen a task of its own: Settings search again |
+| The screens the keyboard opens have a task of their own | failed, then passed | EMU-37B | `AudioCaptureTest.theScreensTheKeyboardOpensHaveATaskOfTheirOwn` (the microphone screen failed it; the picture picker screen already passed) |
+| The refusal flow opened from inside the app still works | passed | EMU-37B | `MicPermissionFlowTest` (opt-in, with the microphone revoked first) |
+| On the phone | not run | PHONE | The owner had already allowed the microphone there, so the screen does not appear |
+
+After the fix: 161 unit tests, lint 0 errors and 37 warnings, and the whole suite on the emulator (EMU-37B, `-e clear true`): 185 run, 168 passed, 17 skipped by design, none failed.
+
 ## The handoff checklist, item by item
 
 Each line of `docs/BUILD_AND_TEST_CHECKLIST.md`, with where it stands. "Emulator" means it ran and passed on an emulator only; the phone rows above still apply.

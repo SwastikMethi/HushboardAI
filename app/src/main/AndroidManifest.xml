@@ -28,11 +28,14 @@
             </intent-filter>
         </activity>
 
-        <!-- Asks for the microphone when the user taps record; the keyboard cannot ask itself. -->
+        <!-- Asks for the microphone when the user taps record; the keyboard cannot ask itself.
+             No task affinity, so that when the keyboard opens it over another app, closing
+             it returns to that app and not to this app's own screens. -->
         <activity
             android:name=".ui.tools.MicPermissionActivity"
             android:excludeFromRecents="true"
             android:exported="false"
+            android:taskAffinity=""
             android:theme="@style/Theme.AiKeyboard.Dialog" />
 
         <!-- Opens the system's picture picker for the keyboard, which cannot open it itself.

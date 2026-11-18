@@ -698,7 +698,8 @@ The seventh model in Kids Chat: Eye looks at a photo that has passed the nudity 
 | By hand, with the real model: a drawn beach scene picked in Android's picker is sent with "I can see: water, sky, sand" | passed by hand | EMU-37B | `docs/evidence/screenshots/kids_chat_photo_seen.png` |
 | Eye on a real photo of a person | not run | — | The project holds none and the owner's photos are not looked at. Whether Eye notices real people reliably is unknown |
 | Pick another picture opening the picker | not run | — | The button drops the photo and calls the same picker launch as the picture button; no test follows it into the system's screen |
-| On the phone | not run | PHONE | Not installed there |
+| On the phone: installed | passed | PHONE | Installed at 23:47 on 18 Nov 2026 at the owner's request (commit `8f9f058`, the build the emulator suite ran on). The picture model is on the phone with the others, and no crash was logged. The phone's selected keyboard was Gboard before and after |
+| On the phone: how the photo helper works, on real photos | not reported yet | PHONE | The owner's to try with their own photos, which are not looked at from here. This is the only place Eye meets a real photo of a person |
 
 After the photo helper: 189 unit tests, lint 0 errors and 41 warnings (one more, the same note about `accessibilityHeading`, for the new card's heading), a 701.8 MB debug APK, and the whole suite on the emulator (EMU-37B, `-e clear true`) in one run: 230 run, 208 passed, 22 skipped by design (the 17 as before, the chat's four measurements and its one screenshot), none failed.
 

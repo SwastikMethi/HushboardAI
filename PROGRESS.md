@@ -17,6 +17,7 @@ The execution plan is `~/.claude/plans/i-have-added-a-whimsical-mist.md` (approv
 | Phone session | Held 18 Nov 2026. Hands-on part by the owner's report | OnePlus CPH2423, Android 15, 12 GB. Run and recorded: install, all 13 models, Clear on the phone's GPU, memory, network silence, latency, the keyboard's own suite, process death, typing in another app's field. Done by the owner and reported as working, without detail: typing in real apps, dictation, haptics and sound, TalkBack, recents, and sending a picture from the keyboard. Not done: battery and heat, a 6 or 8 GB phone. See the validation report, "Phone session". |
 | Picture panel in the keyboard | Done (emulator). Worked on the phone by the owner's report | Added 18 Nov 2026 at the owner's request, during the phone session: a picture button on the keyboard while Eye or Moderator is on; the chosen picture is described and checked in a keyboard panel, and can be inserted or shared from there, a flagged one only after a warning. Ten tests, one of them through Android's real picker. See the validation report. |
 | Final review | Done. Ten small findings deferred | One independent review of the whole branch; one fix pass (see "Final review"). After it: 161 unit tests, 171 instrumented tests (158 passed, 13 opt-in probes skipped, none failed), lint 0 errors, clean build. The review found that the keyboard's AI could read a password field while the on-screen keyboard was hidden; that is fixed and tested from the field's side. |
+| Kids Chat demo | Done (emulator). Not on a phone | Added 18 Nov 2026 at the owner's request: a chat for children as a second icon of this app, two pretend users on one phone. Swear words and abusive wording are refused, personal details are shown masked first, a picture flagged for nudity is refused, and nothing is sent that could not be checked. 175 unit tests, 213 instrumented tests (193 passed, 20 opt-in ones skipped, none failed), lint 0 errors. Rulings 111–129 and the review under them. |
 
 ## Environment
 
@@ -171,12 +172,25 @@ The owner asked for a first demo of a chat app for children built on these model
 119. **"Send as written" is there because the owner chose it** (asked on 18 Nov 2026: "Masked only" or "Child chooses"; answer "Child chooses"). What it sends is the message that was checked for wording, not whatever is in the field by then. Cost if wrong: a personal detail goes out with one tap; that is the choice that was made.
 120. **The conversation is kept in memory only.** It survives turning the phone and is gone when the screen is closed. Nothing typed in the chat is written to disk. Cost if wrong: no chat history, which a real chat app would need.
 121. **The field stays open while a message is checked**, so the keyboard does not drop after every message. Send is off for that moment, and the message that was checked is the one that goes. While the personal-details card is up, the field is closed and the keyboard is hidden. Cost if wrong: text typed during a check is lost if that message is then sent.
-122. **The chat's field is marked "no personalised learning".** This project's keyboard keeps its AI out of such a field (ruling for milestone 3), so a child is not warned twice. Other keyboards are only asked not to learn from it. Cost if wrong: with this keyboard there are no emoji suggestions in the chat.
+122. **The chat's field is marked "no personalised learning".** This project's keyboard keeps its AI out of such a field (`InputEligibility`), so a child is not warned twice. Other keyboards are only asked not to learn from it. Cost if wrong: with this keyboard there are no emoji suggestions in the chat.
 123. **Kids Chat has its own launcher entry and its own task.** On the home screen it is a second icon, and in the recent-apps list a second card. Cost if wrong: someone looking for one app finds two icons after installing.
 124. **A picture is checked and sent in one step.** The child picks it in the system's picker; if the nudity check passes, it appears in the chat with no further confirmation. A refused picture is dropped and never shown in the chat, and so is one that could not be read or checked. Cost if wrong: a picture picked by mistake is in the chat at once; on one phone that is harmless, a real chat would want a preview.
 125. **One field of the chat screen can be replaced by a device test: `ChatActivity.Session.checks`.** The project holds no explicit picture and will not, so the only way to see the screen refuse a picture is to put a harmless drawing under rules whose threshold is zero. The app itself never replaces the field; `AppContainer.capture` is the same kind of opening. Cost if wrong: code inside the app could swap in looser checks; nothing outside the app can reach it.
 126. **Pictures stay in memory at up to 1600 pixels a side**, the copy the model looked at (ruling 54). Cost if wrong: a long chat full of pictures uses a lot of memory; smaller copies for the list are the remedy.
 127. **The accessibility audit found one fault in the new screen and it was fixed:** the empty conversation list had no label for a screen reader. Each message is announced with the sender's name, also for the sender's own messages.
+128. **A message is limited to 1,000 characters, and a longer one is not sent.** Models often read only the start of a long text, which would let unkind words through at the end of a long friendly message. Measured on the emulator: with the threat, or the email address, at the very end of a friendly message, both models still found it at 250, 500, 1,000, 2,000 and 4,000 characters. The limit sits well inside that; the field stops at it and the check itself refuses anything longer. Cost if wrong: a child cannot send a very long message in one piece.
+129. **Naming a city raises the personal-details card, and that is left as it is.** Addresses are watched, and the model's address labels include city and state. Measured: "We went to London on Saturday" is offered as "We went to [CITY_1] on Saturday" and "I live in Mumbai" as "I live in [CITY_1]"; "My house is 12 Park Street" loses both the number and the street; "Let's meet at the park after school" passes. Cost if wrong: the card comes up for harmless mentions of places and is tapped past, the trouble ruling 114 avoided for names. Dropping city and state alone needs a change in what the chat does with Redact's answer; it is the owner's call.
+
+**Review of Kids Chat.** One independent review of the three commits and the length limit, by a fresh reviewer given the code and the promise, not my conclusions. It found no way for a message or picture to reach the conversation unchecked or changed, no threading or lifecycle fault, and no change to the keyboard or the companion app. What it did find:
+
+- Final: fixed "the personal-details card of a long message pushes its own buttons off the screen, with everything else switched off" — `KidsChatTest.theCardForTheLongestMessageCanStillBeAnswered` RED→GREEN. The card now scrolls within the room the screen has.
+- Final: fixed "the locked screen says it is downloading for as long as a download waits for Wi-Fi, and gives no reason when one fails" — `KidsChatTest.theLockedChatLeadsToTheModelsScreenWhereTheReasonIsShown` RED→GREEN. The wording no longer claims a download is running, and a second button opens the Models screen, where the reason, Cancel and Retry are.
+- Final: fixed "no test shows the screen refusing what could not be checked" — `aMessageThatCouldNotBeCheckedIsNotSentAndTheSenderIsTold` and `aPictureThatCouldNotBeCheckedIsNotSent`, each seen failing against a copy of the screen broken on purpose to send such things.
+- Final: fixed "every test would pass if the chat took its rules from the keyboard's settings" — `looseningTheKeyboardsSettingsDoesNotLoosenTheChat`, seen failing against a copy broken on purpose to do that.
+- Final: added `whatIsSentIsWhatWasCheckedWhateverIsTypedMeanwhile`. It passed at once and was never seen failing: the screen's view-model has no way to read the field.
+- Final: minor (deferred): the lock test removes only Moderator, so it would still pass if Toxic or Redact were dropped from the list of models the chat needs.
+- Final: minor (deferred): two quick taps on the picture button open two pickers; the second picture chosen is dropped without a word.
+- Final: minor (deferred): the test of a refused picture cannot tell a refusal from a check that failed; both end in the same line on screen.
 
 ## Final review
 
@@ -249,6 +263,7 @@ What is still open at the end of the emulator work, in one place. Items from ear
 - The app is still installed on your `Pixel_6_Pro` emulator from milestones 0–5, with about 1.4 GB of downloaded models, and that emulator is close to full. Nothing was removed from it. To get the space back, with that emulator running: `adb uninstall com.example.aikeyboard` and `adb uninstall com.example.aikeyboard.test`.
 - A dedicated emulator, `AiKeyboard_Test`, was added under `~/.android/avd/` (ruling 40). Delete `AiKeyboard_Test.ini` and `AiKeyboard_Test.avd` there if you do not want it.
 - The license check was not captured on the wire (ruling 71).
+- Kids Chat, choices that are yours: whether the strictest tone setting is right, given that it refused a friendly message (ruling 115); whether names should count as personal details (114); which words belong on the list, Hinglish ones and slurs included (113); friendlier labels than `[EMAIL_1]` (117); and whether "Send as written" should stay (119). A sixth came out of the review: whether a city or state on its own should raise the card (129). Three small review findings were left as they are (see "Review of Kids Chat").
 
 **Still needs a phone**
 
@@ -257,6 +272,7 @@ What is still open at the end of the emulator work, in one place. Items from ear
 - Typing in named chat apps (WhatsApp, Telegram, Discord): the owner typed in real apps without saying which. What each does with a picture inserted from the keyboard: attach it or send it at once (ruling 108).
 - Speech with real fillers (Uhm); a real recording with several speakers (Who).
 - The keyboard's picture panel and its tests were not run as tests on the phone; the owner used it there by hand.
+- Kids Chat has not been installed on a phone.
 
 **Not tried on any device**
 
@@ -266,6 +282,7 @@ What is still open at the end of the emulator work, in one place. Items from ear
 - Inserting a drawing into a real chat app; a host app that turns an insert down.
 - Font sizes above 1.3×, display-size scaling, right-to-left layout.
 - How useful each model's output is across a real sample of messages. One or two inputs per model were used.
+- Kids Chat with large text, in landscape, with a long conversation or many pictures, with TalkBack by ear, or with a keyboard other than this project's. What its checks do with children's slang, misspellings or any language but English: ten English sentences were measured.
 
 **Not driven by a test** (the code is there)
 
@@ -273,6 +290,7 @@ What is still open at the end of the emulator work, in one place. Items from ear
 - Eye or Moderator failing mid-analysis; sharing failing for lack of storage; a download onto a nearly full disk (unit-tested only).
 - The system photo picker itself (the screen's pick handler is called with a file); the per-app AI switches screen beyond the accessibility audit.
 - Rotation not replaying the enable sweep.
+- Kids Chat: the picture button opening the picker (tried by hand on the emulator); a download that fails while the chat is locked; this project's keyboard staying quiet in the chat's field (the rule itself is unit-tested).
 
 **Behaviour worth knowing**
 
@@ -280,9 +298,10 @@ What is still open at the end of the emulator work, in one place. Items from ear
 - Android defers background jobs for apps that are not on screen. A download started and then immediately left may sit at "Waiting to start" for some minutes.
 - The Voice tools screen plays back the cleaned audio, not the original recording.
 - A drawing is not kept across a screen rotation.
+- The crash guard protects the keyboard, not Kids Chat. If Toxic, Redact or Moderator ever stopped the app while loading, the guard would switch that model off for the keyboard, but Kids Chat ignores those switches (ruling 112) and would stop again on the next message or picture. Not seen with these three models on the emulator or the phone.
 
 ## Next action
 
-**Nothing is waiting on a device.** The phone session was held on 18 Nov 2026 and is recorded in the validation report under "Phone session". What is left is for the owner to decide (see "Open items", "For the owner to decide or do"): the ten deferred findings from the final review, the unexplained keyboard-not-appearing cases, and what a store release needs.
+**Nothing is waiting on a device.** Kids Chat (rulings 111–129) is built and tested on the emulator and committed locally; it has not been pushed and is not on the phone. Trying it there is the natural next step, when the owner asks. The phone session was held on 18 Nov 2026 and is recorded in the validation report under "Phone session". What is left is for the owner to decide (see "Open items", "For the owner to decide or do"): the ten deferred findings from the final review, the unexplained keyboard-not-appearing cases, and what a store release needs.
 
 If a phone is connected again: never use Gradle's `install*` tasks (they install on every device); use `adb -s`. On the OnePlus, most reinstalls raise a prompt only the owner can approve, a test cannot grant the microphone, and the tests that switch Wi-Fi off, turn animations off or disable the keyboard are left out (ruling 91). Put `show_ime_with_hard_keyboard` back to `0` after any test run there. The real-picker test (`-e picker true`) is for an emulator only.

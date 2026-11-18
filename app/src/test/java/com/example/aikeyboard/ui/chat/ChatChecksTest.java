@@ -96,6 +96,14 @@ public class ChatChecksTest {
     }
 
     @Test
+    public void aMessageLongerThanTheChecksWereTriedAtIsNotSent() {
+        String longest = "a".repeat(ChatChecks.MESSAGE_LIMIT);
+
+        assertEquals(Outcome.CLEAR, checks.text(longest).outcome);
+        assertEquals(Outcome.UNCHECKED, checks.text(longest + "a").outcome);
+    }
+
+    @Test
     public void aPictureTheModelPassesMayBeSent() {
         assertTrue(checks.pictureAllowed(null));
     }

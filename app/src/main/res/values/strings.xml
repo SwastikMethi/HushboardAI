@@ -418,5 +418,6 @@
     <string name="chat_picture_from">Picture from %1$s</string>
     <string name="chat_locked">Kids Chat checks every message on this phone before it is sent. It needs three small models first: for unkind words, personal details and pictures.</string>
     <string name="chat_download">Download the checks</string>
-    <string name="chat_downloading">Downloading the checks…</string>
+    <string name="chat_downloading">Getting the checks. They may be waiting for Wi-Fi: Models shows what is happening.</string>
+    <string name="chat_models">Open Models</string>
 </resources>

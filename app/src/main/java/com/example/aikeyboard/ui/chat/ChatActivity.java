@@ -6,10 +6,12 @@
 package com.example.aikeyboard.ui.chat;
 
 import android.app.Application;
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.InputFilter;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +36,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.aikeyboard.AppContainer;
+import com.example.aikeyboard.MainActivity;
 import com.example.aikeyboard.R;
 import com.example.aikeyboard.databinding.ActivityChatBinding;
 import com.example.aikeyboard.databinding.ItemChatMessageBinding;
@@ -280,6 +283,9 @@ public final class ChatActivity extends AppCompatActivity {
         views.chatMessages.setLayoutManager(newestAtTheBottom);
         views.chatMessages.setAdapter(list);
 
+        // The field takes no more than the checks were tried at (see ChatChecks).
+        views.chatInput.setFilters(
+                new InputFilter[] {new InputFilter.LengthFilter(ChatChecks.MESSAGE_LIMIT)});
         views.chatWho.addOnButtonCheckedListener((group, buttonId, checked) -> {
             if (checked) session.typeAs(buttonId == R.id.chat_user_two ? 1 : 0);
         });
@@ -289,6 +295,11 @@ public final class ChatActivity extends AppCompatActivity {
         views.chatChange.setOnClickListener(v -> session.changeIt());
         views.chatSendWritten.setOnClickListener(v -> session.sendAsWritten());
         views.chatDownload.setOnClickListener(v -> downloadMissingModels());
+        // Why a download is waiting or failed, and the way to stop or retry it, are on the
+        // Models screen; Back returns here.
+        views.chatModels.setOnClickListener(v -> startActivity(
+                new Intent(this, MainActivity.class)
+                        .putExtra(MainActivity.EXTRA_TAB, MainActivity.TAB_MODELS)));
         views.chatPicture.setOnClickListener(v -> pickPicture.launch(
                 new PickVisualMediaRequest.Builder().setMediaType(
                         ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build()));
@@ -341,6 +352,7 @@ public final class ChatActivity extends AppCompatActivity {
             // The card needs the room, and the field is closed until a choice is made.
             getSystemService(InputMethodManager.class)
                     .hideSoftInputFromWindow(views.chatInput.getWindowToken(), 0);
+            views.chatPersonal.scrollTo(0, 0);
         }
         views.chatPersonal.setVisibility(deciding ? View.VISIBLE : View.GONE);
         views.chatPersonalTyped.setText(state.typed);

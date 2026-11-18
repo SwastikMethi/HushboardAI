@@ -27,6 +27,13 @@ import java.util.Set;
 
 public final class ChatChecks {
 
+    /**
+     * The longest message that may be sent, in characters. Both text models were tried with
+     * the unkind words, or the email address, at the very end of a friendly message of up to
+     * 4,000 characters and still found them; the limit stays well inside that.
+     */
+    public static final int MESSAGE_LIMIT = 1000;
+
     /** What may happen to a typed message. */
     public enum Outcome {
         /** Nothing found: it may be sent. */
@@ -91,6 +98,8 @@ public final class ChatChecks {
 
     /** Checks a typed message. Blocking: called on the inference thread. */
     public TextVerdict text(String text) {
+        // Longer than anything the models were tried on: not checked, so not sent.
+        if (text.length() > MESSAGE_LIMIT) return new TextVerdict(Outcome.UNCHECKED, null);
         if (hasBlockedWord(text)) return new TextVerdict(Outcome.UNKIND, null);
         try {
             ToxicScores tone = toxic.run(text, rules);

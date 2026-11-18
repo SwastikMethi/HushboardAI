@@ -3,6 +3,7 @@
      message and being sent: a warning, the personal-details card, or the field itself. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/chat_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -77,33 +78,128 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text="@string/chat_download" />
-    </LinearLayout>
 
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/chat_messages"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:clipToPadding="false"
-            android:contentDescription="@string/chat_conversation"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="8dp" />
-
-        <TextView
-            android:id="@+id/chat_empty"
+        <!-- Why a download is waiting or failed is shown on the Models screen. -->
+        <Button
+            android:id="@+id/chat_models"
+            style="?attr/materialButtonOutlinedStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:padding="32dp"
-            android:text="@string/chat_empty"
-            android:textAppearance="?attr/textAppearanceBodyLarge"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-    </FrameLayout>
+            android:text="@string/chat_models" />
+    </LinearLayout>
+
+    <!-- The conversation and, when one is up, the card share what is left of the screen:
+         the card takes what it needs, up to all of it, and the conversation the rest. -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <!-- One weighted child inside one weighted child: nothing for a second measuring
+             pass to cost. -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            tools:ignore="NestedWeights">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/chat_messages"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:contentDescription="@string/chat_conversation"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp" />
+
+            <TextView
+                android:id="@+id/chat_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:padding="32dp"
+                android:text="@string/chat_empty"
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+        </FrameLayout>
+
+        <!-- The personal-details card. It scrolls: a long message is shown twice above the
+             buttons, and they must stay within reach whatever the screen or text size. -->
+        <ScrollView
+            android:id="@+id/chat_personal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:accessibilityHeading="true"
+                    android:text="@string/chat_personal_title"
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/chat_personal_typed_label"
+                    android:textAppearance="?attr/textAppearanceLabelLarge"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <TextView
+                    android:id="@+id/chat_personal_typed"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/chat_personal_masked_label"
+                    android:textAppearance="?attr/textAppearanceLabelLarge"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <TextView
+                    android:id="@+id/chat_personal_masked"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+                <Button
+                    android:id="@+id/chat_send_masked"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/chat_send_masked" />
+
+                <Button
+                    android:id="@+id/chat_change"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/chat_change" />
+
+                <Button
+                    android:id="@+id/chat_send_written"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/chat_send_written" />
+            </LinearLayout>
+        </ScrollView>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/chat_notice"
@@ -115,74 +211,6 @@
         android:paddingVertical="12dp"
         android:textAppearance="?attr/textAppearanceBodyLarge"
         android:visibility="gone" />
-
-    <LinearLayout
-        android:id="@+id/chat_personal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="12dp"
-        android:layout_marginBottom="8dp"
-        android:background="@drawable/bg_card"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:accessibilityHeading="true"
-            android:text="@string/chat_personal_title"
-            android:textAppearance="?attr/textAppearanceTitleMedium" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/chat_personal_typed_label"
-            android:textAppearance="?attr/textAppearanceLabelLarge"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-        <TextView
-            android:id="@+id/chat_personal_typed"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceBodyLarge" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/chat_personal_masked_label"
-            android:textAppearance="?attr/textAppearanceLabelLarge"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-        <TextView
-            android:id="@+id/chat_personal_masked"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textAppearance="?attr/textAppearanceBodyLarge" />
-
-        <Button
-            android:id="@+id/chat_send_masked"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/chat_send_masked" />
-
-        <Button
-            android:id="@+id/chat_change"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/chat_change" />
-
-        <Button
-            android:id="@+id/chat_send_written"
-            style="?attr/borderlessButtonStyle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/chat_send_written" />
-    </LinearLayout>
 
     <!-- Shown while a message is being checked. It keeps its place when hidden, so the
          conversation does not jump on every message. -->

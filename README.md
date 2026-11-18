@@ -1,6 +1,6 @@
 # AI Keyboard — Java implementation handoff
 
-> **Status, 18 Nov 2026.** This folder now holds the implemented Android project as well as the handoff. Milestones 0–9 are built and tested on an emulator and on one physical phone (OnePlus CPH2423, Android 15); the hands-on checks on the phone were done by the owner and rest on their report. Not done: battery and heat, phones with less memory, named chat apps. What passed, failed, is blocked or was not run is in [docs/validation-report.md](docs/validation-report.md); every model's status is in [docs/model-compatibility.md](docs/model-compatibility.md); decisions and open items are in [PROGRESS.md](PROGRESS.md). The handoff text below is kept as it was written.
+> **Status, 18 Nov 2026.** This folder now holds the implemented Android project as well as the handoff. Milestones 0–9 are built and tested on an emulator and on one physical phone (OnePlus CPH2423, Android 15); the hands-on checks on the phone were done by the owner and rest on their report. Not done: battery and heat, phones with less memory, named chat apps. What passed, failed, is blocked or was not run is in [docs/validation-report.md](docs/validation-report.md); every model's status is in [docs/model-compatibility.md](docs/model-compatibility.md); decisions and open items are in [PROGRESS.md](PROGRESS.md). Since 18 Nov 2026 the same app also holds **Kids Chat**, a one-phone demo of a chat for children; see "Kids Chat (demo)" below. The handoff text below is kept as it was written.
 
 ## Build and run
 
@@ -44,6 +44,32 @@ Things worth knowing before relying on it:
 - **Emulators.** The stock emulator image has too little memory for Voz and its software GPU crashes Clear. The tests here ran on an emulator with 8 GB of memory started with `-gpu host`.
 - **License.** The models are Desert Ant Labs' and are used under their source-available license, which the project owner accepted. Their software makes a license check (about once a month per model); the app says so on its Privacy screen and shows a "Powered by Desert Ant Labs" credit in Settings.
 - **Not for a store yet.** The application id is `com.example.aikeyboard`, the build is debug-signed, and the APK size needs a packaging decision.
+
+## Kids Chat (demo)
+
+A first demo of a chat for children, built on the same on-device models. It installs with the app and shows up as a second icon on the home screen, **Kids Chat**. Two pretend users, Mia and Leo, share one phone, and the switch at the top says who is typing. There is no second phone, account, server or parent side. The conversation is held in memory and is gone when the screen is closed; nothing typed or picked there is written to disk or leaves the phone.
+
+Everything is checked on the phone before it is sent:
+
+| What is being sent | Checked by | What happens |
+|---|---|---|
+| A message with a swear word | A built-in word list, `app/src/main/res/values/chat_blocked_words.xml` | Not sent. It stays in the field under a warning |
+| A message with abusive, hateful or threatening wording | Toxic, at its strictest setting | Not sent, with the same warning |
+| A message with an email address, phone number, payment or ID number, street address or web link | Redact | A card shows the message as typed and as masked (`[EMAIL_1]`). The child picks **Send like this**, **Change it** or **Send as written** |
+| A picture | Moderator, which scores nudity | Not sent if flagged, with a line saying so |
+
+A message can be up to 1,000 characters, the range the checks were tried over. If a check cannot run, nothing is sent. The chat stays locked, with a Download button and a way to the Models screen, until Toxic, Redact and Moderator are installed. The rules are fixed in `ChatChecks.kidRules()` and do not follow the keyboard's settings, so they cannot be loosened from the Settings tab.
+
+This is a demo, not a safety product. Its limits:
+
+- **Toxic is a beta model.** It misses slang. At the strict setting used here it refused one friendly message out of ten samples ("You killed it in the match today, great job!").
+- **The word list is short and literal.** 52 English entries, whole words in their exact spelling, so "sh1t" passes. It holds no slurs; those are left to the model's "hateful" category. Add words to the file to extend it.
+- **Redact covers European languages only**, and names are deliberately not treated as personal details, or nearly every message would be stopped. A city or state on its own does raise the card ("We went to London on Saturday").
+- **Moderator scores nudity only**, not violence or anything else. No explicit picture was ever shown to it in this project; its refusal was tested with a harmless drawing and a threshold of zero.
+- **Send as written** lets a personal detail out by the child's own choice. That was the project owner's decision.
+- **Nothing here notices an adult befriending a child.** No model in this set does. A real product would start from contacts a parent approved.
+
+What was tested is in [docs/validation-report.md](docs/validation-report.md) under "Kids Chat demo"; the decisions are rulings 111 to 129 in [PROGRESS.md](PROGRESS.md).
 
 This package contains the implementation plan, UI references, and instructions for building an Android AI keyboard with a companion settings app. **Java is selected as the primary language.**
 

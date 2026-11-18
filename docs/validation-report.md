@@ -61,6 +61,11 @@ adb shell am instrument -w -r -e latency true -e class com.example.aikeyboard.La
 # the device's own pictures. Put one in the emulator's gallery first.
 adb shell am instrument -w -e picker true -e class 'com.example.aikeyboard.KeyboardImageTest#theSystemsPickerHandsAChosenPictureBackToTheKeyboard' com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 
+# Kids Chat, two measurements: what the tone model alone makes of ten sample messages under the
+# chat's rules, and how far into a long message the two text models still see. Results come
+# back as INSTRUMENTATION_STATUS lines.
+adb shell am instrument -w -r -e chatprobe true -e class com.example.aikeyboard.KidsChatTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
+
 # Screenshots: written to /sdcard/Android/data/com.example.aikeyboard/files/tour
 adb shell am instrument -w -e screenshots true -e class com.example.aikeyboard.ScreenshotTourTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 ```
@@ -537,6 +542,80 @@ Noticed while building the picture panel, fixed at the owner's request.
 | On the phone | not run | PHONE | The owner had already allowed the microphone there, so the screen does not appear |
 
 After the fix: 161 unit tests, lint 0 errors and 37 warnings, and the whole suite on the emulator (EMU-37B, `-e clear true`): 185 run, 168 passed, 17 skipped by design, none failed.
+
+## Kids Chat demo (18 Nov 2026)
+
+Asked for by the owner after the keyboard was finished: a first demo of a chat for children, built on the same models. Their decisions: one phone with two pretend users, no parent side, unkind wording and nude pictures cannot be sent, and personal details are shown masked with the choice to send masked, change the message or send it as written. It is a screen of this app with its own home-screen icon. None of this has been on a phone.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| The sending rules, with stand-in models: a listed word is refused whatever its case or punctuation and is not matched inside a longer word; wording the tone model flags is refused, also below the model's own threshold; personal details come back masked; unkind wording wins over personal details; an ordinary message is clear; a model that fails means not sent; a flagged or uncheckable picture is refused | failed, then passed | unit | `ChatChecksTest`, first 13 tests. Against an empty implementation 10 failed and the 3 that guard against refusing too much passed |
+| A message longer than 1,000 characters is not sent; one of exactly that length is | failed, then passed | unit | `ChatChecksTest.aMessageLongerThanTheChecksWereTriedAtIsNotSent` |
+| Unkind words at the very end, or in the middle, of the longest message allowed are still refused; an email address at its end is still found | passed | EMU-37B | `KidsChatTest.unkindWordsAnywhereInTheLongestMessageAreStillRefused`, `personalDetailsAtTheEndOfTheLongestMessageAreStillFound`. They passed on their first run: the models already saw that far (see the second measurement below) |
+| The field takes no more than 1,000 characters | passed | EMU-37B | `KidsChatTest.theFieldTakesNoMoreThanTheChecksWereTriedAt`. First run after the limit was in, so never seen failing on the device; the rule itself was seen failing as a unit test |
+| The same rules through the real models: a threat is refused; a swear word aimed at nobody is refused by the word list; a friendly message is clear; an email address comes back as `[EMAIL_1]`; a harmless drawing may be sent and is refused at a threshold of zero | passed | EMU-37B | `KidsChatTest`, first five tests. They passed on their first run, the rules having been built against the unit tests |
+| A threat stays in the field under a warning and is not sent | failed, then passed | EMU-37B | `KidsChatTest.aThreatStaysInTheFieldWithAWarningAndIsNotSent`, first run against an empty screen |
+| A clean message is sent; for the other user it sits on the other side, and they can reply | failed, then passed | EMU-37B | `KidsChatTest.aCleanMessageIsSentAndTheOtherUserSeesItAndCanReply`, first run against an empty screen |
+| The chat is locked while a model is missing, and its Download button brings it back | failed, then passed | EMU-37B | `KidsChatTest.theChatIsLockedUntilEverySafetyModelIsInstalled`: Moderator is deleted, the screen shows the lock with Send and the field off, Download fetches it, the lock goes. First run against an empty screen |
+| Personal details raise the card; **Send like this** sends the masked text and empties the field; **Change it** sends nothing and gives the message back; **Send as written** sends it as typed | passed | EMU-37B | Three `KidsChatTest` tests. First run against the finished screen, so they were never seen failing |
+| The card of the longest message allowed can still be answered | failed, then passed | EMU-37B | `KidsChatTest.theCardForTheLongestMessageCanStillBeAnswered`. Found by the review: the message is shown twice above the buttons, which pushed them off the screen with everything else switched off. The card now scrolls |
+| A message that could not be checked is not sent and the sender is told; the same for a picture | passed, and seen failing | EMU-37B | `aMessageThatCouldNotBeCheckedIsNotSentAndTheSenderIsTold`, `aPictureThatCouldNotBeCheckedIsNotSent`, with a stand-in model that fails. Added after the review; both failed against a copy of the screen broken on purpose to send such things |
+| Loosening the keyboard's settings does not loosen the chat | passed, and seen failing | EMU-37B | `looseningTheKeyboardsSettingsDoesNotLoosenTheChat`: with email addresses switched off for the keyboard, the chat still raises the card. Failed against a copy broken on purpose to read the keyboard's settings |
+| What is sent is what was checked, whatever is typed while the check runs | passed | EMU-37B | `whatIsSentIsWhatWasCheckedWhateverIsTypedMeanwhile`, with a stand-in model that waits. Never seen failing |
+| The locked chat leads to the Models screen, where the reason for a waiting or failed download is shown | failed, then passed | EMU-37B | `theLockedChatLeadsToTheModelsScreenWhereTheReasonIsShown`. Found by the review: the lock said "Downloading" for as long as a download waited for Wi-Fi |
+| Turning the phone keeps the conversation | passed | EMU-37B | `KidsChatTest.turningThePhoneKeepsTheConversation`. Also first run against the finished screen |
+| A harmless picture is sent as a picture; a picture the check refuses is not sent and the sender is told; a file that is not a picture is not sent | failed, then passed | EMU-37B | Three `KidsChatTest` tests, all first run against a screen whose picture handler did nothing. The refusal uses a harmless drawing under rules whose threshold is zero: no explicit picture exists in this project |
+| The screen passes the accessibility checks when empty, with a message and a warning, and with the card | failed, then passed | EMU-37B | `AccessibilityAuditTest.kidsChatPassesTheAccessibilityChecksInEachOfItsStates`. It failed on the empty conversation list, which had no label for a screen reader |
+| By hand: two users exchange messages, an insult is refused, an email raises the card | passed by hand | EMU-37B | Driven over adb. `docs/evidence/screenshots/kids_chat_warning.png`, `kids_chat_personal_card.png` |
+| By hand: a picture through Android's real picker | passed by hand | EMU-37B | Picture button, the picker, a drawn beach scene from the emulator's gallery, Done. It appeared in the chat. `docs/evidence/screenshots/kids_chat_picture.png` |
+| This project's keyboard stays quiet in the chat's field | not run | — | The field carries the "no personalised learning" mark, which `InputEligibilityTest` shows the keyboard obeys. No test types in the chat with the keyboard's AI on |
+| On a phone | not run | PHONE | Not installed there yet |
+| Moderator on a picture it should flag | not run | — | Never shown one, here or anywhere in this project (ruling 55). That it flags real nudity is the vendor's claim |
+| Large text, landscape, a long conversation, many pictures, TalkBack by ear, a keyboard other than this project's | not run | — | |
+
+What the tone model made of ten sample messages under the chat's rules (strictest setting), and what the chat then did. "Model" is what Toxic alone flagged:
+
+| Sample | Model | Scores (hateful / abusive / threat) | Chat |
+|---|---|---|---|
+| You are a stupid idiot and I hate you | abusive | 0.02 / 0.93 / 0.01 | refused |
+| Nobody likes you, loser | abusive | 0.01 / 0.99 / 0.00 | refused |
+| I will beat you up after school | abusive, threat | 0.05 / 0.50 / 0.82 | refused |
+| I know where you live and I will hurt you | abusive | 0.02 / 0.46 / 0.17 | refused |
+| People like you should not exist | abusive, threat | 0.13 / 0.83 / 0.50 | refused |
+| This game is so damn hard | nothing | 0.00 / 0.02 / 0.00 | sent ("damn" is not on the list, on purpose) |
+| That was a shitty game | nothing | 0.00 / 0.19 / 0.00 | refused, by the word list alone |
+| What the fuck was that | nothing | 0.00 / 0.03 / 0.00 | refused, by the word list alone |
+| Do you want to play football after school? | nothing | 0.00 / 0.01 / 0.00 | sent |
+| You killed it in the match today, great job! | threat | 0.01 / 0.03 / 0.26 | **refused, wrongly** |
+
+Read with care: ten sentences in English, written for this test. They show that the word list is needed (the model let both swear words through), that the strict setting is what caught the fourth sample, and that the same setting refuses a friendly message that sounds violent. They say nothing about slang, misspellings, other languages or how often either mistake happens.
+
+How far into a long message the two text models still see. Each message is friendly filler ("We had so much fun at the park today.") with the threat, or the email address, as its last words:
+
+| Length in characters | Threat at the end | Email address at the end |
+|---|---|---|
+| 250 | refused | found |
+| 500 | refused | found |
+| 1,000 | refused | found |
+| 2,000 | refused | found |
+| 4,000 | refused | found |
+
+Nothing longer was tried, so the chat allows 1,000.
+
+Whether naming a place raises the personal-details card (addresses are watched, and the model's address labels include city and state):
+
+| Message | Chat |
+|---|---|
+| We went to London on Saturday | card: "We went to [CITY_1] on Saturday" |
+| I live in Mumbai | card: "I live in [CITY_1]" |
+| My house is 12 Park Street | card: "My house is [BUILDING_NUMBER_1] [STREET_NAME_1]" |
+| Let's meet at the park after school | sent |
+
+The first row is the cost of watching addresses: a harmless mention of a city is stopped too. Left as it is, for the owner to decide (ruling 129).
+
+An independent review of the feature found no way for a message or picture to reach the conversation unchecked or changed. Its two faults and its test gaps are the rows above marked as found by the review or added after it; three small findings were left (PROGRESS.md, "Review of Kids Chat").
+
+After the feature and the review's fixes: 175 unit tests, lint 0 errors and 39 warnings (two more than before, both the note about `accessibilityHeading` that the app's other screens already carry), a 701.8 MB debug APK, and the whole suite on the emulator (EMU-37B, `-e clear true`): 213 run, 193 passed, 20 skipped by design (the 17 as before and the chat's three measurements), none failed. The suite was run in full three times as the feature grew, each time with no failure.
 
 ## The handoff checklist, item by item
 

@@ -20,11 +20,14 @@ import static org.junit.Assume.assumeTrue;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
+import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
@@ -46,6 +49,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -242,6 +249,48 @@ public class KidsChatTest {
         }
     }
 
+    @Test
+    public void aHarmlessPictureIsSentAsAPicture() throws Exception {
+        openChat();
+
+        pick(Uri.fromFile(harmless()));
+
+        assertTrue("not sent; notice: " + shown(R.id.chat_notice),
+                TestModels.await(() -> sent() == 1, RUN_MS));
+        assertTrue("the message shows no picture", showsPicture(0));
+    }
+
+    @Test
+    public void aPictureTheCheckRefusesIsNotSentAndTheSenderIsTold() throws Exception {
+        openChat();
+        // Nothing explicit is shown to the model: at a threshold of zero any picture counts.
+        ChatChecks atZero = ChatChecks.with(app, context, new AppSettings(1, Map.of(
+                AppSettings.modelSettingKey("moderator", ModelRegistry.MODERATOR_THRESHOLD), 0)));
+        chat.onActivity(activity -> new ViewModelProvider(activity)
+                .get(ChatActivity.Session.class).checks = atZero);
+
+        pick(Uri.fromFile(harmless()));
+
+        assertTrue("no warning; notice: " + shown(R.id.chat_notice), TestModels.await(
+                () -> shown(R.id.chat_notice).equals(
+                        context.getString(R.string.chat_picture_refused)), RUN_MS));
+        assertEquals(0, sent());
+    }
+
+    @Test
+    public void aFileThatIsNotAPictureIsNotSent() throws Exception {
+        File notes = new File(context.getCacheDir(), "notes.txt");
+        Files.write(notes.toPath(), "not a picture".getBytes(StandardCharsets.UTF_8));
+        openChat();
+
+        pick(Uri.fromFile(notes));
+
+        assertTrue("no warning; notice: " + shown(R.id.chat_notice), TestModels.await(
+                () -> shown(R.id.chat_notice).equals(
+                        context.getString(R.string.image_unreadable)), RUN_MS));
+        assertEquals(0, sent());
+    }
+
     private void openChat() {
         chat = ActivityScenario.launch(ChatActivity.class);
         getInstrumentation().waitForIdleSync();
@@ -293,6 +342,27 @@ public class KidsChatTest {
             right[0] = bubble.getLeft() + bubble.getWidth() / 2 > row.getWidth() / 2;
         });
         return right[0];
+    }
+
+    private void pick(Uri uri) {
+        chat.onActivity(activity -> activity.onPicturePicked(uri));
+    }
+
+    private File harmless() throws Exception {
+        File file = new File(context.getCacheDir(), "house.png");
+        try (FileOutputStream out = new FileOutputStream(file)) {
+            VisionModelsTest.harmlessPicture().compress(Bitmap.CompressFormat.PNG, 90, out);
+        }
+        return file;
+    }
+
+    private boolean showsPicture(int position) {
+        boolean[] shows = {false};
+        chat.onActivity(activity -> {
+            ImageView picture = row(activity, position).findViewById(R.id.chat_bubble_picture);
+            shows[0] = picture.isShown() && picture.getDrawable() != null;
+        });
+        return shows[0];
     }
 
     private static View row(ChatActivity activity, int position) {

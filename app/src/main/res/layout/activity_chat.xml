@@ -38,14 +38,18 @@
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/chat_user_one" />
+                android:text="@string/chat_user_one"
+                android:textColor="@color/chat_who_label"
+                app:backgroundTint="@color/chat_who_fill" />
 
             <Button
                 android:id="@+id/chat_user_two"
                 style="?attr/materialButtonOutlinedStyle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/chat_user_two" />
+                android:text="@string/chat_user_two"
+                android:textColor="@color/chat_who_label"
+                app:backgroundTint="@color/chat_who_fill" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
     </LinearLayout>
 
@@ -85,6 +89,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
+            android:contentDescription="@string/chat_conversation"
             android:paddingHorizontal="12dp"
             android:paddingVertical="8dp" />
 
@@ -196,6 +201,15 @@
         android:orientation="horizontal"
         android:paddingHorizontal="12dp"
         android:paddingVertical="8dp">
+
+        <ImageButton
+            android:id="@+id/chat_picture"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/chat_picture"
+            android:src="@drawable/ic_picture" />
 
         <!-- Marked "no personalised learning": this app's own keyboard keeps its AI quiet in
              such a field, so a child is not warned twice about the same message. -->

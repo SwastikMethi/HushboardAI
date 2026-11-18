@@ -43,7 +43,10 @@ public final class Vision {
         }
     }
 
-    /** The sensitive-image check for one picture. A flag is a warning, never a block. */
+    /**
+     * The sensitive-image check for one picture. In the keyboard and the image tools a flag
+     * is a warning, never a block; Kids Chat refuses to send a flagged picture.
+     */
     public static final class Sensitivity {
         public final double score;
         public final boolean flagged;

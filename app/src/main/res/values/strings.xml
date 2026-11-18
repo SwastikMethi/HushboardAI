@@ -399,6 +399,7 @@
     <string name="chat_who">Who is typing</string>
     <string name="chat_user_one" translatable="false">Mia</string>
     <string name="chat_user_two" translatable="false">Leo</string>
+    <string name="chat_conversation">Conversation</string>
     <string name="chat_empty">Say hi! Every message is checked on this phone before it is sent.</string>
     <string name="chat_hint">Type a message</string>
     <string name="chat_send">Send</string>
@@ -412,6 +413,9 @@
     <string name="chat_send_masked">Send like this</string>
     <string name="chat_change">Change it</string>
     <string name="chat_send_written">Send as written</string>
+    <string name="chat_picture">Send a picture</string>
+    <string name="chat_picture_refused">This picture can\'t be sent.</string>
+    <string name="chat_picture_from">Picture from %1$s</string>
     <string name="chat_locked">Kids Chat checks every message on this phone before it is sent. It needs three small models first: for unkind words, personal details and pictures.</string>
     <string name="chat_download">Download the checks</string>
     <string name="chat_downloading">Downloading the checks…</string>

@@ -1,11 +1,14 @@
 // Kids Chat: a demo of a chat for children, with two pretend users on one phone. A message
-// is checked on the phone before it is sent (see ChatChecks): unkind wording is refused and
-// personal details are shown masked first. The conversation lives in memory only and is gone
-// when the screen is closed; nothing typed here is written to disk or leaves the phone.
+// is checked on the phone before it is sent (see ChatChecks): unkind wording is refused,
+// personal details are shown masked first, and a picture the nudity check flags is refused.
+// The conversation lives in memory only and is gone when the screen is closed; nothing typed
+// or picked here is written to disk or leaves the phone.
 package com.example.aikeyboard.ui.chat;
 
 import android.app.Application;
 import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
@@ -13,7 +16,11 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.FrameLayout;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
@@ -30,10 +37,12 @@ import com.example.aikeyboard.AppContainer;
 import com.example.aikeyboard.R;
 import com.example.aikeyboard.databinding.ActivityChatBinding;
 import com.example.aikeyboard.databinding.ItemChatMessageBinding;
+import com.example.aikeyboard.media.ImageImport;
 import com.example.aikeyboard.models.ModelRepository.AssetState;
 import com.example.aikeyboard.ui.chat.ChatChecks.Outcome;
 import com.example.aikeyboard.ui.chat.ChatChecks.TextVerdict;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -47,11 +56,15 @@ public final class ChatActivity extends AppCompatActivity {
     static final class Message {
         /** Who sent it: 0 or 1. */
         final int sender;
+        /** The words, or null for a picture. */
         final String text;
+        /** The picture, or null for words. */
+        final Bitmap picture;
 
-        Message(int sender, String text) {
+        Message(int sender, String text, Bitmap picture) {
             this.sender = sender;
             this.text = text;
+            this.picture = picture;
         }
     }
 
@@ -87,7 +100,12 @@ public final class ChatActivity extends AppCompatActivity {
 
         private final AppContainer app;
         private final Executor main;
-        private final ChatChecks checks;
+        /**
+         * The checks every message passes. Not final so a device test can put a harmless
+         * picture under rules that refuse it, there being no explicit picture in this
+         * project; the app itself never replaces them.
+         */
+        public ChatChecks checks;
         private final MutableLiveData<State> state = new MutableLiveData<>();
         // Everything below is read and changed on the main thread only.
         private final List<Message> messages = new ArrayList<>();
@@ -146,6 +164,40 @@ public final class ChatActivity extends AppCompatActivity {
             });
         }
 
+        /** Reads and checks a chosen picture, and sends it if the check lets it through. */
+        void sendPicture(Uri uri) {
+            if (busy()) return;
+            checking = true;
+            notice = 0;
+            publish();
+            app.io.execute(() -> {
+                Bitmap picture;
+                try {
+                    // ponytail: every picture stays in memory at up to 1600 px a side, the
+                    // copy the model looked at. A long chat full of pictures would need
+                    // smaller copies for the list.
+                    picture = ImageImport.decode(getApplication(), uri, ImageImport.MAX_SIDE);
+                } catch (IOException e) {
+                    main.execute(() -> pictureChecked(null, R.string.image_unreadable));
+                    return;
+                }
+                app.inference.execute(() -> {
+                    boolean allowed = checks.pictureAllowed(picture);
+                    main.execute(() -> pictureChecked(allowed ? picture : null,
+                            R.string.chat_picture_refused));
+                });
+            });
+        }
+
+        // How a picture's check ends: it joins the conversation, or the sender is told why not.
+        private void pictureChecked(Bitmap allowed, int refusal) {
+            if (left) return;
+            checking = false;
+            if (allowed != null) messages.add(new Message(typing, null, allowed));
+            else notice = refusal;
+            publish();
+        }
+
         /** The sender's answer to the personal-details card: send the masked message. */
         void sendMasked() {
             if (typed != null) decide(masked);
@@ -174,7 +226,7 @@ public final class ChatActivity extends AppCompatActivity {
         }
 
         private void add(String text) {
-            messages.add(new Message(typing, text));
+            messages.add(new Message(typing, text, null));
             clearInput = true;
         }
 
@@ -197,6 +249,12 @@ public final class ChatActivity extends AppCompatActivity {
     private AppContainer app;
     private Session session;
     private final Messages list = new Messages();
+
+    // The system's photo picker: the app is handed the one picture chosen and nothing else,
+    // and needs no storage permission.
+    private final ActivityResultLauncher<PickVisualMediaRequest> pickPicture =
+            registerForActivityResult(new ActivityResultContracts.PickVisualMedia(),
+                    this::onPicturePicked);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -231,9 +289,17 @@ public final class ChatActivity extends AppCompatActivity {
         views.chatChange.setOnClickListener(v -> session.changeIt());
         views.chatSendWritten.setOnClickListener(v -> session.sendAsWritten());
         views.chatDownload.setOnClickListener(v -> downloadMissingModels());
+        views.chatPicture.setOnClickListener(v -> pickPicture.launch(
+                new PickVisualMediaRequest.Builder().setMediaType(
+                        ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build()));
 
         session.state().observe(this, state -> render());
         app.models.statuses().observe(this, statuses -> render());
+    }
+
+    /** What the picker reports: the chosen picture, or null when it was closed without one. */
+    public void onPicturePicked(@Nullable Uri uri) {
+        if (uri != null) session.sendPicture(uri);
     }
 
     // A download is only ever started by this tap, as everywhere else in the app.
@@ -283,7 +349,10 @@ public final class ChatActivity extends AppCompatActivity {
         // The field stays open during a check, so the keyboard does not drop after every
         // message; what was checked is what is sent, whatever is typed meanwhile.
         views.chatInput.setEnabled(ready && !deciding);
-        views.chatSend.setEnabled(ready && !deciding && !state.checking);
+        boolean free = ready && !deciding && !state.checking;
+        views.chatSend.setEnabled(free);
+        views.chatPicture.setEnabled(free);
+        views.chatPicture.setAlpha(free ? 1f : 0.4f);
         views.chatUserOne.setEnabled(!deciding && !state.checking);
         views.chatUserTwo.setEnabled(!deciding && !state.checking);
         views.chatWho.check(state.typing == 0 ? R.id.chat_user_one : R.id.chat_user_two);
@@ -347,12 +416,18 @@ public final class ChatActivity extends AppCompatActivity {
 
             item.chatBubbleName.setVisibility(mine ? View.GONE : View.VISIBLE);
             item.chatBubbleName.setText(name(message.sender));
+            boolean words = message.text != null;
+            item.chatBubbleText.setVisibility(words ? View.VISIBLE : View.GONE);
             item.chatBubbleText.setText(message.text);
             item.chatBubbleText.setTextColor(
                     getColor(mine ? R.color.on_accent_blue : R.color.text_primary));
-            // A screen reader is told who said it, also for the sender's own messages.
+            item.chatBubblePicture.setVisibility(words ? View.GONE : View.VISIBLE);
+            item.chatBubblePicture.setImageBitmap(message.picture);
+            // A screen reader is told who it is from, also for the sender's own messages.
             item.chatBubbleText.setContentDescription(
                     getString(R.string.chat_said, name(message.sender), message.text));
+            item.chatBubblePicture.setContentDescription(
+                    getString(R.string.chat_picture_from, name(message.sender)));
         }
 
         @Override

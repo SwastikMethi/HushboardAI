@@ -2,10 +2,12 @@
 <!-- One message in Kids Chat. The bubble is moved to the side of whoever is typing now and
      coloured to match, in ChatActivity. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:paddingVertical="4dp">
 
+    <!-- The frame around the bubble is what lets it sit on either side. -->
     <LinearLayout
         android:id="@+id/chat_bubble"
         android:layout_width="wrap_content"
@@ -14,7 +16,8 @@
         android:background="@drawable/bg_chat_bubble"
         android:orientation="vertical"
         android:paddingHorizontal="14dp"
-        android:paddingVertical="10dp">
+        android:paddingVertical="10dp"
+        tools:ignore="UselessParent">
 
         <TextView
             android:id="@+id/chat_bubble_name"
@@ -30,5 +33,17 @@
             android:layout_height="wrap_content"
             android:maxWidth="280dp"
             android:textAppearance="?attr/textAppearanceBodyLarge" />
+
+        <!-- Its spoken label names the sender, so it is set per message in ChatActivity. -->
+        <ImageView
+            android:id="@+id/chat_bubble_picture"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:maxWidth="220dp"
+            android:maxHeight="220dp"
+            android:scaleType="fitCenter"
+            android:visibility="gone"
+            tools:ignore="ContentDescription" />
     </LinearLayout>
 </FrameLayout>

@@ -37,6 +37,7 @@ import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
 import com.example.aikeyboard.ime.view.AiToggleView;
 import com.example.aikeyboard.models.ModelDescriptor;
+import com.example.aikeyboard.ui.chat.ChatActivity;
 
 import org.hamcrest.Matcher;
 import org.junit.After;
@@ -157,6 +158,46 @@ public class AccessibilityAuditTest {
             auditScreen(app, () -> holder[0].openToolsFor(ModelDescriptor.Group.DRAWING),
                     R.id.drawing_status);
         }
+    }
+
+    // ---- Kids Chat ----
+
+    @Test
+    public void kidsChatPassesTheAccessibilityChecksInEachOfItsStates() throws Exception {
+        for (String id : new String[] {"toxic", "redact", "moderator"}) {
+            TestModels.ensureInstalled(id);
+        }
+        try (ActivityScenario<ChatActivity> chat = ActivityScenario.launch(ChatActivity.class)) {
+            getInstrumentation().waitForIdleSync();
+            onView(withId(R.id.chat_empty)).check(matches(isDisplayed()));
+            onView(isRoot()).perform(audit());
+
+            // A message in the conversation, and a refused one with its warning.
+            sayInChat("See you after school");
+            assertTrue(TestModels.await(() -> isShowing(chat, R.id.chat_bubble), 60_000));
+            sayInChat("I will find you and hurt you, you worthless idiot");
+            assertTrue(TestModels.await(() -> isShowing(chat, R.id.chat_notice), 60_000));
+            onView(isRoot()).perform(audit());
+
+            // The personal-details card with its three buttons.
+            sayInChat("My email is mia@example.com");
+            assertTrue(TestModels.await(() -> isShowing(chat, R.id.chat_personal), 60_000));
+            onView(isRoot()).perform(audit());
+        }
+    }
+
+    private static void sayInChat(String text) {
+        onView(withId(R.id.chat_input)).perform(ViewActions.replaceText(text));
+        onView(withId(R.id.chat_send)).perform(click());
+    }
+
+    private static boolean isShowing(ActivityScenario<ChatActivity> chat, int viewId) {
+        boolean[] showing = {false};
+        chat.onActivity(activity -> {
+            View view = activity.findViewById(viewId);
+            showing[0] = view != null && view.isShown();
+        });
+        return showing[0];
     }
 
     // ---- Keyboard ----

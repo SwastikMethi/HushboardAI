@@ -76,6 +76,11 @@ public final class ImageToolsFragment extends Fragment {
         public boolean analysed() {
             return picture != null && !working;
         }
+
+        /** Whether the sensitive-content check ran on this picture and flagged it. */
+        public boolean flagged() {
+            return sensitivity != null && sensitivity.flagged;
+        }
     }
 
     /**

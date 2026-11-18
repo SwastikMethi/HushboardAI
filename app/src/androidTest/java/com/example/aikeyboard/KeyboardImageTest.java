@@ -1,6 +1,7 @@
 // The keyboard's picture button and panel. The button is offered only while an image model
 // can really run and the field allows AI. A picture chosen in the system's picker comes back
-// to the keyboard, and what the image models found is shown there; the field is not touched.
+// to the keyboard, and what the image models found is shown there; the field is not touched
+// until the user taps Insert, and a flagged picture is sent only after a warning.
 // The system's picker cannot be driven by a test, so a picture is handed over the way the
 // picker screen hands it over once it has read the chosen file.
 package com.example.aikeyboard;
@@ -9,9 +10,11 @@ import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentat
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.widget.EditText;
 
 import androidx.lifecycle.Lifecycle;
@@ -26,12 +29,14 @@ import androidx.test.uiautomator.Until;
 
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
+import com.example.aikeyboard.models.ModelRegistry;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @RunWith(AndroidJUnit4.class)
@@ -41,6 +46,8 @@ public class KeyboardImageTest {
     private static final String IME_ID = PKG + "/.ime.AiInputMethodService";
     private static final long TIMEOUT_MS = 8000;
     private static final long RUN_MS = 60_000;
+    private static final String THRESHOLD =
+            AppSettings.modelSettingKey("moderator", ModelRegistry.MODERATOR_THRESHOLD);
 
     private final AppContainer app = TestModels.container();
     private final SettingsRepository settings = app.settings;
@@ -59,6 +66,9 @@ public class KeyboardImageTest {
             settings.setModelEnabled(other, false);
         }
         use(true);
+        settings.setInt(THRESHOLD, ModelRegistry.MODERATOR_THRESHOLD_DEFAULT);
+        EditorTestActivity.lastContentMime = null;
+        EditorTestActivity.lastContentUri = null;
         settings.setBoolean(AppSettings.AI_ENABLED, true);
         assertTrue(TestModels.await(() -> settings.latest().modelActive("moderator"), 5000));
         scenario = ActivityScenario.launch(EditorTestActivity.class);
@@ -68,6 +78,7 @@ public class KeyboardImageTest {
     public void tearDown() throws Exception {
         if (scenario != null) scenario.close();
         use(false);
+        settings.setInt(THRESHOLD, ModelRegistry.MODERATOR_THRESHOLD_DEFAULT);
         settings.setBoolean(AppSettings.AI_ENABLED, false);
     }
 
@@ -178,6 +189,70 @@ public class KeyboardImageTest {
         String kind = shown("picture_kind", RUN_MS);
         assertNotNull("the picture chosen while away was not shown on return", kind);
         assertTrue(kind, kind.startsWith("Looks like"));
+    }
+
+    @Test
+    public void aCheckedPictureIsInsertedWhereTheFieldTakesPictures() throws Exception {
+        focus("field_rich");
+        handOver();
+        assertNotNull(shown("picture_sensitivity", RUN_MS));
+        assertNull("nothing is sent until Insert is tapped", EditorTestActivity.lastContentUri);
+        UiObject2 send = device.findObject(By.res(PKG, "picture_send"));
+        assertEquals("the button says what will happen in this field", "Insert", send.getText());
+
+        send.click();
+
+        assertTrue("the editor never received the picture", TestModels.await(
+                () -> EditorTestActivity.lastContentUri != null, TIMEOUT_MS));
+        assertEquals("image/jpeg", EditorTestActivity.lastContentMime);
+        // The editor was given a read grant with it: the picture really opens.
+        try (InputStream in = getInstrumentation().getTargetContext().getContentResolver()
+                .openInputStream(EditorTestActivity.lastContentUri)) {
+            assertNotNull("what arrived is not a picture", BitmapFactory.decodeStream(in));
+        }
+        assertTrue("the panel closes and the keys come back",
+                device.wait(Until.gone(By.res(PKG, "picture_panel")), TIMEOUT_MS));
+    }
+
+    @Test
+    public void whereTheFieldTakesNoPicturesTheShareSheetIsOffered() throws Exception {
+        focus("field_plain");
+        handOver();
+        assertNotNull(shown("picture_sensitivity", RUN_MS));
+        UiObject2 send = device.findObject(By.res(PKG, "picture_send"));
+        assertEquals("Share…", send.getText());
+
+        send.click();
+
+        assertTrue("the system share sheet did not open",
+                device.wait(Until.gone(By.res(PKG, "field_plain")), 10_000));
+        assertNull("a plain text field must not be handed a picture",
+                EditorTestActivity.lastContentUri);
+        device.pressBack();
+        assertTrue(device.wait(Until.hasObject(By.res(PKG, "field_plain")), 10_000));
+    }
+
+    @Test
+    public void aFlaggedPictureIsSentOnlyAfterAWarningAndASecondTap() throws Exception {
+        // Zero is the model's own threshold at its strictest: every picture is flagged.
+        settings.setInt(THRESHOLD, 0);
+        assertTrue(TestModels.await(() -> settings.latest().integer(THRESHOLD, -1) == 0, 5000));
+        focus("field_rich");
+        handOver();
+        String check = shown("picture_sensitivity", RUN_MS);
+        assertNotNull(check);
+        assertTrue(check, check.contains("may contain nudity"));
+
+        device.findObject(By.res(PKG, "picture_send")).click();
+
+        UiObject2 again = device.wait(Until.findObject(
+                By.res(PKG, "picture_send").text("Insert anyway")), TIMEOUT_MS);
+        assertNotNull("a flagged picture needs a warning before it is sent", again);
+        assertNull("the first tap only warns", EditorTestActivity.lastContentUri);
+
+        again.click();
+        assertTrue("after the warning the choice is the user's", TestModels.await(
+                () -> EditorTestActivity.lastContentUri != null, TIMEOUT_MS));
     }
 
     // The whole trip through the system's own picker. Only on request (-e picker true) and

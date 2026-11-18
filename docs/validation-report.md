@@ -488,7 +488,7 @@ The test changes made during the phone session were then run as the whole suite 
 
 ## Picture panel in the keyboard (added 18 Nov 2026)
 
-Asked for by the owner during the phone session: a picture button on the keyboard while the image models are on, with the result shown in the keyboard. Android's picker is a full-screen system screen, so the keyboard steps aside while a picture is chosen and comes back with the result. The panel shows what Eye and Moderator found; it does not insert or share the picture.
+Asked for by the owner during the phone session: a picture button on the keyboard while the image models are on, with the result shown in the keyboard. Android's picker is a full-screen system screen, so the keyboard steps aside while a picture is chosen and comes back with the result. The panel shows what Eye and Moderator found. At the owner's next request it also sends the picture: Insert where the field takes pictures, Share elsewhere, and a flagged picture only after a warning and a second tap.
 
 | Check | Result | Target | Evidence |
 |---|---|---|---|
@@ -498,12 +498,18 @@ Asked for by the owner during the phone session: a picture button on the keyboar
 | A chosen picture is described and checked in the keyboard; the draft is untouched; Back returns to the keys | failed, then passed | EMU-37B | `KeyboardImageTest.aChosenPictureIsDescribedAndCheckedInTheKeyboard` |
 | A picture chosen while the keyboard is away is shown when it returns | failed, then passed | EMU-37B | `KeyboardImageTest.aPictureChosenWhileTheKeyboardIsAwayIsShownWhenItReturns`. The first two versions of the feature failed this: Android starts a field's input twice within milliseconds on the way back, and a window with nothing to type into can hold the keyboard for a moment. A picture is now tied to the field the picker was opened from |
 | Moving to another field closes the panel and forgets the picture | failed, then passed | EMU-37B | `KeyboardImageTest.movingToAnotherFieldClosesThePanelAndForgetsThePicture` |
+| A checked picture is inserted where the field takes pictures; nothing is sent before the tap; the panel then closes | failed, then passed | EMU-37B | `KeyboardImageTest.aCheckedPictureIsInsertedWhereTheFieldTakesPictures`: the debug host's picture field received an `image/jpeg` it could open |
+| Where the field takes no pictures the button says Share and opens the system share sheet | failed, then passed | EMU-37B | `KeyboardImageTest.whereTheFieldTakesNoPicturesTheShareSheetIsOffered` |
+| A flagged picture is sent only after a warning and a second tap | failed, then passed | EMU-37B | `KeyboardImageTest.aFlaggedPictureIsSentOnlyAfterAWarningAndASecondTap`, with Moderator's threshold at zero so that a harmless picture is flagged (no explicit imagery is used) |
+| The drawing panel still inserts and shares after its send path was shared with the picture panel | passed | EMU-37B | `DrawingTest` 8 of 8 |
 | The whole trip through Android's real picker | passed | EMU-37B | `KeyboardImageTest.theSystemsPickerHandsAChosenPictureBackToTheKeyboard`, opt-in with `-e picker true`, three runs. Emulator only: the picker shows the device's own pictures, so it must not be run on a phone |
 | From another app's field: the picker returns to that app, not to AI Keyboard, and the keyboard comes back by itself with the result | passed by hand | EMU-37B | Settings search, driven over adb: picture button, picker, a picture, Done. Focus returned to Settings search; the panel read "Looks like: screenshot" and "Sensitive-content check: nothing flagged." `docs/evidence/screenshots/picture_panel_keyboard.png` |
-| On the phone | not run | PHONE | The build with this feature has not been installed on the phone yet |
+| On the phone, the first version (analysis only) | observed, not reported | PHONE | Installed on 18 Nov 2026. A minute later the app's memory on the phone rose from about 140 MB to 1.0 GB for some twenty seconds and fell back: the image models loading, running and being let go of in the keyboard's process. No crash, the same process throughout, the keyboard still selected. The owner then asked for sending from the panel. What they saw on screen was not reported |
+| On the phone, the build with sending | not run | PHONE | — |
+| Inserting into a real chat app | not run | PHONE | What a chat app does with an inserted picture (attach it, or send it at once) is that app's choice and has not been seen |
 | A file that cannot be read as a picture; the screen turned while the picker is open | not run | — | The code is there (a message is shown; the picker is not opened twice); no test drives either |
 
-After the feature: 161 unit tests, lint 0 errors and 37 warnings, and the whole suite on the emulator (EMU-37B, `-e clear true`): 181 run, 164 passed, 17 skipped by design (13 opt-in probes, the three latency measurements and the real-picker test), none failed.
+After the feature, with sending: 161 unit tests, lint 0 errors and 37 warnings, and the whole suite on the emulator (EMU-37B, `-e clear true`): 184 run, 167 passed, 17 skipped by design (13 opt-in probes, the three latency measurements and the real-picker test), none failed.
 
 ## The handoff checklist, item by item
 

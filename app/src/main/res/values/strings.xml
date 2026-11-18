@@ -375,7 +375,9 @@
     <string name="draw_button">Draw a shape</string>
     <string name="picture_button">Look at a picture</string>
     <string name="picture_title">What the image models found</string>
-    <string name="picture_note">These are a model\'s estimates and can be wrong either way. The picture is not added to your message.</string>
+    <string name="picture_note">These are a model\'s estimates and can be wrong either way. Nothing is sent until you tap the button; it sends a copy up to 1600 pixels across.</string>
+    <string name="picture_insert_anyway">Insert anyway</string>
+    <string name="picture_warning">This picture may contain nudity. Tap again to send it anyway.</string>
     <string name="draw_insert">Insert</string>
     <string name="draw_share">Share…</string>
     <string name="shape_line">Line</string>

@@ -139,6 +139,9 @@ public final class KeyboardController implements KeyGridView.Listener,
     // It is the Image tools screen's own worker, used here as a plain object.
     private final ImageToolsFragment.Session pictures;
     private boolean pictureShown;
+    // What the panel's heading says instead of its title: the warning a flagged picture
+    // gets before it is sent, or that it could not be sent. 0 for neither.
+    private int pictureNotice;
     // Which field a held picture belongs to, or null when none is held. A picture is chosen
     // in the system's picker, which covers the app, so it arrives while no field has the
     // keyboard: it belongs to the field the picker was opened from, and is shown whenever
@@ -189,6 +192,7 @@ public final class KeyboardController implements KeyGridView.Listener,
             closePicture();
             render();
         });
+        views.picturePanel.pictureSend.setOnClickListener(v -> sendPicture());
         views.drawPanel.drawBack.setOnClickListener(v -> showDrawPanel(false));
         views.drawPanel.drawClear.setOnClickListener(v -> clearDrawing());
         views.drawPanel.drawInsert.setOnClickListener(v -> insertDrawing());
@@ -656,6 +660,7 @@ public final class KeyboardController implements KeyGridView.Listener,
         // No field to show it in, or the image models went away meanwhile: not kept.
         if (field == null || !imageModelUsable()) return;
         pictureFor = field;
+        pictureNotice = 0;
         pictures.open(picture);
         // Usually the picker is still covering the app, and the picture is shown when its
         // field has the keyboard again (onStartInput). If the keyboard is up now, show it.
@@ -670,7 +675,28 @@ public final class KeyboardController implements KeyGridView.Listener,
     private void closePicture() {
         pictureShown = false;
         pictureFor = null;
+        pictureNotice = 0;
         pictures.forget();
+    }
+
+    // Sends the picture the way a drawing is sent. Moderator warns and never blocks: the
+    // first tap on a flagged picture only says so, and the second is the user's decision.
+    private void sendPicture() {
+        ImageToolsFragment.State state = pictures.state().getValue();
+        if (session == null || !pictureShown || !state.analysed()) return;
+        if (state.flagged() && pictureNotice != R.string.picture_warning) {
+            pictureNotice = R.string.picture_warning;
+            renderPicturePanel();
+            return;
+        }
+        send(state.picture, ShareResultController.JPEG,
+                service.getString(R.string.image_preview), () -> {
+                    closePicture();
+                    render();
+                }, () -> {
+                    pictureNotice = R.string.image_share_failed;
+                    if (views != null && pictureShown) renderPicturePanel();
+                });
     }
 
     private static String fieldKey(EditorInfo info) {
@@ -679,8 +705,16 @@ public final class KeyboardController implements KeyGridView.Listener,
 
     private void renderPicturePanel() {
         ImageToolsFragment.State state = pictures.state().getValue();
-        views.picturePanel.pictureStatus.setText(
-                state.working ? R.string.image_working : R.string.picture_title);
+        views.picturePanel.pictureStatus.setText(state.working ? R.string.image_working
+                : pictureNotice != 0 ? pictureNotice : R.string.picture_title);
+        // The button says what will happen here: not every field takes pictures.
+        boolean takesPictures = EditorBridge.accepts(editorInfo, ShareResultController.JPEG);
+        boolean warned = pictureNotice == R.string.picture_warning;
+        views.picturePanel.pictureSend.setText(takesPictures
+                ? (warned ? R.string.picture_insert_anyway : R.string.draw_insert)
+                : (warned ? R.string.image_share_anyway : R.string.draw_share));
+        views.picturePanel.pictureSend.setEnabled(state.analysed());
+        views.picturePanel.pictureSend.setAlpha(state.analysed() ? 1f : 0.4f);
         views.picturePanel.picturePreview.setImageBitmap(state.picture);
         // INVISIBLE, not GONE: the picture keeps its share of the width while it is looked at.
         views.picturePanel.pictureResult.setVisibility(
@@ -749,37 +783,44 @@ public final class KeyboardController implements KeyGridView.Listener,
                         ? R.string.draw_insert : R.string.draw_share);
     }
 
-    // The tap is the user's consent. The picture goes into the field if the field takes
-    // pictures; if it does not, or the host app turns it down, the share sheet is offered.
     private void insertDrawing() {
         if (session == null || views == null) return;
-        Bitmap drawing = views.drawPanel.drawSurface.render();
-        InputSession drawnFor = session;
+        send(views.drawPanel.drawSurface.render(), ShareResultController.PNG,
+                service.getString(R.string.shape_other), () -> {
+                    closeDrawing();
+                    render();
+                }, () -> {
+                    drawStatus = R.string.image_share_failed;
+                    if (views != null && drawShown) renderDrawPanel();
+                });
+    }
+
+    // How a drawing or a chosen picture leaves the keyboard. The tap is the user's consent.
+    // The picture goes into the field if the field takes pictures; if it does not, or the
+    // host app turns it down, the share sheet is offered.
+    private void send(Bitmap picture, String mime, String label, Runnable sent,
+            Runnable failed) {
+        InputSession sentFor = session;
         EditorInfo field = editorInfo;
-        String label = service.getString(R.string.shape_other);
         app.io.execute(() -> {
             Uri uri;
             try {
-                uri = ShareResultController.writePicture(service, drawing,
-                        ShareResultController.PNG);
+                uri = ShareResultController.writePicture(service, picture, mime);
             } catch (IOException e) {
                 uri = null;
             }
             Uri written = uri;
             ContextCompat.getMainExecutor(service).execute(() -> {
                 // The field changed while the picture was being written: nothing is sent.
-                if (session != drawnFor) return;
+                if (session != sentFor) return;
                 if (written == null) {
-                    drawStatus = R.string.image_share_failed;
-                    if (views != null && drawShown) renderDrawPanel();
+                    failed.run();
                     return;
                 }
-                if (!editor.commitContent(field, written, ShareResultController.PNG, label)) {
-                    service.share(ShareResultController.shareIntent(written,
-                            ShareResultController.PNG));
+                if (!editor.commitContent(field, written, mime, label)) {
+                    service.share(ShareResultController.shareIntent(written, mime));
                 }
-                closeDrawing();
-                render();
+                sent.run();
             });
         });
     }

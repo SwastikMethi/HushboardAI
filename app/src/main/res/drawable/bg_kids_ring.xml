@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kids Chat: the ring round the face of whoever's turn it is. Drawn white and tinted in that child's colour. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="#00000000" />
+    <stroke
+        android:width="3dp"
+        android:color="#FFFFFF" />
+</shape>

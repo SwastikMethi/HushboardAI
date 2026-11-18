@@ -30,13 +30,15 @@
 
         <!-- Kids Chat: a demo chat for children, with two pretend users on one phone. It has
              its own icon on the home screen and its own task, so it opens and sits in the
-             recent-apps list like an app of its own. -->
+             recent-apps list like an app of its own. It has a light theme of its own too;
+             the rest of the app stays dark. -->
         <activity
             android:name=".ui.chat.ChatActivity"
             android:exported="true"
             android:icon="@mipmap/ic_chat"
             android:label="@string/chat_title"
             android:taskAffinity="${applicationId}.chat"
+            android:theme="@style/Theme.KidsChat"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

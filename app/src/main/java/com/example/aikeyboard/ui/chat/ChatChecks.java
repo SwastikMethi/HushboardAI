@@ -9,7 +9,6 @@ import android.graphics.Bitmap;
 import com.example.aikeyboard.AppContainer;
 import com.example.aikeyboard.R;
 import com.example.aikeyboard.ai.ModelAdapter;
-import com.example.aikeyboard.ai.RedactionPlan;
 import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
 import com.example.aikeyboard.ai.Suggestion.ToxicScores;
 import com.example.aikeyboard.ai.ToxicPolicy;
@@ -17,7 +16,9 @@ import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.media.Vision.Sensitivity;
 import com.example.aikeyboard.models.ModelRegistry;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -34,6 +35,14 @@ public final class ChatChecks {
      */
     public static final int MESSAGE_LIMIT = 1000;
 
+    // The word that stands in for a hidden detail, by the kind of detail. Words a child
+    // knows; the message carries them in square brackets and the screen draws those as
+    // lock chips.
+    private static final Map<String, String> HIDDEN_WORDS = Map.of(
+            "email", "email", "phone", "phone number", "payment", "bank number",
+            "ids", "ID number", "names", "name", "addresses", "address", "online", "link");
+    private static final String HIDDEN_OTHER = "hidden";
+
     /** What may happen to a typed message. */
     public enum Outcome {
         /** Nothing found: it may be sent. */
@@ -48,7 +57,7 @@ public final class ChatChecks {
 
     public static final class TextVerdict {
         public final Outcome outcome;
-        /** For {@link Outcome#PERSONAL}: the message with each detail replaced by its label. */
+        /** For {@link Outcome#PERSONAL}: the message with each detail replaced by its word. */
         public final String masked;
 
         TextVerdict(Outcome outcome, String masked) {
@@ -108,11 +117,40 @@ public final class ChatChecks {
             }
             List<SensitiveSpan> personal = redact.run(text, rules);
             if (personal.isEmpty()) return new TextVerdict(Outcome.CLEAR, null);
-            return new TextVerdict(Outcome.PERSONAL, RedactionPlan.maskedText(text, personal));
+            return new TextVerdict(Outcome.PERSONAL, hide(text, personal));
         } catch (Exception e) {
             // A model that is missing, failed or timed out: what was not checked is not sent.
             return new TextVerdict(Outcome.UNCHECKED, null);
         }
+    }
+
+    /** Every bracketed word that can stand in for a hidden detail, such as "[email]". */
+    public static List<String> hiddenWords() {
+        List<String> words = new ArrayList<>();
+        for (String word : HIDDEN_WORDS.values()) words.add("[" + word + "]");
+        words.add("[" + HIDDEN_OTHER + "]");
+        return words;
+    }
+
+    // The message with each personal detail replaced by its word in brackets.
+    private static String hide(String text, List<SensitiveSpan> found) {
+        List<SensitiveSpan> inOrder = new ArrayList<>(found);
+        inOrder.sort(Comparator.comparingInt((SensitiveSpan span) -> span.start));
+        StringBuilder safe = new StringBuilder();
+        int done = 0;
+        String last = null;
+        for (SensitiveSpan span : inOrder) {
+            if (span.start < done) continue; // inside a detail that is already hidden
+            String word = "[" + HIDDEN_WORDS.getOrDefault(span.category, HIDDEN_OTHER) + "]";
+            String between = text.substring(done, span.start);
+            done = span.end;
+            // A street and its number are one address to a child: neighbours of one kind
+            // share one word.
+            if (word.equals(last) && between.matches("[\\s,]*")) continue;
+            safe.append(between).append(word);
+            last = word;
+        }
+        return safe.append(text.substring(done)).toString();
     }
 
     /** Whether a picture may be sent. Blocking: called on the inference thread. */

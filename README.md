@@ -47,18 +47,18 @@ Things worth knowing before relying on it:
 
 ## Kids Chat (demo)
 
-A first demo of a chat for children, built on the same on-device models. It installs with the app and shows up as a second icon on the home screen, **Kids Chat**. Two pretend users, Mia and Leo, share one phone, and the switch at the top says who is typing. There is no second phone, account, server or parent side. The conversation is held in memory and is gone when the screen is closed; nothing typed or picked there is written to disk or leaves the phone.
+A first demo of a chat for children, built on the same on-device models. It installs with the app and shows up as a second icon on the home screen, **Kids Chat**. Two pretend users share one phone: Mia, a fox, and Leo, a bear. The child whose turn it is has the big face at the top, and a tap on the other face swaps. The screen is made for early readers: a face and a colour for each child, big round buttons with a picture on each, short words, and a sun helper who gives a tip when something cannot be sent. There is no second phone, account, server or parent side. The conversation is held in memory and is gone when the screen is closed; nothing typed or picked there is written to disk or leaves the phone.
 
 Everything is checked on the phone before it is sent:
 
 | What is being sent | Checked by | What happens |
 |---|---|---|
-| A message with a swear word | A built-in word list, `app/src/main/res/values/chat_blocked_words.xml` | Not sent. It stays in the field under a warning |
-| A message with abusive, hateful or threatening wording | Toxic, at its strictest setting | Not sent, with the same warning |
-| A message with an email address, phone number, payment or ID number, street address or web link | Redact | A card shows the message as typed and as masked (`[EMAIL_1]`). The child picks **Send like this**, **Change it** or **Send as written** |
+| A message with a swear word | A built-in word list, `app/src/main/res/values/chat_blocked_words.xml` | Not sent. It stays in the field, and the helper says "Let's use kind words" |
+| A message with abusive, hateful or threatening wording | Toxic, at its strictest setting | Not sent, with the same tip |
+| A message with an email address, phone number, payment or ID number, street address or web link | Redact | A card shows a safer message with each private detail behind a lock chip (as plain text: `[email]`, `[phone number]`, `[address]`). The child picks **Send the safe one**, **Change my message** or **Send mine anyway** |
 | A picture | Moderator, which scores nudity | Not sent if flagged, with a line saying so |
 
-A message can be up to 1,000 characters, the range the checks were tried over. If a check cannot run, nothing is sent. The chat stays locked, with a Download button and a way to the Models screen, until Toxic, Redact and Moderator are installed. The rules are fixed in `ChatChecks.kidRules()` and do not follow the keyboard's settings, so they cannot be loosened from the Settings tab.
+A message can be up to 1,000 characters, the range the checks were tried over. If a check cannot run, nothing is sent. Until Toxic, Redact and Moderator are installed, a getting-ready screen stands in for the chat: it asks for a grown-up, and has a **Get ready** button and a way to the Models screen. The rules are fixed in `ChatChecks.kidRules()` and do not follow the keyboard's settings, so they cannot be loosened from the Settings tab.
 
 This is a demo, not a safety product. Its limits:
 
@@ -66,10 +66,12 @@ This is a demo, not a safety product. Its limits:
 - **The word list is short and literal.** 52 English entries, whole words in their exact spelling, so "sh1t" passes. It holds no slurs; those are left to the model's "hateful" category. Add words to the file to extend it.
 - **Redact covers European languages only**, and names are deliberately not treated as personal details, or nearly every message would be stopped. A city or state on its own does raise the card ("We went to London on Saturday").
 - **Moderator scores nudity only**, not violence or anything else. No explicit picture was ever shown to it in this project; its refusal was tested with a harmless drawing and a threshold of zero.
-- **Send as written** lets a personal detail out by the child's own choice. That was the project owner's decision.
+- **Send mine anyway** lets a personal detail out by the child's own choice. That was the project owner's decision.
 - **Nothing here notices an adult befriending a child.** No model in this set does. A real product would start from contacts a parent approved.
 
-What was tested is in [docs/validation-report.md](docs/validation-report.md) under "Kids Chat demo"; the decisions are rulings 111 to 129 in [PROGRESS.md](PROGRESS.md).
+Kids Chat uses two typefaces under the SIL Open Font License: Baloo 2 for names and buttons, and Andika, which is drawn for people learning to read, for messages. Their licence texts are in [docs/licenses](docs/licenses). The faces and the sun are drawn for this app; the small icons are Material Icons (Apache 2.0).
+
+What was tested is in [docs/validation-report.md](docs/validation-report.md) under "Kids Chat demo" and "Kids Chat, redesigned for young children"; the decisions are rulings 111 to 137 in [PROGRESS.md](PROGRESS.md).
 
 This package contains the implementation plan, UI references, and instructions for building an Android AI keyboard with a companion settings app. **Java is selected as the primary language.**
 

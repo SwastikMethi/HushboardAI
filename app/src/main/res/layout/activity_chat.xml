@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Kids Chat: who is typing, the conversation, and below it whatever stands between a
-     message and being sent: a warning, the personal-details card, or the field itself. -->
+<!-- Kids Chat, made for young children. Always the same three places: whose turn it is at the
+     top, the conversation in the middle, and the tools for saying something at the bottom.
+     Between the last two sits whatever stands in the way of a message: a tip from the
+     helper, or the card for private details. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -9,88 +11,151 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <!-- Whose turn it is. The faces are sized and ringed in ChatActivity: big for the child
+         typing, small for the other, and a tap on either swaps. -->
     <LinearLayout
+        android:id="@+id/chat_top"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/kids_card"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="8dp">
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="10dp">
 
-        <TextView
+        <ImageButton
+            android:id="@+id/chat_user_one"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@null"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_kid_fox"
+            tools:ignore="ContentDescription" />
+
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
             android:layout_weight="1"
-            android:accessibilityHeading="true"
-            android:text="@string/chat_title"
-            android:textAppearance="?attr/textAppearanceTitleLarge" />
+            android:orientation="vertical">
 
-        <com.google.android.material.button.MaterialButtonToggleGroup
-            android:id="@+id/chat_who"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:contentDescription="@string/chat_who"
-            app:checkedButton="@+id/chat_user_one"
-            app:selectionRequired="true"
-            app:singleSelection="true">
-
-            <Button
-                android:id="@+id/chat_user_one"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="wrap_content"
+            <TextView
+                android:id="@+id/chat_turn"
+                style="@style/KidsDisplay"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/chat_user_one"
-                android:textColor="@color/chat_who_label"
-                app:backgroundTint="@color/chat_who_fill" />
+                android:accessibilityHeading="true"
+                android:textSize="22sp" />
 
-            <Button
-                android:id="@+id/chat_user_two"
-                style="?attr/materialButtonOutlinedStyle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/chat_user_two"
-                android:textColor="@color/chat_who_label"
-                app:backgroundTint="@color/chat_who_fill" />
-        </com.google.android.material.button.MaterialButtonToggleGroup>
+            <TextView
+                android:id="@+id/chat_turn_hint"
+                style="@style/KidsText.Small"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/chat_user_two"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@null"
+            android:padding="5dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_kid_bear"
+            tools:ignore="ContentDescription" />
     </LinearLayout>
 
-    <LinearLayout
+    <!-- Before the first chat: the checks have to be on the phone, and fetching them is a
+         grown-up's job. Shown in place of everything else. -->
+    <ScrollView
         android:id="@+id/chat_locked"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:background="@drawable/bg_card"
-        android:orientation="vertical"
-        android:padding="16dp"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
         android:visibility="gone">
 
-        <TextView
-            android:id="@+id/chat_locked_text"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:accessibilityLiveRegion="polite"
-            android:text="@string/chat_locked"
-            android:textAppearance="?attr/textAppearanceBodyLarge" />
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="28dp">
 
-        <Button
-            android:id="@+id/chat_download"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:text="@string/chat_download" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="bottom"
+                android:importantForAccessibility="noHideDescendants"
+                android:orientation="horizontal">
 
-        <!-- Why a download is waiting or failed is shown on the Models screen. -->
-        <Button
-            android:id="@+id/chat_models"
-            style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/chat_models" />
-    </LinearLayout>
+                <ImageView
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:src="@drawable/ic_kid_fox"
+                    tools:ignore="ContentDescription" />
+
+                <ImageView
+                    android:layout_width="96dp"
+                    android:layout_height="96dp"
+                    android:layout_marginHorizontal="6dp"
+                    android:src="@drawable/ic_helper_sun"
+                    tools:ignore="ContentDescription" />
+
+                <ImageView
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:src="@drawable/ic_kid_bear"
+                    tools:ignore="ContentDescription" />
+            </LinearLayout>
+
+            <TextView
+                style="@style/KidsDisplay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:accessibilityHeading="true"
+                android:gravity="center"
+                android:text="@string/chat_locked_title"
+                android:textSize="28sp" />
+
+            <TextView
+                android:id="@+id/chat_locked_text"
+                style="@style/KidsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:accessibilityLiveRegion="polite"
+                android:gravity="center"
+                android:text="@string/chat_locked" />
+
+            <Button
+                android:id="@+id/chat_download"
+                style="@style/KidsButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/chat_download"
+                app:icon="@drawable/ic_kids_download" />
+
+            <!-- Why a download is waiting or failed is shown on the Models screen. -->
+            <Button
+                android:id="@+id/chat_models"
+                style="?attr/borderlessButtonStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/andika_regular"
+                android:text="@string/chat_models"
+                android:textColor="@color/kids_ink_soft"
+                android:textSize="15sp" />
+        </LinearLayout>
+    </ScrollView>
 
     <!-- The conversation and, when one is up, the card share what is left of the screen:
          the card takes what it needs, up to all of it, and the conversation the rest. -->
     <LinearLayout
+        android:id="@+id/chat_middle"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -110,107 +175,159 @@
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
                 android:contentDescription="@string/chat_conversation"
-                android:paddingHorizontal="12dp"
+                android:paddingHorizontal="10dp"
                 android:paddingVertical="8dp" />
 
             <TextView
                 android:id="@+id/chat_empty"
+                style="@style/KidsDisplay"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
                 android:gravity="center"
                 android:padding="32dp"
-                android:text="@string/chat_empty"
-                android:textAppearance="?attr/textAppearanceBodyLarge"
-                android:textColor="?attr/colorOnSurfaceVariant" />
+                android:textSize="28sp" />
         </FrameLayout>
 
-        <!-- The personal-details card. It scrolls: a long message is shown twice above the
-             buttons, and they must stay within reach whatever the screen or text size. -->
+        <!-- The card for private details. It scrolls: a long message must not push the
+             buttons out of reach, whatever the screen or text size. -->
         <ScrollView
             android:id="@+id/chat_personal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="12dp"
-            android:layout_marginBottom="8dp"
+            android:layout_marginHorizontal="10dp"
+            android:layout_marginBottom="10dp"
             android:visibility="gone">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
+                android:background="@drawable/bg_kids_card"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="14dp">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:accessibilityHeading="true"
-                    android:text="@string/chat_personal_title"
-                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/chat_personal_typed_label"
-                    android:textAppearance="?attr/textAppearanceLabelLarge"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="10dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_helper_sun" />
 
-                <TextView
-                    android:id="@+id/chat_personal_typed"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/chat_personal_masked_label"
-                    android:textAppearance="?attr/textAppearanceLabelLarge"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                        <TextView
+                            style="@style/KidsDisplay"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:accessibilityHeading="true"
+                            android:text="@string/chat_personal_title" />
 
+                        <TextView
+                            style="@style/KidsText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/chat_personal_more"
+                            android:textSize="15sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- The safer message, as it will look in the chat: in the sender's colour,
+                     with each hidden detail drawn as a lock chip. -->
                 <TextView
                     android:id="@+id/chat_personal_masked"
+                    style="@style/KidsText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textAppearance="?attr/textAppearanceBodyLarge" />
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_chat_bubble"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="10dp" />
 
                 <Button
                     android:id="@+id/chat_send_masked"
+                    style="@style/KidsButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="@string/chat_send_masked" />
+                    android:layout_marginTop="10dp"
+                    android:text="@string/chat_send_masked"
+                    android:textColor="@color/kids_card"
+                    app:backgroundTint="@color/kids_leaf"
+                    app:icon="@drawable/ic_kids_check"
+                    app:iconTint="@color/kids_card" />
 
                 <Button
                     android:id="@+id/chat_change"
-                    style="?attr/materialButtonOutlinedStyle"
+                    style="@style/KidsButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/chat_change" />
+                    android:text="@string/chat_change"
+                    app:backgroundTint="@color/kids_sky"
+                    app:icon="@drawable/ic_kids_edit" />
 
                 <Button
                     android:id="@+id/chat_send_written"
                     style="?attr/borderlessButtonStyle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/chat_send_written" />
+                    android:fontFamily="@font/andika_regular"
+                    android:text="@string/chat_send_written"
+                    android:textColor="@color/kids_ink_soft"
+                    android:textSize="15sp" />
             </LinearLayout>
         </ScrollView>
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/chat_notice"
+    <!-- A tip from the helper when something could not be sent. Never a telling-off. -->
+    <LinearLayout
+        android:id="@+id/chat_helper"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:accessibilityLiveRegion="polite"
-        android:background="@color/surface_raised"
-        android:paddingHorizontal="16dp"
-        android:paddingVertical="12dp"
-        android:textAppearance="?attr/textAppearanceBodyLarge"
-        android:visibility="gone" />
+        android:layout_marginHorizontal="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="@drawable/bg_kids_card"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginEnd="10dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_helper_sun" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/chat_notice"
+                style="@style/KidsDisplay"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:accessibilityLiveRegion="polite" />
+
+            <TextView
+                android:id="@+id/chat_notice_more"
+                style="@style/KidsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="15sp" />
+        </LinearLayout>
+    </LinearLayout>
 
     <!-- Shown while a message is being checked. It keeps its place when hidden, so the
          conversation does not jump on every message. -->
@@ -220,44 +337,56 @@
         android:layout_height="wrap_content"
         android:contentDescription="@string/chat_checking"
         android:indeterminate="true"
-        android:visibility="invisible" />
+        android:visibility="invisible"
+        app:indicatorColor="@color/kids_leo"
+        app:trackColor="@color/kids_card" />
 
     <LinearLayout
+        android:id="@+id/chat_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="@color/kids_card"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="8dp">
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="10dp">
 
         <ImageButton
             android:id="@+id/chat_picture"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="4dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_kids_round"
+            android:backgroundTint="@color/kids_sky"
             android:contentDescription="@string/chat_picture"
-            android:src="@drawable/ic_picture" />
+            android:src="@drawable/ic_kids_picture" />
 
         <!-- Marked "no personalised learning": this app's own keyboard keeps its AI quiet in
              such a field, so a child is not warned twice about the same message. -->
         <EditText
             android:id="@+id/chat_input"
+            style="@style/KidsText"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="8dp"
             android:layout_weight="1"
+            android:background="@drawable/bg_kids_field"
             android:hint="@string/chat_hint"
             android:imeOptions="flagNoPersonalizedLearning"
             android:importantForAutofill="no"
             android:inputType="textCapSentences|textMultiLine"
             android:maxLines="4"
-            android:minHeight="48dp" />
+            android:minHeight="52dp"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="12dp"
+            android:textColorHint="@color/kids_ink_soft" />
 
-        <Button
+        <ImageButton
             android:id="@+id/chat_send"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:text="@string/chat_send" />
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_kids_round"
+            android:backgroundTint="@color/kids_sun"
+            android:contentDescription="@string/chat_send"
+            android:src="@drawable/ic_kids_send" />
     </LinearLayout>
 </LinearLayout>

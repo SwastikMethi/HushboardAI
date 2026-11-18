@@ -30,4 +30,20 @@
     <color name="ai_panel_top">#392847</color>
     <color name="ai_panel_middle">#272230</color>
     <color name="ai_panel_bottom">#181B25</color>
+
+    <!-- Kids Chat: its own bright palette. Each child has a strong colour for their face and a
+         soft one for their bubbles; ink on every soft colour and on the sun keeps text easy
+         to read. Nothing else in the app uses these. -->
+    <color name="kids_sky">#EEF6FF</color>
+    <color name="kids_card">#FFFFFF</color>
+    <color name="kids_ink">#1B2A4E</color>
+    <color name="kids_ink_soft">#5B6B8C</color>
+    <color name="kids_mia">#FF7B6B</color>
+    <color name="kids_mia_soft">#FFE0DA</color>
+    <color name="kids_leo">#20B2A0</color>
+    <color name="kids_leo_soft">#D5F3EE</color>
+    <color name="kids_sun">#FFC83D</color>
+    <color name="kids_sun_soft">#FFF1C2</color>
+    <!-- Darker than a leaf: white text on it has to stay readable. -->
+    <color name="kids_leaf">#18804A</color>
 </resources>

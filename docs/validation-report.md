@@ -618,6 +618,27 @@ An independent review of the feature found no way for a message or picture to re
 
 After the feature and the review's fixes: 175 unit tests, lint 0 errors and 39 warnings (two more than before, both the note about `accessibilityHeading` that the app's other screens already carry), a 701.8 MB debug APK, and the whole suite on the emulator (EMU-37B, `-e clear true`): 213 run, 193 passed, 20 skipped by design (the 17 as before and the chat's three measurements), none failed. The suite was run in full three times as the feature grew, each time with no failure.
 
+## Kids Chat, redesigned for young children (18 Nov 2026)
+
+The owner tried the first version on the phone, said it looked like a demo, and asked for a screen made for little children, to be shown to them before it was built. A mockup of four screens was shown and approved. The checks did not change: the same word list, models and rules decide what is sent. What changed is the look and the words, and how a hidden detail reads ("[email]" drawn as a lock chip, where the section above still says `[EMAIL_1]`).
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| A hidden detail reads as a plain word in brackets; a street and its number become one "[address]"; different kinds each get their own word; a kind with no word of its own is still hidden | failed, then passed | unit | Four `ChatChecksTest` tests, all four seen failing before the words existed |
+| The child whose turn it is is named and has the big face; a tap on the other face swaps | passed, and seen failing | EMU-37B | `KidsChatTest.theChildWhoseTurnItIsIsNamedAndHasTheBigFace`, failed against a copy of the screen broken on purpose to leave the turn unnamed and the faces the same size |
+| A refusal comes as a tip that says what to do | passed, and seen failing | EMU-37B | `KidsChatTest.aRefusalComesAsATipThatSaysWhatToDo`, failed against the same broken copy |
+| A hidden detail is drawn as a lock chip in the chat, and the words underneath stay plain | passed, and seen failing | EMU-37B | `KidsChatTest.aHiddenDetailIsDrawnAsALockChipInTheChat`, failed against the same broken copy |
+| Everything the first version's tests checked still holds under the new screen | passed | EMU-37B | The rest of `KidsChatTest`, with three expectations changed to the new words: the masked email, what stays in the field while the card is up, and the line for a file that is not a picture |
+| The new, light screen passes the accessibility checks when empty, with a message and a tip, and with the card | passed | EMU-37B | `AccessibilityAuditTest.kidsChatPassesTheAccessibilityChecksInEachOfItsStates`, first run. Text contrast is part of those checks |
+| By hand, set beside the mockup: chatting with a picture, the tip for unkind words, the card for private details, the getting-ready screen | passed by hand | EMU-37B | Driven over adb; the picture went through Android's real picker. `docs/evidence/screenshots/kids_chat_new_chatting.png`, `kids_chat_new_kind_words.png`, `kids_chat_new_private.png`, `kids_chat_new_getting_ready.png`. The getting-ready screen was reached by setting Moderator's files aside and putting them back |
+| The two typefaces are what they claim to be | passed | — | Read from the files' own fields: "Baloo 2 Medium", weight 500, copyright The Baloo 2 Project Authors; "Andika", weight 400, copyright SIL International; both name the SIL Open Font License |
+| On the phone | not run | PHONE | The phone still has the first look |
+| Large text, landscape, a small screen, TalkBack by ear, a real child | not run | — | |
+
+After the redesign: 178 unit tests, lint 0 errors and 40 warnings (one more than before, the same note about `accessibilityHeading`), a 701.8 MB debug APK, and all 216 device tests on the emulator (EMU-37B, `-e clear true`): 196 passed, 20 skipped by design (the 17 as before and the chat's three measurements), none failed.
+
+That took four runs, not one. The full run stopped at its 175th test, `ModelSmokeTest.sdkDownload_cancelReleasesCallerButTransferRunsOn`, an older test of the vendor's own downloader that waits, with no time limit, for a 100 MB transfer from Hugging Face. The transfer stalled at 44 MB while the emulator's connection was dropping packets. The run was ended there with 174 tests finished (161 passed, 13 skipped); the 41 tests it had not reached were run next (34 passed, 7 skipped); and the stalled test passed by itself a few minutes later. Nothing in that test touches Kids Chat, and it passed in each of the three full runs earlier the same day.
+
 ## The handoff checklist, item by item
 
 Each line of `docs/BUILD_AND_TEST_CHECKLIST.md`, with where it stands. "Emulator" means it ran and passed on an emulator only; the phone rows above still apply.

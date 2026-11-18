@@ -1,4 +1,5 @@
-// Kids Chat: a demo of a chat for children, with two pretend users on one phone. A message
+// Kids Chat: a demo of a chat for young children, with two pretend users on one phone, each
+// with a face and a colour of their own. A message
 // is checked on the phone before it is sent (see ChatChecks): unkind wording is refused,
 // personal details are shown masked first, and a picture the nudity check flags is refused.
 // The conversation lives in memory only and is gone when the screen is closed; nothing typed
@@ -16,7 +17,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.FrameLayout;
+import android.widget.ImageButton;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
@@ -54,6 +55,9 @@ public final class ChatActivity extends AppCompatActivity {
 
     // Every one of these must be installed before anything can be sent.
     private static final String[] SAFETY_MODELS = {"toxic", "redact", "moderator"};
+    // A face is this big when it is that child's turn, and this big when it is not.
+    private static final int FACE_BIG_DP = 60;
+    private static final int FACE_SMALL_DP = 48;
 
     /** One message in the conversation. */
     static final class Message {
@@ -181,7 +185,7 @@ public final class ChatActivity extends AppCompatActivity {
                     // smaller copies for the list.
                     picture = ImageImport.decode(getApplication(), uri, ImageImport.MAX_SIDE);
                 } catch (IOException e) {
-                    main.execute(() -> pictureChecked(null, R.string.image_unreadable));
+                    main.execute(() -> pictureChecked(null, R.string.chat_picture_unreadable));
                     return;
                 }
                 app.inference.execute(() -> {
@@ -286,9 +290,8 @@ public final class ChatActivity extends AppCompatActivity {
         // The field takes no more than the checks were tried at (see ChatChecks).
         views.chatInput.setFilters(
                 new InputFilter[] {new InputFilter.LengthFilter(ChatChecks.MESSAGE_LIMIT)});
-        views.chatWho.addOnButtonCheckedListener((group, buttonId, checked) -> {
-            if (checked) session.typeAs(buttonId == R.id.chat_user_two ? 1 : 0);
-        });
+        views.chatUserOne.setOnClickListener(v -> session.typeAs(0));
+        views.chatUserTwo.setOnClickListener(v -> session.typeAs(1));
         views.chatSend.setOnClickListener(
                 v -> session.send(views.chatInput.getText().toString()));
         views.chatSendMasked.setOnClickListener(v -> session.sendMasked());
@@ -334,19 +337,30 @@ public final class ChatActivity extends AppCompatActivity {
         }
         boolean deciding = state.typed != null;
 
-        // What cannot be checked cannot be sent, so without the models there is no chat.
+        // What cannot be checked cannot be sent, so without the models there is no chat:
+        // the getting-ready screen stands in for all of it.
+        int chat = ready ? View.VISIBLE : View.GONE;
         views.chatLocked.setVisibility(ready ? View.GONE : View.VISIBLE);
+        views.chatTop.setVisibility(chat);
+        views.chatMiddle.setVisibility(chat);
+        views.chatBar.setVisibility(chat);
         views.chatLockedText.setText(fetching ? R.string.chat_downloading : R.string.chat_locked);
         views.chatDownload.setEnabled(!fetching);
 
+        boolean free = ready && !deciding && !state.checking;
+        showTurn(state.typing, !deciding && !state.checking);
         list.show(state.messages, state.typing);
-        views.chatEmpty.setVisibility(
-                ready && state.messages.isEmpty() ? View.VISIBLE : View.GONE);
+        views.chatEmpty.setVisibility(state.messages.isEmpty() ? View.VISIBLE : View.GONE);
+        views.chatEmpty.setText(getString(R.string.chat_empty, name(1 - state.typing)));
 
         // Invisible, not gone: the conversation must not jump on every message.
         views.chatProgress.setVisibility(state.checking ? View.VISIBLE : View.INVISIBLE);
-        views.chatNotice.setVisibility(state.notice == 0 ? View.GONE : View.VISIBLE);
-        if (state.notice != 0) views.chatNotice.setText(state.notice);
+        boolean tip = ready && state.notice != 0;
+        views.chatHelper.setVisibility(tip ? View.VISIBLE : View.GONE);
+        if (tip) {
+            views.chatNotice.setText(state.notice);
+            views.chatNoticeMore.setText(whatToDoAbout(state.notice));
+        }
 
         if (deciding && views.chatPersonal.getVisibility() != View.VISIBLE) {
             // The card needs the room, and the field is closed until a choice is made.
@@ -355,19 +369,19 @@ public final class ChatActivity extends AppCompatActivity {
             views.chatPersonal.scrollTo(0, 0);
         }
         views.chatPersonal.setVisibility(deciding ? View.VISIBLE : View.GONE);
-        views.chatPersonalTyped.setText(state.typed);
-        views.chatPersonalMasked.setText(state.masked);
+        // The safer message as it will look in the chat: the sender's colour, lock chips.
+        views.chatPersonalMasked.setText(
+                deciding ? LockChipSpan.decorate(this, state.masked) : null);
+        views.chatPersonalMasked.setBackgroundTintList(
+                ColorStateList.valueOf(getColor(soft(state.typing))));
 
         // The field stays open during a check, so the keyboard does not drop after every
         // message; what was checked is what is sent, whatever is typed meanwhile.
         views.chatInput.setEnabled(ready && !deciding);
-        boolean free = ready && !deciding && !state.checking;
         views.chatSend.setEnabled(free);
+        views.chatSend.setAlpha(free ? 1f : 0.4f);
         views.chatPicture.setEnabled(free);
         views.chatPicture.setAlpha(free ? 1f : 0.4f);
-        views.chatUserOne.setEnabled(!deciding && !state.checking);
-        views.chatUserTwo.setEnabled(!deciding && !state.checking);
-        views.chatWho.check(state.typing == 0 ? R.id.chat_user_one : R.id.chat_user_two);
 
         if (state.clearInput) {
             views.chatInput.setText("");
@@ -375,8 +389,60 @@ public final class ChatActivity extends AppCompatActivity {
         }
     }
 
+    // The child whose turn it is has the big face with a ring in their colour, and the
+    // words beside it lean towards them.
+    private void showTurn(int typing, boolean canSwap) {
+        views.chatTurn.setText(getString(R.string.chat_turn, name(typing)));
+        views.chatTurnHint.setText(getString(R.string.chat_turn_hint, name(1 - typing)));
+        int lean = typing == 0 ? Gravity.START : Gravity.END;
+        views.chatTurn.setGravity(lean);
+        views.chatTurnHint.setGravity(lean);
+        showFace(views.chatUserOne, 0, typing == 0, canSwap);
+        showFace(views.chatUserTwo, 1, typing == 1, canSwap);
+    }
+
+    private void showFace(ImageButton face, int who, boolean theirTurn, boolean canSwap) {
+        int size = Math.round((theirTurn ? FACE_BIG_DP : FACE_SMALL_DP)
+                * getResources().getDisplayMetrics().density);
+        ViewGroup.LayoutParams box = face.getLayoutParams();
+        if (box.width != size) {
+            box.width = size;
+            box.height = size;
+            face.setLayoutParams(box);
+        }
+        face.setBackgroundResource(theirTurn ? R.drawable.bg_kids_ring : 0);
+        face.setBackgroundTintList(
+                theirTurn ? ColorStateList.valueOf(getColor(strong(who))) : null);
+        face.setContentDescription(getString(
+                theirTurn ? R.string.chat_typing_now : R.string.chat_let_type, name(who)));
+        face.setEnabled(canSwap);
+    }
+
+    // The second line of a tip: what to do about it.
+    private static int whatToDoAbout(int notice) {
+        if (notice == R.string.chat_unkind) return R.string.chat_unkind_more;
+        if (notice == R.string.chat_picture_refused) return R.string.chat_picture_refused_more;
+        if (notice == R.string.chat_picture_unreadable) {
+            return R.string.chat_picture_unreadable_more;
+        }
+        return R.string.chat_unchecked_more;
+    }
+
     private String name(int who) {
         return getString(who == 0 ? R.string.chat_user_one : R.string.chat_user_two);
+    }
+
+    // Each child's own look: a face, a strong colour for its ring and a soft one for bubbles.
+    private static int face(int who) {
+        return who == 0 ? R.drawable.ic_kid_fox : R.drawable.ic_kid_bear;
+    }
+
+    private static int strong(int who) {
+        return who == 0 ? R.color.kids_mia : R.color.kids_leo;
+    }
+
+    private static int soft(int who) {
+        return who == 0 ? R.color.kids_mia_soft : R.color.kids_leo_soft;
     }
 
     /** The conversation as a list: messages are only ever added at the end. */
@@ -417,22 +483,27 @@ public final class ChatActivity extends AppCompatActivity {
         public void onBindViewHolder(@NonNull Row row, int position) {
             Message message = shown.get(position);
             boolean mine = message.sender == typing;
+            boolean words = message.text != null;
             ItemChatMessageBinding item = row.item;
 
-            FrameLayout.LayoutParams side =
-                    (FrameLayout.LayoutParams) item.chatBubble.getLayoutParams();
-            side.gravity = mine ? Gravity.END : Gravity.START;
-            item.chatBubble.setLayoutParams(side);
+            // Whoever is typing sees their own messages on the right, face on the outside.
+            item.getRoot().setGravity((mine ? Gravity.END : Gravity.START) | Gravity.BOTTOM);
+            item.chatFaceStart.setVisibility(mine ? View.GONE : View.VISIBLE);
+            item.chatFaceEnd.setVisibility(mine ? View.VISIBLE : View.GONE);
+            item.chatFaceStart.setImageResource(face(message.sender));
+            item.chatFaceEnd.setImageResource(face(message.sender));
+            // A message keeps its sender's colour whoever is looking, so a child who cannot
+            // read the names still knows who said what. A picture sits in a white frame.
             item.chatBubble.setBackgroundTintList(ColorStateList.valueOf(
-                    getColor(mine ? R.color.accent_blue : R.color.surface_raised)));
+                    getColor(words ? soft(message.sender) : R.color.kids_card)));
+            float dp = getResources().getDisplayMetrics().density;
+            int sides = Math.round((words ? 14 : 6) * dp);
+            int ends = Math.round((words ? 10 : 6) * dp);
+            item.chatBubble.setPadding(sides, ends, sides, ends);
 
-            item.chatBubbleName.setVisibility(mine ? View.GONE : View.VISIBLE);
-            item.chatBubbleName.setText(name(message.sender));
-            boolean words = message.text != null;
             item.chatBubbleText.setVisibility(words ? View.VISIBLE : View.GONE);
-            item.chatBubbleText.setText(message.text);
-            item.chatBubbleText.setTextColor(
-                    getColor(mine ? R.color.on_accent_blue : R.color.text_primary));
+            item.chatBubbleText.setText(
+                    words ? LockChipSpan.decorate(ChatActivity.this, message.text) : null);
             item.chatBubblePicture.setVisibility(words ? View.GONE : View.VISIBLE);
             item.chatBubblePicture.setImageBitmap(message.picture);
             // A screen reader is told who it is from, also for the sender's own messages.

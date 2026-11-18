@@ -65,7 +65,33 @@ public class ChatChecksTest {
         TextVerdict verdict = checks.text(WITH_EMAIL);
 
         assertEquals(Outcome.PERSONAL, verdict.outcome);
-        assertEquals("My email is [EMAIL_1]", verdict.masked);
+        assertEquals("My email is [email]", verdict.masked);
+    }
+
+    @Test
+    public void aStreetAndItsNumberAreHiddenAsOneAddress() {
+        redact.result = List.of(
+                new SensitiveSpan("addresses", 12, 14, "12", "[BUILDING_NUMBER_1]"),
+                new SensitiveSpan("addresses", 15, 26, "Park Street", "[STREET_NAME_1]"));
+
+        assertEquals("My house is [address]", checks.text("My house is 12 Park Street").masked);
+    }
+
+    @Test
+    public void detailsOfDifferentKindsAreHiddenEachUnderItsOwnWord() {
+        redact.result = List.of(
+                new SensitiveSpan("email", 26, 41, "mia@example.com", "[EMAIL_1]"),
+                new SensitiveSpan("phone", 5, 17, "415-555-0132", "[PHONE_1]"));
+
+        assertEquals("Call [phone number] or mail [email]",
+                checks.text("Call 415-555-0132 or mail mia@example.com").masked);
+    }
+
+    @Test
+    public void aKindOfDetailWithNoWordOfItsOwnIsStillHidden() {
+        redact.result = List.of(new SensitiveSpan("something new", 3, 9, "secret", "[X_1]"));
+
+        assertEquals("My [hidden] is out", checks.text("My secret is out").masked);
     }
 
     @Test

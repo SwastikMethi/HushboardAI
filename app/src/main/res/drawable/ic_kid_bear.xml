@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kids Chat: Leo's face, a bear in his colour. Drawn from plain shapes for this app. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="@color/kids_leo_soft"
+        android:pathData="M0,24a24,24 0 1,0 48,0a24,24 0 1,0 -48,0" />
+    <path
+        android:fillColor="@color/kids_leo"
+        android:pathData="M8,13a5,5 0 1,0 10,0a5,5 0 1,0 -10,0" />
+    <path
+        android:fillColor="@color/kids_leo"
+        android:pathData="M30,13a5,5 0 1,0 10,0a5,5 0 1,0 -10,0" />
+    <path
+        android:fillColor="@color/kids_leo"
+        android:pathData="M11,26a13,13 0 1,0 26,0a13,13 0 1,0 -26,0" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M17,31a7,5 0 1,0 14,0a7,5 0 1,0 -14,0" />
+    <path
+        android:fillColor="@color/kids_ink"
+        android:pathData="M17,24a2,2 0 1,0 4,0a2,2 0 1,0 -4,0" />
+    <path
+        android:fillColor="@color/kids_ink"
+        android:pathData="M27,24a2,2 0 1,0 4,0a2,2 0 1,0 -4,0" />
+    <path
+        android:fillColor="@color/kids_ink"
+        android:pathData="M22.4,29a1.6,1.6 0 1,0 3.2,0a1.6,1.6 0 1,0 -3.2,0" />
+</vector>

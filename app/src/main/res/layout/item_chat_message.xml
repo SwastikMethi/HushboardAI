@@ -1,38 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One message in Kids Chat. The bubble is moved to the side of whoever is typing now and
-     coloured to match, in ChatActivity. -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<!-- One message in Kids Chat: its sender's face beside a bubble in its sender's colour.
+     ChatActivity puts the pair on the side of whoever is typing and shows the face on the
+     outside. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:gravity="bottom"
+    android:orientation="horizontal"
     android:paddingVertical="4dp">
 
-    <!-- The frame around the bubble is what lets it sit on either side. -->
+    <ImageView
+        android:id="@+id/chat_face_start"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginEnd="6dp"
+        android:importantForAccessibility="no" />
+
     <LinearLayout
         android:id="@+id/chat_bubble"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="4dp"
         android:background="@drawable/bg_chat_bubble"
         android:orientation="vertical"
         android:paddingHorizontal="14dp"
-        android:paddingVertical="10dp"
-        tools:ignore="UselessParent">
-
-        <TextView
-            android:id="@+id/chat_bubble_name"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:importantForAccessibility="no"
-            android:textAppearance="?attr/textAppearanceLabelMedium"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+        android:paddingVertical="10dp">
 
         <TextView
             android:id="@+id/chat_bubble_text"
+            style="@style/KidsText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxWidth="280dp"
-            android:textAppearance="?attr/textAppearanceBodyLarge" />
+            android:maxWidth="240dp" />
 
         <!-- Its spoken label names the sender, so it is set per message in ChatActivity. -->
         <ImageView
@@ -40,10 +38,17 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:adjustViewBounds="true"
+            android:contentDescription="@null"
             android:maxWidth="220dp"
             android:maxHeight="220dp"
             android:scaleType="fitCenter"
-            android:visibility="gone"
-            tools:ignore="ContentDescription" />
+            android:visibility="gone" />
     </LinearLayout>
-</FrameLayout>
+
+    <ImageView
+        android:id="@+id/chat_face_end"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="6dp"
+        android:importantForAccessibility="no" />
+</LinearLayout>

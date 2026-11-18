@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One fixed dark theme shared by the companion app and the keyboard. -->
+<!-- One fixed dark theme shared by the companion app and the keyboard, and at the end a
+     light one that only Kids Chat uses. -->
 <resources>
     <style name="Theme.AiKeyboard" parent="Theme.Material3.Dark.NoActionBar">
         <item name="colorPrimary">@color/accent_blue</item>
@@ -79,5 +80,50 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
         <item name="android:textAppearance">?attr/textAppearanceBodyLarge</item>
+    </style>
+
+    <!-- Kids Chat only: light and bright, made for young children. The keyboard and the
+         companion app keep the dark theme at the top of this file. -->
+    <style name="Theme.KidsChat" parent="Theme.Material3.Light.NoActionBar">
+        <item name="colorPrimary">@color/kids_sun</item>
+        <item name="colorOnPrimary">@color/kids_ink</item>
+        <item name="colorSurface">@color/kids_card</item>
+        <item name="colorOnSurface">@color/kids_ink</item>
+        <item name="colorOnSurfaceVariant">@color/kids_ink_soft</item>
+        <item name="android:colorBackground">@color/kids_sky</item>
+        <item name="android:statusBarColor">@color/kids_sky</item>
+        <item name="android:navigationBarColor">@color/kids_card</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!-- What children read: messages and tips. Andika is drawn for people learning to
+         read, with letters shaped the way they are taught to write them. -->
+    <style name="KidsText">
+        <item name="android:fontFamily">@font/andika_regular</item>
+        <item name="android:textColor">@color/kids_ink</item>
+        <item name="android:textSize">17sp</item>
+    </style>
+
+    <style name="KidsText.Small">
+        <item name="android:textColor">@color/kids_ink_soft</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- Names, headings and buttons: Baloo 2, round and chunky. -->
+    <style name="KidsDisplay">
+        <item name="android:fontFamily">@font/baloo2_medium</item>
+        <item name="android:textColor">@color/kids_ink</item>
+        <item name="android:textSize">20sp</item>
+    </style>
+
+    <!-- A big button with a picture and a word on it. -->
+    <style name="KidsButton" parent="Widget.Material3.Button.Icon">
+        <item name="android:fontFamily">@font/baloo2_medium</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:textColor">@color/kids_ink</item>
+        <item name="iconTint">@color/kids_ink</item>
+        <item name="iconGravity">textStart</item>
+        <item name="cornerRadius">28dp</item>
     </style>
 </resources>

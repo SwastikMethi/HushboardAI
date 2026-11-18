@@ -23,6 +23,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Spanned;
 import android.util.Log;
 import android.view.View;
 import android.widget.ImageView;
@@ -46,6 +47,7 @@ import com.example.aikeyboard.ui.chat.ChatActivity;
 import com.example.aikeyboard.ui.chat.ChatChecks;
 import com.example.aikeyboard.ui.chat.ChatChecks.Outcome;
 import com.example.aikeyboard.ui.chat.ChatChecks.TextVerdict;
+import com.example.aikeyboard.ui.chat.LockChipSpan;
 
 import org.junit.After;
 import org.junit.Before;
@@ -70,7 +72,7 @@ public class KidsChatTest {
     private static final long RUN_MS = 60_000;
     private static final String THREAT = "I will find you and hurt you, you worthless idiot";
     private static final String WITH_EMAIL = "My email is mia@example.com";
-    private static final String MASKED_EMAIL = "My email is [EMAIL_1]";
+    private static final String MASKED_EMAIL = "My email is [email]";
 
     // What the tone model is asked about when measuring, strongest first. None holds a slur.
     private static final String[] SAMPLES = {
@@ -188,7 +190,7 @@ public class KidsChatTest {
     public void personalDetailsRaiseACardAndSendLikeThisSendsThemMasked() throws Exception {
         openChat();
         sayWithPersonalDetails();
-        assertEquals(WITH_EMAIL, shown(R.id.chat_personal_typed));
+        assertEquals("what was typed stays in the field", WITH_EMAIL, shown(R.id.chat_input));
         assertEquals("nothing is sent before a choice is made", 0, sent());
 
         onView(withId(R.id.chat_send_masked)).perform(click());
@@ -243,6 +245,45 @@ public class KidsChatTest {
         assertTrue(TestModels.await(() -> sent() == 2, RUN_MS));
         assertEquals("Yes! See you at four", bubble(1));
         assertTrue(onTheRight(1));
+    }
+
+    @Test
+    public void theChildWhoseTurnItIsIsNamedAndHasTheBigFace() {
+        openChat();
+        assertEquals("Mia's turn", shown(R.id.chat_turn));
+        assertTrue("Mia's face should be the big one",
+                width(R.id.chat_user_one) > width(R.id.chat_user_two));
+
+        onView(withId(R.id.chat_user_two)).perform(click());
+        getInstrumentation().waitForIdleSync();
+
+        assertEquals("Leo's turn", shown(R.id.chat_turn));
+        assertTrue("Leo's face should be the big one",
+                width(R.id.chat_user_two) > width(R.id.chat_user_one));
+    }
+
+    @Test
+    public void aRefusalComesAsATipThatSaysWhatToDo() throws Exception {
+        openChat();
+
+        say(THREAT);
+
+        assertTrue(TestModels.await(() -> shown(R.id.chat_notice).equals(
+                context.getString(R.string.chat_unkind)), RUN_MS));
+        assertEquals(context.getString(R.string.chat_unkind_more),
+                shown(R.id.chat_notice_more));
+    }
+
+    @Test
+    public void aHiddenDetailIsDrawnAsALockChipInTheChat() throws Exception {
+        openChat();
+        sayWithPersonalDetails();
+
+        onView(withId(R.id.chat_send_masked)).perform(click());
+
+        assertTrue(TestModels.await(() -> sent() == 1, RUN_MS));
+        assertEquals("the words themselves stay plain", MASKED_EMAIL, bubble(0));
+        assertEquals("one chip, over the hidden word", 1, chips(0));
     }
 
     @Test
@@ -319,7 +360,7 @@ public class KidsChatTest {
 
         assertTrue("no warning; notice: " + shown(R.id.chat_notice), TestModels.await(
                 () -> shown(R.id.chat_notice).equals(
-                        context.getString(R.string.image_unreadable)), RUN_MS));
+                        context.getString(R.string.chat_picture_unreadable)), RUN_MS));
         assertEquals(0, sent());
     }
 
@@ -453,6 +494,25 @@ public class KidsChatTest {
         chat.onActivity(activity -> {
             RecyclerView list = activity.findViewById(R.id.chat_messages);
             if (list.getAdapter() != null) count[0] = list.getAdapter().getItemCount();
+        });
+        return count[0];
+    }
+
+    private int width(int viewId) {
+        int[] width = {0};
+        chat.onActivity(activity -> width[0] = activity.findViewById(viewId).getWidth());
+        return width[0];
+    }
+
+    /** How many hidden details the message at a position draws as lock chips. */
+    private int chips(int position) {
+        int[] count = {0};
+        chat.onActivity(activity -> {
+            CharSequence text = ((TextView) row(activity, position)
+                    .findViewById(R.id.chat_bubble_text)).getText();
+            if (text instanceof Spanned) {
+                count[0] = ((Spanned) text).getSpans(0, text.length(), LockChipSpan.class).length;
+            }
         });
         return count[0];
     }

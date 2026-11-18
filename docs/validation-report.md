@@ -727,7 +727,8 @@ Five more models in Kids Chat, twelve in all: a child says a message, Clear, Ear
 | A real child's speech; real "um"s; a real second voice; an accent; Hinglish; a noisy room | not run | — | One synthesised English sentence was used. Uhm and Who had never been tried on real fillers or second voices before this either |
 | Unkind words or a private detail said out loud | not run | — | The words take the same road as typed ones from Send it on, which the typed tests cover; no test speaks such words |
 | Listening back to the recording | not run | — | The play button's code is the voice tools' own player; no test presses it |
-| On the phone | not run | PHONE | Not installed there |
+| On the phone: installed | passed | PHONE | Installed at 00:34 on 19 Nov 2026 at the owner's request (commit `1e978f6`, the build the emulator suite ran on). All five voice models are on the phone, the microphone was already allowed for the app and still is, and no crash was logged. The phone's selected keyboard was Gboard before and after |
+| On the phone: a real voice | not reported yet | PHONE | The owner's to try. This is the first time the voice messages meet a real voice, a real microphone and a moving level meter. Nothing on the phone's screen was read or captured, and no recording leaves the phone |
 
 After voice messages: 199 unit tests, lint 0 errors and 43 warnings (two more: the note about `accessibilityHeading` for the new card's heading, and a note that the chat's one layout file now holds more than 80 views), a 701.8 MB debug APK, and the whole suite on the emulator (EMU-37B, `-e clear true`) in one run: 236 run, 213 passed, 23 skipped by design (the 17 as before, the chat's four measurements and its two sets of screenshots), none failed.
 

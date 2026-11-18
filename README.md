@@ -1,6 +1,6 @@
 # AI Keyboard — Java implementation handoff
 
-> **Status, 17 Nov 2026.** This folder now holds the implemented Android project as well as the handoff. Milestones 0–8 are built and tested on an emulator; milestone 9's checks that need a physical phone are still open. What passed, failed, is blocked or was not run is in [docs/validation-report.md](docs/validation-report.md); every model's status is in [docs/model-compatibility.md](docs/model-compatibility.md); decisions and open items are in [PROGRESS.md](PROGRESS.md). The handoff text below is kept as it was written.
+> **Status, 18 Nov 2026.** This folder now holds the implemented Android project as well as the handoff. Milestones 0–9 are built and tested on an emulator and on one physical phone (OnePlus CPH2423, Android 15); the hands-on checks on the phone were done by the owner and rest on their report. Not done: battery and heat, phones with less memory, named chat apps. What passed, failed, is blocked or was not run is in [docs/validation-report.md](docs/validation-report.md); every model's status is in [docs/model-compatibility.md](docs/model-compatibility.md); decisions and open items are in [PROGRESS.md](PROGRESS.md). The handoff text below is kept as it was written.
 
 ## Build and run
 

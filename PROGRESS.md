@@ -135,6 +135,9 @@ Rulings from the phone session:
 92. **Phone: `eye_describesARealScreenshot` failed and nothing was changed.** Eye called a capture of the phone's screen "illustration or art". The app shows the model's own words (ruling 56), so this is the model's answer on a real screen, not an app fault. Cost if wrong: the Image tools screen mislabels some screenshots; the test stays red on this phone as a record.
 93. **Phone: the tests no longer grant the microphone where it is already granted.** The phone refused a grant from a test (`SecurityException`), which stopped 22 tests before they began although the owner had granted it by hand. Cost if wrong: on a device where it is not granted and a test's grant is refused, those tests fail in their setup with the phone's own message.
 94. **Phone: the suite was run with Do Not Disturb off.** It was asked for; the owner said to go ahead. A notification popping up under a test's tap could have opened another app. Nothing of the kind showed in the results. Cost if wrong: a chat marked as read.
+95. **Phone: after the force-stop experiments, AI Keyboard was selected again with `ime set`.** The owner had chosen it by hand; the experiments undid that as a side effect. Cost if wrong: none; it puts their choice back.
+96. **Phone: the four times no keyboard appeared after a field was tapped are recorded as unexplained, and nothing was changed.** Three were minutes after the keyboard was first enabled; one was a single dictation test. Eight later attempts all worked. Cost if wrong: on a real phone the keyboard sometimes does not come up on the first tap; the owner is asked to watch for it in the hands-on part.
+97. **Phone: a force-stop making Android choose another keyboard is reported, not worked around.** It is Android's behaviour on the phone and on the emulator. The Keyboard tab already says when the keyboard is no longer selected. Cost if wrong: on phones whose cleaners force-stop apps, people find their keyboard has gone back to Gboard and do not know why. If clearing recents on OnePlus does this, the remedy is a line on the Keyboard tab and advice to lock the app, which is the owner's call.
 
 ## Final review
 
@@ -238,14 +241,16 @@ What is still open at the end of the emulator work, in one place. Items from ear
 
 ## Next action
 
-**The phone session is under way and waiting on the owner** (OnePlus CPH2423, serial `(serial omitted)`). Parts 1 and 2 are recorded in the validation report under "Phone session": models, Clear, memory, network silence, latency, and the keyboard's own suite (132 passed, 24 failed, 22 of them one fault in the tests).
+**The phone session's automated part is done; the hands-on part needs the owner at the phone** (OnePlus CPH2423, serial `(serial omitted)`). Everything so far is in the validation report under "Phone session".
 
-Waiting for, on the phone, by the owner: approve OnePlus's install prompt for the corrected test package (`adb install` is held on it; it appears on most reinstalls).
+With the owner, who types and says what they see (their chat apps are not to be screenshotted or read):
 
-Then, in this order:
+1. Open AI Keyboard, clear it from the recents screen, then check which keyboard is selected (`adb shell settings get secure default_input_method`). This settles whether OnePlus's recents counts as a force-stop (ruling 97).
+2. Switch on AI support and the typing models in the Models tab, then type in a browser, a notes app and whichever chat apps they choose: keys, backspace, shift, symbols, emoji suggestions, a privacy notice with mask and undo, Enter. Watch for the keyboard not appearing on a first tap (ruling 96).
+3. Dictation with their own voice from the keyboard's microphone button.
+4. Haptics and key sound from the Settings tab.
+5. TalkBack on: the keys, the tool row, the strip, the three tabs.
 
-1. Re-run on the phone the classes that were stopped by the microphone-grant fault: `AudioCaptureTest`, `KeyboardVoiceTest`, `VoiceToolsScreenTest`, and `EditorReadsTest`. Put `show_ime_with_hard_keyboard` back to `0` afterwards (the tests set it to 1; it was 0 on this phone and is 0 now).
-2. Find out why the keyboard did not appear on the first tap after the app had been force-stopped (validation report, part 2). Try it without the test harness: a field in Settings or the debug host, `kill -9` of the keyboard's process and separately a force-stop, and time how long the keyboard takes to return.
-3. With the owner at the phone: a browser, a notes app and whichever chat apps they choose; dictation with a real voice; haptics and key sound; TalkBack; and swiping AI Keyboard away from recents, then tapping a field in another app. Their chat apps are not to be screenshotted or read; they type and say what they see.
+Afterwards read `logcat -b crash` for the app and the memory samples, write the results into the blocked rows, and commit.
 
-Never use Gradle's `install*` tasks while the phone is connected (they install on every device); use `adb -s`. Leave out on the phone the tests that switch Wi-Fi off, turn animations off or disable the keyboard (ruling 91).
+Never use Gradle's `install*` tasks while the phone is connected; use `adb -s`. Most reinstalls on this phone raise a OnePlus prompt only the owner can approve. Leave out on the phone the tests that switch Wi-Fi off, turn animations off or disable the keyboard (ruling 91), and put `show_ime_with_hard_keyboard` back to `0` after any test run there.

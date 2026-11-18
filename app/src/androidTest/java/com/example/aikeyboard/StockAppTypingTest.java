@@ -49,8 +49,10 @@ public class StockAppTypingTest {
         context.startActivity(new Intent(Settings.ACTION_APP_SEARCH_SETTINGS)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
 
-        UiObject2 field = device.wait(
-                Until.findObject(By.clazz("android.widget.EditText")), TIMEOUT_MS);
+        // Android's own Settings uses a plain EditText; OnePlus's uses an AutoCompleteTextView.
+        java.util.regex.Pattern textField = java.util.regex.Pattern.compile(
+                "android\\.widget\\.(EditText|AutoCompleteTextView)");
+        UiObject2 field = device.wait(Until.findObject(By.clazz(textField)), TIMEOUT_MS);
         assertNotNull("no search field in Settings", field);
         String hostPackage = field.getApplicationPackage();
         field.click();
@@ -61,7 +63,7 @@ public class StockAppTypingTest {
         }
         device.waitForIdle();
         UiObject2 typed = device.wait(Until.findObject(
-                By.pkg(hostPackage).clazz("android.widget.EditText").text("wifi")), TIMEOUT_MS);
+                By.pkg(hostPackage).clazz(textField).text("wifi")), TIMEOUT_MS);
         assertNotNull("the host app's field did not receive the text", typed);
         assertEquals("wifi", typed.getText());
         device.pressHome();

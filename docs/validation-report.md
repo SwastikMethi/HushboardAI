@@ -656,7 +656,8 @@ Three more of the 13 models, chosen by the owner as the small ones to start with
 | "Get ready" also fetches the emoji and shape models | passed, and seen failing | EMU-37B | `KidsChatTest.gettingReadyAlsoFetchesTheEmojiAndShapeModels`: Shapes and Moderator deleted, the button tapped, Shapes back. Failed against a copy that fetched only the three required models |
 | The screen passes the accessibility checks with the emoji row up and with the drawing pad open | passed | EMU-37B | Two more states in `AccessibilityAuditTest.kidsChatPassesTheAccessibilityChecksInEachOfItsStates`, first run |
 | By hand, set beside the mockup: emoji ideas for "Yes! I love football"; a house drawn with four crayons, each stroke tidied; a French sentence refused with the tip | passed by hand | EMU-37B | Driven over adb, the strokes as touch events. `docs/evidence/screenshots/kids_chat_emoji_ideas.png`, `kids_chat_drawing_pad.png`, `kids_chat_other_language.png` |
-| On the phone | not run | PHONE | The phone has the redesign without these three |
+| On the phone: installed | passed | PHONE | Installed at 23:04 on 18 Nov 2026 at the owner's request (commit `efe3905`, the build the emulator suite ran on). The three required models and the emoji and shape models are on the phone, and no crash was logged. The phone's selected keyboard was Gboard before and after |
+| On the phone: how the three additions work | not reported yet | PHONE | The owner's to try. Nothing on the phone's screen was read or captured |
 | A drawing kept while the phone is turned; emoji ideas with a keyboard other than this project's; large text; a real child | not run | — | A drawing is known not to survive turning the phone |
 
 Which messages the language rule stops. "Sure" is whether the language model was confident; the rule acts only then:

@@ -391,13 +391,13 @@ No physical phone was connected, so every row that needs one is **blocked**, not
 | Typing works after the device sleeps and is woken | passed | EMU-37B | `input keyevent KEYCODE_SLEEP`, `KEYCODE_WAKEUP`, `wm dismiss-keyguard`, then two `KeyboardImeTest` tests |
 | Cold start with the network off: emoji suggestions, privacy review with mask and undo, and shape recognition all work | passed | EMU-37B | Airplane mode on, app force-stopped, then `ModelSmokeTest#offline_…`, two `KeyboardAiTest` tests and `VisionModelsTest#shapes_recognisesACircleALineAndARectangle`: 4 of 4 |
 | The keyboard keeps working after rotation | passed | EMU-37B | `KeyboardImeTest.keyboardKeepsWorkingAfterRotation` |
-| Typing in WhatsApp, Telegram, Discord, a browser field and a notes app | blocked | PHONE | Needs the owner's phone and accounts. On the emulator only Android's Settings search and the debug host were used |
-| Key handling time (p95) and time from last key to suggestion | blocked | PHONE | Emulator timings are not device evidence and were not collected as such |
-| Peak memory on a constrained phone; Voz on 6, 8 and 12 GB phones; Clear on a phone GPU | blocked | PHONE | Emulator figures are in the compatibility report |
-| Battery and heat during long typing with AI on | blocked | PHONE | — |
-| Haptics and key sound felt and heard | blocked | PHONE | The settings exist and reach the service; an emulator cannot show the result |
-| Dictation with a real voice; a recording with fillers and several speakers | blocked | PHONE | The emulator's microphone is silent |
-| A pass with TalkBack switched on | blocked | PHONE | — |
+| Typing in WhatsApp, Telegram, Discord, a browser field and a notes app | passed in part, by the owner's report | PHONE | See "Phone session", part 3: the owner typed in real apps and reported that it worked, without naming them. Typing into another app's field (Settings search) was also driven over adb |
+| Key handling time (p95) and time from last key to suggestion | measured | PHONE | See "Phone session", part 2: 12 ms and 200 ms at the 95th percentile on a OnePlus CPH2423 |
+| Peak memory on a constrained phone; Voz on 6, 8 and 12 GB phones; Clear on a phone GPU | measured on one phone | PHONE | See "Phone session": a 12 GB phone held Voz at about 5 GB, and Clear runs on its GPU. No 6 or 8 GB phone was tried |
+| Battery and heat during long typing with AI on | not run | PHONE | Not done in the phone session |
+| Haptics and key sound felt and heard | passed, by the owner's report | PHONE | See "Phone session", part 3 |
+| Dictation with a real voice; a recording with fillers and several speakers | dictation passed, by the owner's report; the rest not run | PHONE | See "Phone session", part 3. The phone's real microphone was also recorded from by `AudioCaptureTest` |
+| A pass with TalkBack switched on | passed, by the owner's report | PHONE | See "Phone session", part 3 |
 | A release-signed build | not run | — | Needs the owner's keystore; the deliverable is the debug-signed APK |
 
 Full-suite run at the end of the milestone, on the clean build (EMU-37B, with `-e clear true`): 158 instrumented tests; 145 passed, 13 skipped by design (opt-in probes, each run separately as listed), none failed. Unit tests: 161. Lint: 0 errors, 37 warnings.
@@ -479,12 +479,25 @@ Part 2 followed the owner's steps on the phone: they approved OnePlus's install 
 | Peak memory over the whole run | measured | PHONE | 6.1 GB, with Voz, Clear and the other voice models loaded together |
 | Battery temperature over the 12-minute run | observed | PHONE | 31.5 °C before, 34.2 °C after, on USB power. Not a battery or heat test |
 | Left out on the phone on purpose | not run | PHONE | The tests that switch Wi-Fi off, turn animations off, or disable the keyboard (ruling 91). `show_ime_with_hard_keyboard`, which the tests set to 1, was put back to 0. The force-stop experiments switched the selected keyboard to Gboard; AI Keyboard was selected again afterwards with `ime set` |
-| Typing in WhatsApp, Telegram, Discord, a browser and a notes app | blocked | PHONE | Needs the owner at the phone; their chats are not to be read or captured |
-| Dictation with a real voice; haptics and key sound; a pass with TalkBack | blocked | PHONE | Needs the owner at the phone |
+| Typing in WhatsApp, Telegram, Discord, a browser and a notes app | blocked when this table was written | PHONE | Done by the owner afterwards; see part 3 |
+| Dictation with a real voice; haptics and key sound; a pass with TalkBack | blocked when this table was written | PHONE | Done by the owner afterwards; see part 3 |
 
 Totals for the suite on the phone (`-e clear true -e stockApps true`, three tests left out): 171 run, 132 passed, 15 skipped, 24 failed. 22 of the 24 are the microphone-grant fault in the tests.
 
 The test changes made during the phone session were then run as the whole suite on the emulator (EMU-37B, `-e clear true`): 174 run, 158 passed, 16 skipped by design (13 opt-in probes and the three latency measurements), none failed.
+
+Part 3 is the hands-on part, done by the owner on their own phone on 18 Nov 2026 with the build of commit `c62601f`. **These rows rest on the owner's word.** They were given a list of five checks (clear the app from recents; type in real apps and watch emoji suggestions, a privacy notice with mask and undo, Enter, and the keyboard coming up on the first tap; dictate with their own voice; haptics and key sound; TalkBack) and answered "All worked". Their apps were not read or captured, and they did not say which apps they used. The last column says what the phone itself could and could not confirm.
+
+| Check | Result | Target | What the phone shows |
+|---|---|---|---|
+| Typing in real apps: keys, emoji suggestions, privacy notice with mask and undo, Enter, the keyboard on the first tap | passed, by the owner's report | PHONE | The typing models were loaded and in use from 13:59 to 14:12 and again after 14:21 (the keyboard's process at about 510 to 540 MB). No crash. Which apps were used was not said, so no named chat app can be listed as tried |
+| Clearing AI Keyboard from the recents screen | passed, by the owner's report | PHONE | Afterwards AI Keyboard was still the selected keyboard and its process had run without a restart since 14:16. Whether OnePlus's recents force-stops other apps is not something this shows |
+| Dictation with the owner's own voice | passed, by the owner's report | PHONE | Not confirmed by anything on the phone: the watch that would have shown the speech model loading had ended |
+| Haptics and key sound | passed, by the owner's report | PHONE | Cannot be confirmed from outside |
+| A pass with TalkBack | passed, by the owner's report | PHONE | Cannot be confirmed from outside; TalkBack was off when the phone was read afterwards |
+| The app over the session | observed | PHONE | Nothing naming the app in the phone's crash log at any point from the first install to the end |
+| Battery and heat over a long typing session | not run | — | Only the battery temperature around the 12-minute test run was noted |
+| A recording with fillers and several speakers; speech in a language other than English | not run | — | — |
 
 ## Picture panel in the keyboard (added 18 Nov 2026)
 
@@ -534,7 +547,7 @@ Each line of `docs/BUILD_AND_TEST_CHECKLIST.md`, with where it stands. "Emulator
 | No AI in password and no-learning fields; typing still works | passed (emulator) | `InputEligibilityTest`, `KeyboardAiTest` (2), `KeyboardVoiceTest`, `DrawingTest`, and `EditorReadsTest`, where the field itself counts the keyboard's reads: zero for a password field, with the keyboard shown or hidden. The hidden case failed until the final review's fix |
 | Empty, long, partial or unavailable editor context | passed in part | Unit-tested (`TextRangeMapperTest`, `AiCoordinatorTest`); a draft over 1,000 characters and an editor that hides its offsets were not driven on a device |
 | Fast typing, paste, selection moves, app switches and settings changes drop stale work | passed | `AiCoordinatorTest` (26), `InferenceSchedulerTest`; on device through the notice and topics tests |
-| Main thread never waits on a model; p95 key handling and suggestion latency measured on a named device | design passed; measurement blocked | One inference thread (ruling 23); numbers need the phone |
+| Main thread never waits on a model; p95 key handling and suggestion latency measured on a named device | passed | One inference thread (ruling 23). On a OnePlus CPH2423: key press to text 12 ms, last key to emoji 200 ms, both at the 95th percentile; the main thread was never held more than 29 ms, and that was while models loaded |
 | One call at a time per model; late results suppressed | passed in part | `InferenceSchedulerTest`, `AiCoordinatorTest`, dictation and voice-tools cancel tests. The review found a narrow window in which a shape answer can be applied to the next stroke (deferred, see `PROGRESS.md`) |
 | Redaction offsets: UTF-16, surrogate pairs, emoji families, combining marks, partial windows | passed | `TextRangeMapperTest` (9), `ModelSmokeTest.redact_offsetsAreUtf16CodeUnits` |
 | Apply and Undo both re-check the text; acceptance required; never auto-send | passed (emulator) | `EditorBridgeTest` (16, including edits that overlap being refused whole), `KeyboardAiTest` mask/undo, Enter test |
@@ -563,7 +576,7 @@ Each line of `docs/BUILD_AND_TEST_CHECKLIST.md`, with where it stands. "Emulator
 | Temporary media policy documented; exports need a tap | passed | Compatibility report ("what is kept"); `AudioImportTest` |
 | Every control works or says it is unavailable; no placeholder responses | passed | Milestone 8 audit; catalog test |
 | Reference composition, dark theme, muted panel, gradient icon, single 600 ms enable sweep | passed (by eye and test) | Milestone 8 |
-| Animations off, larger fonts, TalkBack, contrast, touch targets | passed except TalkBack | Milestone 8; TalkBack waits for the phone |
+| Animations off, larger fonts, TalkBack, contrast, touch targets | passed; TalkBack by the owner's report | Milestone 8; the TalkBack pass was done by the owner on the phone and reported as working, without detail |
 
 ### Final delivery
 
@@ -575,4 +588,4 @@ Each line of `docs/BUILD_AND_TEST_CHECKLIST.md`, with where it stands. "Emulator
 | Passed, failed, blocked and not-run kept apart, with commands and targets | passed | This file |
 | Unsupported features and device-only gaps explicit; no whole-app completion claim | passed | The blocked rows above; `PROGRESS.md` open items |
 
-**Not complete.** Everything that can be shown on an emulator has been. The app has not been run on a physical phone, so the device gates in the handoff (chat apps, latency, memory, battery, a real voice, TalkBack) are open.
+**Where it stands.** All ten milestones are built and have been run on an emulator and on one physical phone (a OnePlus CPH2423, Android 15, 12 GB). On that phone the automated checks and the measurements were run and recorded here; the hands-on checks (typing in real apps, dictation, haptics and sound, TalkBack, recents) were done by the owner and rest on their report that all of them worked. Still open, and not to be read as passed: battery and heat over a long session; any phone with 6 or 8 GB of memory; which chat apps were typed in; four unexplained cases of the keyboard not appearing after a tap; the ten findings deferred from the final review. Whether that is complete enough is the owner's call.

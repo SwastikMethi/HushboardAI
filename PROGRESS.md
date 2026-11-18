@@ -13,8 +13,8 @@ The execution plan is `~/.claude/plans/i-have-added-a-whimsical-mist.md` (approv
 | 6 — Voice tools | Done (emulator). Device rows blocked | 154 unit tests, 119 instrumented tests (107 passed, 12 opt-in probes skipped). All five voice models run for real: dictation in the keyboard (record → preview → Insert), and a Voice tools screen with record/import, steps, cancel, preview, copy, playback and sharing. Two real crashes (Voz out of memory, Clear on a software GPU) were survived by the crash breaker. A real voice through a real microphone, and Voz and Clear on phone hardware, wait for the phone. |
 | 7 — Image and drawing tools | Done (emulator). Device rows blocked | 160 unit tests, 142 instrumented tests (129 passed, 13 opt-in probes skipped). All 13 models now run for real. Image tools: pick a picture, see what Eye found and Moderator's check, warn before sharing a flagged one. Drawing: a stroke is tidied into a shape, on its own screen and in a keyboard panel that inserts it where the field takes pictures and offers the share sheet where it does not. Moderator on real sensitive material and Eye on real photos were not tried. |
 | 8 — Visual and accessibility audit | Done (emulator). Device rows blocked | 160 unit tests, 151 instrumented tests. Screens set beside both reference images and brought closer: drawn icons, grouped cards, the reference's switches, emoji chips, an app icon. The audit found the AI panel had outgrown the keyboard; every panel now keeps the keyboard's footprint. The app's screens pass Google's accessibility checks; keyboard controls are labelled and full-size; contrast and reduced motion are tested; large text checked at 1.3×. A pass with TalkBack on waits for the phone. |
-| 9 — Complete-version hardening | Emulator part done. **Phone session open** | 161 unit tests, 158 instrumented tests (145 passed, 13 opt-in probes skipped) at the end of the milestone; clean build, 700.1 MB debug APK. Model runs send and receive nothing; nothing typed is kept on disk or in the log; the keyboard survives its process being killed, sleep and wake, rotation, and a cold start offline; overlapping download, delete and reset behave. Every check that needs a real phone (chat apps, latency, memory, battery, a real voice, TalkBack) is blocked until one is connected. |
-| Phone session | **In progress** | Started 18 Nov 2026 on a OnePlus CPH2423 (Android 15, 12 GB). Done without the owner's hands: install, all 13 models running, Clear on the phone's GPU, memory, network silence. Waiting for the owner to enable the keyboard. See the validation report, "Phone session". |
+| 9 — Complete-version hardening | Done on the emulator and on one phone (see "Phone session") | 161 unit tests, 158 instrumented tests (145 passed, 13 opt-in probes skipped) at the end of the milestone; clean build, 700.1 MB debug APK. Model runs send and receive nothing; nothing typed is kept on disk or in the log; the keyboard survives its process being killed, sleep and wake, rotation, and a cold start offline; overlapping download, delete and reset behave. Every check that needs a real phone (chat apps, latency, memory, battery, a real voice, TalkBack) is blocked until one is connected. |
+| Phone session | Held 18 Nov 2026. Hands-on part by the owner's report | OnePlus CPH2423, Android 15, 12 GB. Run and recorded: install, all 13 models, Clear on the phone's GPU, memory, network silence, latency, the keyboard's own suite, process death, typing in another app's field. Done by the owner and reported as working, without detail: typing in real apps, dictation, haptics and sound, TalkBack, recents, and sending a picture from the keyboard. Not done: battery and heat, a 6 or 8 GB phone. See the validation report, "Phone session". |
 | Picture panel in the keyboard | Done (emulator). Worked on the phone by the owner's report | Added 18 Nov 2026 at the owner's request, during the phone session: a picture button on the keyboard while Eye or Moderator is on; the chosen picture is described and checked in a keyboard panel, and can be inserted or shared from there, a flagged one only after a warning. Ten tests, one of them through Android's real picker. See the validation report. |
 | Final review | Done. Ten small findings deferred | One independent review of the whole branch; one fix pass (see "Final review"). After it: 161 unit tests, 171 instrumented tests (158 passed, 13 opt-in probes skipped, none failed), lint 0 errors, clean build. The review found that the keyboard's AI could read a password field while the on-screen keyboard was hidden; that is fixed and tested from the field's side. |
 
@@ -153,6 +153,7 @@ Rulings for the picture panel, added on 18 Nov 2026 at the owner's request:
 106. **What is sent is the copy the models looked at, up to 1600 pixels across, as a JPEG** (ruling 54), and the panel says so. Cost if wrong: someone wanting the original at full size attaches it with the chat app instead.
 107. **The drawing panel and the picture panel share one send routine.** The drawing's own code was moved into it rather than copied. Cost if wrong: none; `DrawingTest` covers the drawing side.
 108. **Never auto-send still holds, with one thing to know:** Insert hands the picture to the app, and some chat apps send an inserted picture at once instead of attaching it to the draft. The tap on Insert is the user's decision, as it is for a drawing. Cost if wrong: a picture goes out one step earlier than someone expected in such an app; not seen yet, to be watched on the phone.
+109. **Phone: the hands-on checks are recorded on the owner's word.** Asked how five listed checks went, the owner answered "All worked", and "It worked" for sending a picture. Their apps were not read or captured and they did not name them. The report says "by the owner's report" on each such row and says what the phone itself confirmed: the typing models in use, a picture written for sending, the same process throughout, no crash. Cost if wrong: a check counted as passed that was done quickly or not at all; dictation, haptics and TalkBack have nothing on the phone to back them.
 
 ## Final review
 
@@ -217,19 +218,23 @@ What is still open at the end of the emulator work, in one place. Items from ear
 
 **For the owner to decide or do**
 
-- The phone session (see "Next action"): every device-only gate is blocked until then.
+- Whether what the phone session showed is enough. Its hands-on part rests on your own report (ruling 109).
+- The four times the keyboard did not appear after a field was tapped on the phone (ruling 96): unexplained, not reproduced. Say if you see it again.
+- The microphone permission screen probably returns to this app instead of the app being typed into when this app is open in the background (ruling 104). One line in the manifest; not verified, not changed.
+- A force-stop makes Android pick another keyboard (ruling 97). If a phone cleaner does that to people, the Keyboard tab should say so in so many words.
 - The deferred findings from the final review (see "Final review"): ten small ones, none fixed, each with what it means for someone using the app.
 - The debug APK is 700 MB because each native model library is about 56 MB. A store release needs a packaging decision (compressed libraries or per-model delivery), a real application id instead of `com.example.aikeyboard`, and your signing key.
 - The app is still installed on your `Pixel_6_Pro` emulator from milestones 0–5, with about 1.4 GB of downloaded models, and that emulator is close to full. Nothing was removed from it. To get the space back, with that emulator running: `adb uninstall com.example.aikeyboard` and `adb uninstall com.example.aikeyboard.test`.
 - A dedicated emulator, `AiKeyboard_Test`, was added under `~/.android/avd/` (ruling 40). Delete `AiKeyboard_Test.ini` and `AiKeyboard_Test.avd` there if you do not want it.
 - The license check was not captured on the wire (ruling 71).
 
-**Needs the phone**
+**Still needs a phone**
 
-- Typing in WhatsApp, Telegram, Discord, a browser and a notes app; key-handling and suggestion latency; memory on a constrained phone; battery and heat; haptics and key sound.
-- Voz on a phone sold as 8 GB, the smallest the new line admits (ruling 90). Done on the owner's 12 GB phone: Voz's memory, and Clear on a phone's GPU.
-- Dictation with a real voice; speech with real fillers (Uhm); a real recording with several speakers (Who).
-- A pass with TalkBack switched on (ruling 70).
+- Battery and heat over a long typing session with AI on.
+- Voz on a phone sold as 8 GB, the smallest the line admits (ruling 90), and on any phone with less than 12 GB.
+- Typing in named chat apps (WhatsApp, Telegram, Discord): the owner typed in real apps without saying which. What each does with a picture inserted from the keyboard: attach it or send it at once (ruling 108).
+- Speech with real fillers (Uhm); a real recording with several speakers (Who).
+- The keyboard's picture panel and its tests were not run as tests on the phone; the owner used it there by hand.
 
 **Not tried on any device**
 
@@ -256,18 +261,6 @@ What is still open at the end of the emulator work, in one place. Items from ear
 
 ## Next action
 
-**The phone session's automated part is done; the hands-on part needs the owner at the phone** (OnePlus CPH2423, serial `(serial omitted)`). Everything so far is in the validation report under "Phone session".
+**Nothing is waiting on a device.** The phone session was held on 18 Nov 2026 and is recorded in the validation report under "Phone session". What is left is for the owner to decide (see "Open items", "For the owner to decide or do"): the ten deferred findings from the final review, the unexplained keyboard-not-appearing cases, the microphone screen's return path, and what a store release needs.
 
-The phone has the build with the keyboard's picture panel and sending from it (commit `c62601f`, installed 18 Nov 2026, AI Keyboard still selected). The owner tries it in a chat field: picture button, picker, a picture, the result in the keyboard, then Insert or Share. To be noted: what the chat app does with an inserted picture (attach it or send it at once), and whether the keyboard comes back by itself after the picker.
-
-With the owner, who types and says what they see (their chat apps are not to be screenshotted or read):
-
-1. Open AI Keyboard, clear it from the recents screen, then check which keyboard is selected (`adb shell settings get secure default_input_method`). This settles whether OnePlus's recents counts as a force-stop (ruling 97).
-2. Switch on AI support and the typing models in the Models tab, then type in a browser, a notes app and whichever chat apps they choose: keys, backspace, shift, symbols, emoji suggestions, a privacy notice with mask and undo, Enter. Watch for the keyboard not appearing on a first tap (ruling 96).
-3. Dictation with their own voice from the keyboard's microphone button.
-4. Haptics and key sound from the Settings tab.
-5. TalkBack on: the keys, the tool row, the strip, the three tabs.
-
-Afterwards read `logcat -b crash` for the app and the memory samples, write the results into the blocked rows, and commit.
-
-Never use Gradle's `install*` tasks while the phone is connected; use `adb -s`. Most reinstalls on this phone raise a OnePlus prompt only the owner can approve. Leave out on the phone the tests that switch Wi-Fi off, turn animations off or disable the keyboard (ruling 91), and put `show_ime_with_hard_keyboard` back to `0` after any test run there.
+If a phone is connected again: never use Gradle's `install*` tasks (they install on every device); use `adb -s`. On the OnePlus, most reinstalls raise a prompt only the owner can approve, a test cannot grant the microphone, and the tests that switch Wi-Fi off, turn animations off or disable the keyboard are left out (ruling 91). Put `show_ime_with_hard_keyboard` back to `0` after any test run there. The real-picker test (`-e picker true`) is for an emulator only.

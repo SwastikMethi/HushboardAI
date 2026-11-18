@@ -44,9 +44,11 @@ import com.example.aikeyboard.ai.Suggestion.LanguageHint;
 import com.example.aikeyboard.ai.Suggestion.ToxicScores;
 import com.example.aikeyboard.ai.ToxicPolicy;
 import com.example.aikeyboard.data.AppSettings;
+import com.example.aikeyboard.media.AudioCaptureController;
 import com.example.aikeyboard.media.Vision.ImageFindings;
 import com.example.aikeyboard.media.Vision.Sensitivity;
 import com.example.aikeyboard.media.Vision.Tag;
+import com.example.aikeyboard.media.Voice.AudioClip;
 import com.example.aikeyboard.models.ModelRegistry;
 import com.example.aikeyboard.models.ModelRepository.AssetState;
 import com.example.aikeyboard.ui.chat.ChatActivity;
@@ -102,6 +104,11 @@ public class KidsChatTest {
     private final AppContainer app = TestModels.container();
     private ChatChecks checks;
     private ActivityScenario<ChatActivity> chat;
+    // Set by the tests that speak: known speech stands where the microphone would be.
+    private AudioCaptureController realMicrophone;
+    private FakeCapture microphone;
+    // The speech model is slow to load the first time; nothing else waits this long.
+    private static final long WRITING_MS = 3 * 60_000;
 
     @Before
     public void setUp() throws Exception {
@@ -114,6 +121,7 @@ public class KidsChatTest {
     @After
     public void tearDown() {
         if (chat != null) chat.close();
+        if (realMicrophone != null) app.capture = realMicrophone;
     }
 
     @Test
@@ -671,6 +679,113 @@ public class KidsChatTest {
                 .takeScreenshot(new File(dir, "kids_chat_people_card.png")));
     }
 
+    @Test
+    public void theSendButtonIsAMicrophoneOnlyWhileNothingIsTyped() throws Exception {
+        TestModels.ensureInstalled("voz");
+        openChat();
+        assertEquals(context.getString(R.string.chat_speak), described(R.id.chat_send));
+
+        onView(withId(R.id.chat_input)).perform(replaceText("hi"));
+        assertEquals(context.getString(R.string.chat_send), described(R.id.chat_send));
+
+        onView(withId(R.id.chat_input)).perform(replaceText(""));
+        assertEquals(context.getString(R.string.chat_speak), described(R.id.chat_send));
+    }
+
+    @Test
+    public void aSpokenMessageIsShownAsWordsFirstAndThenSentMarkedAsSpoken() throws Exception {
+        speakInto();
+        openChat();
+        sayOutLoud();
+        String words = shown(R.id.chat_heard_words);
+        assertTrue("heard: " + words, TestSpeech.recognised(words));
+        assertEquals("nothing is sent before the child says so", 0, sent());
+
+        onView(withId(R.id.chat_heard_send)).perform(scrollTo(), click());
+
+        assertTrue("not sent; notice: " + shown(R.id.chat_notice),
+                TestModels.await(() -> sent() == 1, RUN_MS));
+        assertEquals(words, bubble(0));
+        assertTrue("the message is not marked as spoken", markedAsSpoken(0));
+        assertEquals("the field is emptied once the message has gone", "",
+                shown(R.id.chat_input));
+    }
+
+    @Test
+    public void sayItAgainListensAgainAndSendsNothing() throws Exception {
+        speakInto();
+        openChat();
+        sayOutLoud();
+
+        onView(withId(R.id.chat_heard_again)).perform(scrollTo(), click());
+
+        assertTrue("not listening again",
+                TestModels.await(() -> isShown(R.id.chat_listen), RUN_MS));
+        assertFalse(isShown(R.id.chat_heard));
+        assertEquals(0, sent());
+    }
+
+    @Test
+    public void dontSendItThrowsAwayWhatWasHeard() throws Exception {
+        speakInto();
+        openChat();
+        sayOutLoud();
+
+        onView(withId(R.id.chat_heard_drop)).perform(scrollTo(), click());
+
+        assertFalse(isShown(R.id.chat_heard));
+        assertEquals(0, sent());
+        assertEquals("", shown(R.id.chat_input));
+        onView(withId(R.id.chat_input)).check(matches(isEnabled()));
+    }
+
+    @Test
+    public void stoppingWhileListeningThrowsTheRecordingAway() throws Exception {
+        speakInto();
+        openChat();
+        onView(withId(R.id.chat_send)).perform(click());
+        assertTrue(TestModels.await(() -> isShown(R.id.chat_listen), RUN_MS));
+
+        onView(withId(R.id.chat_listen_cancel)).perform(click());
+
+        assertFalse(isShown(R.id.chat_listen));
+        assertTrue("the recording was kept", microphone.cancelled);
+        onView(withId(R.id.chat_input)).check(matches(isDisplayed()));
+        assertEquals(0, sent());
+    }
+
+    // Not a check: saves pictures of a spoken message on its way, which cannot be made by
+    // hand on an emulator, whose microphone hears only silence. Run with -e chatshots true.
+    @Test
+    public void picturesOfASpokenMessageForTheRecord() throws Exception {
+        assumeTrue("opt-in: pass -e chatshots true", "true".equals(
+                InstrumentationRegistry.getArguments().getString("chatshots")));
+        speakInto();
+        openChat();
+        onView(withId(R.id.chat_user_two)).perform(click());
+        say("What are you doing today?");
+        assertTrue(TestModels.await(() -> sent() == 1, RUN_MS));
+        onView(withId(R.id.chat_user_one)).perform(click());
+        UiDevice device = UiDevice.getInstance(getInstrumentation());
+        File dir = new File(context.getExternalFilesDir(null), "tour");
+        dir.mkdirs();
+
+        onView(withId(R.id.chat_send)).perform(click());
+        assertTrue(TestModels.await(() -> isShown(R.id.chat_listen), RUN_MS));
+        Thread.sleep(1500);
+        assertTrue(device.takeScreenshot(new File(dir, "kids_chat_listening.png")));
+
+        onView(withId(R.id.chat_listen_done)).perform(click());
+        assertTrue(TestModels.await(() -> isShown(R.id.chat_heard), WRITING_MS));
+        Thread.sleep(700);
+        assertTrue(device.takeScreenshot(new File(dir, "kids_chat_heard.png")));
+
+        onView(withId(R.id.chat_heard_send)).perform(scrollTo(), click());
+        assertTrue(TestModels.await(() -> sent() == 2, RUN_MS));
+        Thread.sleep(700);
+        assertTrue(device.takeScreenshot(new File(dir, "kids_chat_spoken.png")));
+    }
+
     private void openChat() {
         chat = ActivityScenario.launch(ChatActivity.class);
         getInstrumentation().waitForIdleSync();
@@ -788,6 +903,43 @@ public class KidsChatTest {
             right[0] = bubble.getLeft() + bubble.getWidth() / 2 > row.getWidth() / 2;
         });
         return right[0];
+    }
+
+    /** Puts known speech where the microphone would be, with the speech model installed. */
+    private void speakInto() throws Exception {
+        AudioClip speech = TestSpeech.english();
+        assumeTrue("this device has no speech synthesiser to make the test speech",
+                speech != null);
+        TestModels.ensureInstalled("voz");
+        TestModels.allowMicrophone();
+        realMicrophone = app.capture;
+        microphone = new FakeCapture(speech);
+        app.capture = microphone;
+    }
+
+    /** Taps the microphone, "speaks", taps Done, and waits for the words to come up. */
+    private void sayOutLoud() throws InterruptedException {
+        onView(withId(R.id.chat_send)).perform(click());
+        assertTrue("not listening; notice: " + shown(R.id.chat_notice),
+                TestModels.await(() -> isShown(R.id.chat_listen), RUN_MS));
+        onView(withId(R.id.chat_listen_done)).perform(click());
+        assertTrue("nothing was written down; notice: " + shown(R.id.chat_notice),
+                TestModels.await(() -> isShown(R.id.chat_heard), WRITING_MS));
+    }
+
+    private String described(int viewId) {
+        String[] label = {""};
+        chat.onActivity(activity -> label[0] =
+                String.valueOf(activity.findViewById(viewId).getContentDescription()));
+        return label[0];
+    }
+
+    /** Whether the message at a position carries the small microphone of a spoken one. */
+    private boolean markedAsSpoken(int position) {
+        boolean[] marked = {false};
+        chat.onActivity(activity -> marked[0] = ((TextView) row(activity, position)
+                .findViewById(R.id.chat_bubble_text)).getCompoundDrawablesRelative()[0] != null);
+        return marked[0];
     }
 
     /** The chat's real checks, with a picture model that reports what it is told to. */

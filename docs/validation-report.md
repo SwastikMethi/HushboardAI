@@ -57,6 +57,10 @@ adb shell am instrument -w -e micDenied true -e class com.example.aikeyboard.Mic
 # as INSTRUMENTATION_STATUS lines (add -r).
 adb shell am instrument -w -r -e latency true -e class com.example.aikeyboard.LatencyProbeTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 
+# Kids Chat's pictures for the record: the card for a photo with a person, and a spoken
+# message on its way. Written to /sdcard/Android/data/com.example.aikeyboard/files/tour
+adb shell am instrument -w -e chatshots true -e class com.example.aikeyboard.KidsChatTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
+
 # The keyboard's picture button through Android's real picker. EMULATOR ONLY: the picker shows
 # the device's own pictures. Put one in the emulator's gallery first.
 adb shell am instrument -w -e picker true -e class 'com.example.aikeyboard.KeyboardImageTest#theSystemsPickerHandsAChosenPictureBackToTheKeyboard' com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
@@ -703,6 +707,29 @@ The seventh model in Kids Chat: Eye looks at a photo that has passed the nudity 
 | On the phone: the card's three buttons, a photo without people and its line, a person who is small or seen from behind, a drawing | not reported | PHONE | Suggested to the owner; they did not say what these did |
 
 After the photo helper: 189 unit tests, lint 0 errors and 41 warnings (one more, the same note about `accessibilityHeading`, for the new card's heading), a 701.8 MB debug APK, and the whole suite on the emulator (EMU-37B, `-e clear true`) in one run: 230 run, 208 passed, 22 skipped by design (the 17 as before, the chat's four measurements and its one screenshot), none failed.
+
+## Kids Chat: voice messages (19 Nov 2026)
+
+Five more models in Kids Chat, twelve in all: a child says a message, Clear, Ear, Voz, Uhm and Who write it down, the words are shown, and on the child's word they are sent like typed ones. Built from a mockup the owner approved. Nothing here has been on the phone, and no real child's voice was used.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| What a recording comes to: the words as the speech model wrote them; "um"s left out; a second voice left out and said so; the longer-speaking voice kept; one voice means nothing left out; a word between turns kept; silence and nothing-but-"um"s are nothing; speech surely not English is not written down; a guess at another language changes nothing | failed, then passed | unit | `ChatVoiceTest`, 10 tests. Against an empty implementation 8 failed and the 2 "nothing was said" cases passed |
+| The send button is a microphone only while nothing is typed | passed, and seen failing | EMU-37B | `KidsChatTest.theSendButtonIsAMicrophoneOnlyWhileNothingIsTyped`; failed against a copy that never changed the button |
+| A spoken message is shown as words first, then sent marked as spoken, and the field is emptied | passed, and seen failing | EMU-37B | `KidsChatTest.aSpokenMessageIsShownAsWordsFirstAndThenSentMarkedAsSpoken`, with the real voice models and a synthesised English sentence standing where the microphone would be. The words came back as "Hello, this is a test of speech recognition on this device. The weather is nice today and I would like some coffee". Failed against a copy that showed no words |
+| Say it again listens again and sends nothing; Don't send it throws the words away | passed, and seen failing | EMU-37B | Two `KidsChatTest` tests; each failed against a copy whose button did nothing |
+| Stopping while listening throws the recording away | passed, and seen failing | EMU-37B | `KidsChatTest.stoppingWhileListeningThrowsTheRecordingAway`; failed against a copy that left the microphone running |
+| Sending a message no longer crashes the screen | failed, then passed | EMU-37B | The first run of the whole class with voice in it stopped at "Process crashed" on the first test that sent a message: the field's listener redrew the screen, which emptied the field, which called the listener, without end. Fixed, and the class then passed |
+| The listening panel and the card for what was heard pass the accessibility checks | passed | EMU-37B | Two more states in `AccessibilityAuditTest.kidsChatPassesTheAccessibilityChecksInEachOfItsStates`. Its first run failed for a fault in the test itself, which had left words in the field |
+| By hand, with the emulator's real microphone, which hears only silence: the panel comes up at once with Android's microphone indicator, Done works, and the helper says "I didn't hear anything"; left alone, the recording ends by itself at 30 seconds with the same result | passed by hand | EMU-37B | Driven over adb. `docs/evidence/screenshots/kids_chat_listening.png` |
+| The card and the sent message as they look | seen | EMU-37B | `docs/evidence/screenshots/kids_chat_heard.png`, `kids_chat_spoken.png`, saved by `KidsChatTest.picturesOfASpokenMessageForTheRecord` (opt-in). The level meter is flat there because the stand-in microphone reports no loudness |
+| The level meter moving with a voice | not run | — | Needs a real microphone and a person |
+| A real child's speech; real "um"s; a real second voice; an accent; Hinglish; a noisy room | not run | — | One synthesised English sentence was used. Uhm and Who had never been tried on real fillers or second voices before this either |
+| Unkind words or a private detail said out loud | not run | — | The words take the same road as typed ones from Send it on, which the typed tests cover; no test speaks such words |
+| Listening back to the recording | not run | — | The play button's code is the voice tools' own player; no test presses it |
+| On the phone | not run | PHONE | Not installed there |
+
+After voice messages: 199 unit tests, lint 0 errors and 43 warnings (two more: the note about `accessibilityHeading` for the new card's heading, and a note that the chat's one layout file now holds more than 80 views), a 701.8 MB debug APK, and the whole suite on the emulator (EMU-37B, `-e clear true`) in one run: 236 run, 213 passed, 23 skipped by design (the 17 as before, the chat's four measurements and its two sets of screenshots), none failed.
 
 ## The handoff checklist, item by item
 

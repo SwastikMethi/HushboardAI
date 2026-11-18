@@ -26,6 +26,8 @@ public class AudioCaptureController {
     private volatile boolean reading;
     private short[] samples;
     private int count;
+    // How loud the last tenth of a second was, between 0 and 1, for a level meter.
+    private volatile float level;
 
     public AudioCaptureController(Context appContext) {
         this.app = appContext;
@@ -76,6 +78,11 @@ public class AudioCaptureController {
                 int read = opened.read(buffer, filled,
                         Math.min(rate / 10, buffer.length - filled));
                 if (read <= 0) break; // the system took the microphone away
+                int peak = 0;
+                for (int i = filled; i < filled + read; i++) {
+                    peak = Math.max(peak, Math.abs(buffer[i]));
+                }
+                level = peak / 32768f;
                 filled += read;
             }
             count = filled;
@@ -87,6 +94,11 @@ public class AudioCaptureController {
 
     public synchronized boolean isRecording() {
         return record != null;
+    }
+
+    /** How loud the last moment of the recording was, between 0 and 1. 0 when not recording. */
+    public float level() {
+        return level;
     }
 
     /** Ends the recording and returns it, or null when nothing was being recorded. */
@@ -121,5 +133,6 @@ public class AudioCaptureController {
         record.release();
         record = null;
         reader = null;
+        level = 0;
     }
 }

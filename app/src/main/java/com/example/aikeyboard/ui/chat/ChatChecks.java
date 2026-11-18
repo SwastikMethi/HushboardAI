@@ -46,7 +46,8 @@ public final class ChatChecks {
             "email", "email", "phone", "phone number", "payment", "bank number",
             "ids", "ID number", "names", "name", "addresses", "address", "online", "link");
     private static final String HIDDEN_OTHER = "hidden";
-    private static final String ENGLISH = "en";
+    /** The one language the word list and the models were tried on. */
+    static final String ENGLISH = "en";
     private static final int SEEN_WORDS = 3;
 
     /** What may happen to a typed message. */

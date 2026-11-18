@@ -381,6 +381,130 @@
                     android:textSize="15sp" />
             </LinearLayout>
         </ScrollView>
+
+        <!-- The card for a message that was spoken: the words as they were written down,
+             shown before anything is sent. It scrolls like the cards above. -->
+        <ScrollView
+            android:id="@+id/chat_heard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp"
+            android:layout_marginBottom="10dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_kids_card"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="10dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_helper_sun" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/KidsDisplay"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:accessibilityHeading="true"
+                            android:text="@string/chat_heard_title" />
+
+                        <TextView
+                            style="@style/KidsText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/chat_heard_more"
+                            android:textSize="15sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/chat_heard_words"
+                        style="@style/KidsText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_chat_bubble"
+                        android:paddingHorizontal="14dp"
+                        android:paddingVertical="10dp" />
+
+                    <!-- Plays the recording back, cleaned of background noise where the
+                         cleanup model ran. Its picture and label are set in ChatActivity. -->
+                    <ImageButton
+                        android:id="@+id/chat_heard_play"
+                        android:layout_width="52dp"
+                        android:layout_height="52dp"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_kids_round"
+                        android:backgroundTint="@color/kids_sky"
+                        android:contentDescription="@string/chat_heard_play"
+                        android:src="@drawable/ic_kids_play" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/chat_heard_note"
+                    style="@style/KidsText.Small"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/chat_heard_other_voice"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/chat_heard_send"
+                    style="@style/KidsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/chat_heard_send"
+                    android:textColor="@color/kids_card"
+                    app:backgroundTint="@color/kids_leaf"
+                    app:icon="@drawable/ic_kids_send"
+                    app:iconTint="@color/kids_card" />
+
+                <Button
+                    android:id="@+id/chat_heard_again"
+                    style="@style/KidsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/chat_heard_again"
+                    app:backgroundTint="@color/kids_sky"
+                    app:icon="@drawable/ic_kids_mic" />
+
+                <Button
+                    android:id="@+id/chat_heard_drop"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/andika_regular"
+                    android:text="@string/chat_drop_photo"
+                    android:textColor="@color/kids_ink_soft"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </ScrollView>
     </LinearLayout>
 
     <!-- A tip from the helper when something could not be sent. Never a telling-off. -->
@@ -639,6 +763,98 @@
                 android:layout_weight="1"
                 android:text="@string/chat_send_drawing"
                 app:icon="@drawable/ic_kids_send" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Listening to a spoken message, and then writing it down. Like the drawing pad it
+         takes the place of the bar and of the keyboard. -->
+    <LinearLayout
+        android:id="@+id/chat_listen"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_kids_pad"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_marginEnd="10dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_helper_sun" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/chat_listen_title"
+                    style="@style/KidsDisplay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:accessibilityLiveRegion="polite"
+                    android:textSize="22sp" />
+
+                <TextView
+                    android:id="@+id/chat_listen_more"
+                    style="@style/KidsText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- How loud the child is, so they can see they are heard. Decoration only. -->
+        <com.example.aikeyboard.ui.chat.KidsLevelView
+            android:id="@+id/chat_level"
+            android:layout_width="150dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="12dp"
+            android:importantForAccessibility="no" />
+
+        <Chronometer
+            android:id="@+id/chat_timer"
+            style="@style/KidsDisplay"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textSize="22sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageButton
+                android:id="@+id/chat_listen_cancel"
+                android:layout_width="52dp"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_kids_round"
+                android:backgroundTint="@color/kids_sky"
+                android:contentDescription="@string/chat_listen_cancel"
+                android:src="@drawable/ic_kids_close" />
+
+            <Button
+                android:id="@+id/chat_listen_done"
+                style="@style/KidsButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="@string/chat_listen_done"
+                app:icon="@drawable/ic_kids_check" />
         </LinearLayout>
     </LinearLayout>
 </LinearLayout>

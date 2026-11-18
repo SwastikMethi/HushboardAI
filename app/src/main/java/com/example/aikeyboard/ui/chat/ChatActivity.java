@@ -1,18 +1,24 @@
 // Kids Chat: a demo of a chat for young children, with two pretend users on one phone, each
-// with a face and a colour of their own. They can type, with emoji ideas as they go, send a
-// picture, or draw on a pad that tidies their shapes. A message
+// with a face and a colour of their own. They can type, with emoji ideas as they go, say a
+// message out loud and see it written down, send a picture, or draw on a pad that tidies
+// their shapes. A message
 // is checked on the phone before it is sent (see ChatChecks): unkind wording is refused,
 // personal details are shown masked first, and a picture the nudity check flags is refused.
 // The conversation lives in memory only and is gone when the screen is closed; nothing typed
 // or picked here is written to disk or leaves the phone.
 package com.example.aikeyboard.ui.chat;
 
+import android.Manifest;
 import android.app.Application;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.text.Editable;
 import android.text.InputFilter;
 import android.text.TextWatcher;
@@ -48,12 +54,16 @@ import com.example.aikeyboard.ai.Suggestion.EmojiCandidate;
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.databinding.ActivityChatBinding;
 import com.example.aikeyboard.databinding.ItemChatMessageBinding;
+import com.example.aikeyboard.media.AudioPlayback;
 import com.example.aikeyboard.media.ImageImport;
 import com.example.aikeyboard.media.Vision.RecognizedShape;
+import com.example.aikeyboard.media.Voice.AudioClip;
+import com.example.aikeyboard.media.Voice.VoiceResult;
 import com.example.aikeyboard.models.ModelRepository.AssetState;
 import com.example.aikeyboard.ui.chat.ChatChecks.Outcome;
 import com.example.aikeyboard.ui.chat.ChatChecks.Seen;
 import com.example.aikeyboard.ui.chat.ChatChecks.TextVerdict;
+import com.example.aikeyboard.ui.tools.MicPermissionActivity;
 import com.example.aikeyboard.ui.tools.ShapeRecognizer;
 
 import java.io.IOException;
@@ -63,6 +73,7 @@ import java.util.Locale;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class ChatActivity extends AppCompatActivity {
 
@@ -71,6 +82,11 @@ public final class ChatActivity extends AppCompatActivity {
     // Extras fetched along with them. Nothing waits for these: emoji ideas, tidy shapes and
     // the look at a photo simply appear once their model is on the phone.
     private static final String[] EXTRA_MODELS = {"emo", "shapes", "eye"};
+    // A spoken message stops by itself after this long: enough for a few sentences, and the
+    // speech model takes longer the more there is to write down.
+    private static final int VOICE_SECONDS = 30;
+    // How often the level meter looks at the microphone while a child is speaking.
+    private static final long LEVEL_EVERY_MS = 100;
     // How long after the last key emoji ideas are looked for.
     private static final long IDEAS_PAUSE_MS = 400;
     private static final int[] CRAYONS = {R.color.kids_mia, R.color.kids_leo, R.color.kids_sun,
@@ -89,12 +105,15 @@ public final class ChatActivity extends AppCompatActivity {
         final Bitmap picture;
         /** For a photo: what the picture model can see in it, in a few words. Else empty. */
         final List<String> seen;
+        /** True for words that were said out loud and written down, not typed. */
+        final boolean spoken;
 
-        Message(int sender, String text, Bitmap picture, List<String> seen) {
+        Message(int sender, String text, Bitmap picture, List<String> seen, boolean spoken) {
             this.sender = sender;
             this.text = text;
             this.picture = picture;
             this.seen = seen;
+            this.spoken = spoken;
         }
     }
 
@@ -116,9 +135,18 @@ public final class ChatActivity extends AppCompatActivity {
         final List<String> ideas;
         /** While the sender decides about a photo that shows a person: that photo. */
         final Bitmap pending;
+        /** Where a spoken message is. */
+        final Voice voice;
+        /** While the child decides about what was heard: the words, as they will be sent. */
+        final String heard;
+        /** True when a second voice was heard in the recording and left out of the words. */
+        final boolean otherVoice;
+        /** The recording behind those words, to listen back to. Never sent, never kept. */
+        final AudioClip heardAudio;
 
         State(List<Message> messages, int typing, boolean checking, int notice, String typed,
-                String masked, boolean clearInput, List<String> ideas, Bitmap pending) {
+                String masked, boolean clearInput, List<String> ideas, Bitmap pending,
+                Voice voice, String heard, boolean otherVoice, AudioClip heardAudio) {
             this.messages = messages;
             this.typing = typing;
             this.checking = checking;
@@ -128,7 +156,23 @@ public final class ChatActivity extends AppCompatActivity {
             this.clearInput = clearInput;
             this.ideas = ideas;
             this.pending = pending;
+            this.voice = voice;
+            this.heard = heard;
+            this.otherVoice = otherVoice;
+            this.heardAudio = heardAudio;
         }
+    }
+
+    /** Where a spoken message is on its way from the child's mouth to the chat. */
+    enum Voice {
+        /** Nobody is speaking a message. */
+        NONE,
+        /** The microphone is on and the child is talking. */
+        LISTENING,
+        /** The recording is being written down by the voice models. */
+        WRITING,
+        /** The words are on screen, waiting for the child to send them or not. */
+        HEARD
     }
 
     /** The conversation and its checks; outlives rotation and ends when the screen is left. */
@@ -155,6 +199,14 @@ public final class ChatActivity extends AppCompatActivity {
         private List<String> ideas = List.of();
         private Bitmap pending;
         private List<String> pendingSeen = List.of();
+        private Voice voice = Voice.NONE;
+        private String heard;
+        private boolean otherVoice;
+        private AudioClip heardAudio;
+        // Set when the child stops a recording that is still being written down.
+        private AtomicBoolean writing = new AtomicBoolean();
+        // Whether the words now being checked were spoken, for the mark on the message.
+        private boolean spoken;
         // What the field held when ideas were last asked for, and the pause before asking.
         private String drafted = "";
         private ScheduledFuture<?> ideasDue;
@@ -183,8 +235,14 @@ public final class ChatActivity extends AppCompatActivity {
 
         /** Checks a typed message, and sends it if nothing stands in the way. */
         void send(String text) {
+            send(text, false);
+        }
+
+        // Typed or spoken, the words take the same road: every check, then the conversation.
+        private void send(String text, boolean aloud) {
             String message = text.trim();
             if (message.isEmpty() || busy()) return;
+            spoken = aloud;
             checking = true;
             notice = 0;
             publish();
@@ -255,7 +313,7 @@ public final class ChatActivity extends AppCompatActivity {
         /** The sender's answer to the card about people in a photo: send it after all. */
         void sendPhotoAnyway() {
             if (pending == null) return;
-            messages.add(new Message(typing, null, pending, pendingSeen));
+            messages.add(new Message(typing, null, pending, pendingSeen, false));
             dropPhoto();
         }
 
@@ -312,9 +370,93 @@ public final class ChatActivity extends AppCompatActivity {
                 pendingSeen = seen.words;
             } else {
                 messages.add(new Message(typing, null, allowed,
-                        seen == null ? List.of() : seen.words));
+                        seen == null ? List.of() : seen.words, false));
             }
             publish();
+        }
+
+        /** Starts listening for a spoken message. The screen has made sure of the microphone. */
+        void listen() {
+            if (busy()) return;
+            notice = 0;
+            // The recording ends by itself at the limit, as if Done had been tapped.
+            if (!app.capture.start(VOICE_SECONDS, this::doneListening)) {
+                notice = R.string.chat_mic_failed;
+            } else {
+                voice = Voice.LISTENING;
+            }
+            publish();
+        }
+
+        /** The child has finished speaking: the recording is written down. */
+        void doneListening() {
+            if (voice != Voice.LISTENING) return;
+            AudioClip recorded = app.capture.stop();
+            if (recorded == null || recorded.samples.length == 0) {
+                voice = Voice.NONE;
+                notice = R.string.chat_heard_nothing;
+                publish();
+                return;
+            }
+            voice = Voice.WRITING;
+            publish();
+            AtomicBoolean stopped = new AtomicBoolean();
+            writing = stopped;
+            // Cleanup, language, words, fillers and voices, with whichever of the five voice
+            // models are on the phone. The one inference thread, like every other model.
+            app.inference.execute(() -> {
+                VoiceResult result;
+                try {
+                    result = app.voice.run(recorded, rules, app.models::isReady, stopped,
+                            step -> { });
+                } catch (RuntimeException e) {
+                    result = null; // stopped between steps, or a model gave up
+                }
+                ChatVoice.Heard written = result == null ? null : ChatVoice.heard(result);
+                AudioClip cleaned = result != null && result.enhanced != null
+                        ? result.enhanced : recorded;
+                main.execute(() -> written(written, cleaned, stopped));
+            });
+        }
+
+        // How writing a recording down ends: the words go up for the child to look at, or
+        // the helper says why there are none.
+        private void written(ChatVoice.Heard result, AudioClip audio, AtomicBoolean stopped) {
+            if (left || stopped.get() || voice != Voice.WRITING) return;
+            voice = Voice.NONE;
+            if (result == null || result.kind == ChatVoice.Kind.NOTHING) {
+                notice = R.string.chat_heard_nothing;
+            } else if (result.kind == ChatVoice.Kind.OTHER_LANGUAGE) {
+                notice = R.string.chat_heard_other_language;
+            } else {
+                voice = Voice.HEARD;
+                heard = result.words;
+                otherVoice = result.otherVoice;
+                heardAudio = audio;
+            }
+            publish();
+        }
+
+        /** Stops a spoken message wherever it is, and throws the recording away. */
+        void dropVoice() {
+            if (voice == Voice.LISTENING) app.capture.cancel();
+            writing.set(true);
+            voice = Voice.NONE;
+            heard = null;
+            otherVoice = false;
+            heardAudio = null;
+            publish();
+        }
+
+        /**
+         * The child's answer to "Here is what I heard": send these words. From here on they
+         * are treated exactly like a typed message.
+         */
+        void sendHeard() {
+            if (voice != Voice.HEARD) return;
+            String words = heard;
+            dropVoice();
+            send(words, true);
         }
 
         /** The sender's answer to the personal-details card: send the masked message. */
@@ -345,23 +487,26 @@ public final class ChatActivity extends AppCompatActivity {
         }
 
         private void add(String text) {
-            messages.add(new Message(typing, text, null, List.of()));
+            messages.add(new Message(typing, text, null, List.of(), spoken));
             clearInput = true;
         }
 
         private boolean busy() {
-            return checking || typed != null || pending != null;
+            return checking || typed != null || pending != null || voice != Voice.NONE;
         }
 
         private void publish() {
             state.setValue(new State(List.copyOf(messages), typing, checking, notice, typed,
-                    masked, clearInput, ideas, pending));
+                    masked, clearInput, ideas, pending, voice, heard, otherVoice, heardAudio));
         }
 
         @Override
         protected void onCleared() {
             left = true;
             if (ideasDue != null) ideasDue.cancel(false);
+            // The microphone does not outlive the screen.
+            if (voice == Voice.LISTENING) app.capture.cancel();
+            writing.set(true);
         }
     }
 
@@ -370,6 +515,21 @@ public final class ChatActivity extends AppCompatActivity {
     private Session session;
     private final Messages list = new Messages();
     private TextView[] ideas;
+    private final AudioPlayback playback = new AudioPlayback();
+    private final Handler meter = new Handler(Looper.getMainLooper());
+    private final Runnable readLevel = new Runnable() {
+        @Override
+        public void run() {
+            views.chatLevel.push(app.capture.level());
+            meter.postDelayed(this, LEVEL_EVERY_MS);
+        }
+    };
+    // The app's own screen for asking for the microphone: it explains, asks, and points to
+    // the settings when the answer was a lasting no.
+    private final ActivityResultLauncher<Intent> askForMicrophone = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), answer -> {
+                if (answer.getResultCode() == RESULT_OK) session.listen();
+            });
     private ImageButton[] crayons;
     // The drawing pad is the screen's own business: closed again when the screen is rebuilt.
     private boolean padOpen;
@@ -415,8 +575,25 @@ public final class ChatActivity extends AppCompatActivity {
                 new InputFilter[] {new InputFilter.LengthFilter(ChatChecks.MESSAGE_LIMIT)});
         views.chatUserOne.setOnClickListener(v -> session.typeAs(0));
         views.chatUserTwo.setOnClickListener(v -> session.typeAs(1));
-        views.chatSend.setOnClickListener(
-                v -> session.send(views.chatInput.getText().toString()));
+        // With nothing typed, the send button is the microphone.
+        views.chatSend.setOnClickListener(v -> {
+            if (offersMicrophone()) speak();
+            else session.send(views.chatInput.getText().toString());
+        });
+        views.chatListenDone.setOnClickListener(v -> session.doneListening());
+        views.chatListenCancel.setOnClickListener(v -> session.dropVoice());
+        views.chatHeardSend.setOnClickListener(v -> {
+            // The words go into the field first, so that a refusal leaves them there to be
+            // changed, as it does for a typed message.
+            views.chatInput.setText(session.state().getValue().heard);
+            session.sendHeard();
+        });
+        views.chatHeardAgain.setOnClickListener(v -> {
+            session.dropVoice();
+            speak();
+        });
+        views.chatHeardDrop.setOnClickListener(v -> session.dropVoice());
+        views.chatHeardPlay.setOnClickListener(v -> listenBack());
         views.chatSendMasked.setOnClickListener(v -> session.sendMasked());
         views.chatChange.setOnClickListener(v -> session.changeIt());
         views.chatSendWritten.setOnClickListener(v -> session.sendAsWritten());
@@ -448,6 +625,9 @@ public final class ChatActivity extends AppCompatActivity {
             @Override
             public void afterTextChanged(Editable text) {
                 session.drafted(text.toString());
+                // Only the button: drawing the whole screen from here would loop, because
+                // the screen empties this field itself once a message has gone.
+                showSendButton();
             }
         });
 
@@ -543,6 +723,52 @@ public final class ChatActivity extends AppCompatActivity {
         showPad(false);
     }
 
+    // The microphone is offered where a spoken message can be written down: the speech model
+    // is on the phone, and there is nothing typed that the button should send instead.
+    private boolean offersMicrophone() {
+        return app.models.isReady("voz") && views.chatInput.getText().toString().trim().isEmpty();
+    }
+
+    // The send button's face: a microphone while nothing is typed and a spoken message can
+    // be written down, the paper plane otherwise.
+    private void showSendButton() {
+        boolean microphone = offersMicrophone();
+        views.chatSend.setImageResource(
+                microphone ? R.drawable.ic_kids_mic : R.drawable.ic_kids_send);
+        views.chatSend.setContentDescription(
+                getString(microphone ? R.string.chat_speak : R.string.chat_send));
+    }
+
+    private void speak() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED) {
+            session.listen();
+        } else {
+            askForMicrophone.launch(new Intent(this, MicPermissionActivity.class));
+        }
+    }
+
+    // Plays the recording behind the words on the card, or stops it.
+    private void listenBack() {
+        if (playback.isPlaying()) {
+            playback.stop();
+        } else {
+            AudioClip recording = session.state().getValue().heardAudio;
+            if (recording != null) playback.play(recording, this::render);
+        }
+        render();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        playback.stop();
+        meter.removeCallbacks(readLevel);
+        // Nothing is recorded once the screen is out of sight. Turning the phone does not
+        // count: the screen comes straight back.
+        if (!isChangingConfigurations()) session.dropVoice();
+    }
+
     private void choosePicture() {
         pickPicture.launch(new PickVisualMediaRequest.Builder().setMediaType(
                 ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build());
@@ -576,7 +802,10 @@ public final class ChatActivity extends AppCompatActivity {
         }
         // A card is up and waits for the child's answer: about private details in a message,
         // or about a person in a photo.
-        boolean deciding = state.typed != null || state.pending != null;
+        boolean deciding = state.typed != null || state.pending != null
+                || state.voice == Voice.HEARD;
+        // A message is being spoken or written down: its panel stands in for the bar.
+        boolean talking = state.voice == Voice.LISTENING || state.voice == Voice.WRITING;
 
         // What cannot be checked cannot be sent, so without the models there is no chat:
         // the getting-ready screen stands in for all of it.
@@ -586,12 +815,13 @@ public final class ChatActivity extends AppCompatActivity {
         views.chatMiddle.setVisibility(chat);
         // The drawing pad stands in for the bar while it is open; the card for private
         // details comes before either.
-        boolean pad = padOpen && ready && !deciding;
+        boolean pad = padOpen && ready && !deciding && !talking;
         views.chatPad.setVisibility(pad ? View.VISIBLE : View.GONE);
-        views.chatBar.setVisibility(ready && !pad ? View.VISIBLE : View.GONE);
+        views.chatBar.setVisibility(ready && !pad && !talking ? View.VISIBLE : View.GONE);
+        showListening(state.voice, ready && talking);
         views.chatSendDrawing.setEnabled(!views.chatCanvas.isEmpty() && !state.checking);
 
-        boolean showIdeas = ready && !pad && !deciding && !state.ideas.isEmpty();
+        boolean showIdeas = ready && !pad && !talking && !deciding && !state.ideas.isEmpty();
         views.chatIdeas.setVisibility(showIdeas ? View.VISIBLE : View.GONE);
         for (int i = 0; i < ideas.length; i++) {
             boolean has = i < state.ideas.size();
@@ -621,14 +851,28 @@ public final class ChatActivity extends AppCompatActivity {
         }
 
         boolean cardWasUp = views.chatPersonal.getVisibility() == View.VISIBLE
-                || views.chatPeople.getVisibility() == View.VISIBLE;
+                || views.chatPeople.getVisibility() == View.VISIBLE
+                || views.chatHeard.getVisibility() == View.VISIBLE;
         if (deciding && !cardWasUp) {
             // The card needs the room, and the field is closed until a choice is made.
             getSystemService(InputMethodManager.class)
                     .hideSoftInputFromWindow(views.chatInput.getWindowToken(), 0);
             views.chatPersonal.scrollTo(0, 0);
             views.chatPeople.scrollTo(0, 0);
+            views.chatHeard.scrollTo(0, 0);
         }
+        // What was heard, as it will look in the chat, with a way to listen back to it.
+        boolean heard = state.voice == Voice.HEARD;
+        if (!heard) playback.stop();
+        views.chatHeard.setVisibility(heard ? View.VISIBLE : View.GONE);
+        views.chatHeardWords.setText(state.heard);
+        views.chatHeardWords.setBackgroundTintList(
+                ColorStateList.valueOf(getColor(soft(state.typing))));
+        views.chatHeardNote.setVisibility(heard && state.otherVoice ? View.VISIBLE : View.GONE);
+        views.chatHeardPlay.setImageResource(
+                playback.isPlaying() ? R.drawable.ic_kids_stop : R.drawable.ic_kids_play);
+        views.chatHeardPlay.setContentDescription(getString(
+                playback.isPlaying() ? R.string.chat_heard_stop : R.string.chat_heard_play));
         views.chatPeople.setVisibility(state.pending != null ? View.VISIBLE : View.GONE);
         views.chatPeoplePhoto.setImageBitmap(state.pending);
         views.chatPersonal.setVisibility(state.typed != null ? View.VISIBLE : View.GONE);
@@ -643,6 +887,7 @@ public final class ChatActivity extends AppCompatActivity {
         views.chatInput.setEnabled(ready && !deciding);
         views.chatSend.setEnabled(free);
         views.chatSend.setAlpha(free ? 1f : 0.4f);
+        showSendButton();
         views.chatPicture.setEnabled(free);
         views.chatPicture.setAlpha(free ? 1f : 0.4f);
         views.chatDraw.setEnabled(free);
@@ -651,6 +896,32 @@ public final class ChatActivity extends AppCompatActivity {
         if (state.clearInput) {
             views.chatInput.setText("");
             session.inputCleared();
+        }
+    }
+
+    // The panel for a spoken message: listening, with a meter and a clock, then a moment of
+    // waiting while the words are written down.
+    private void showListening(Voice voice, boolean shown) {
+        boolean wasListening = views.chatListen.getVisibility() == View.VISIBLE
+                && views.chatListenDone.isEnabled();
+        boolean listening = shown && voice == Voice.LISTENING;
+        views.chatListen.setVisibility(shown ? View.VISIBLE : View.GONE);
+        views.chatListenTitle.setText(
+                listening ? R.string.chat_listen_title : R.string.chat_writing_title);
+        views.chatListenMore.setText(
+                listening ? R.string.chat_listen_more : R.string.chat_writing_more);
+        views.chatListenDone.setEnabled(listening);
+        if (listening && !wasListening) {
+            getSystemService(InputMethodManager.class)
+                    .hideSoftInputFromWindow(views.chatInput.getWindowToken(), 0);
+            views.chatLevel.reset();
+            views.chatTimer.setBase(SystemClock.elapsedRealtime());
+            views.chatTimer.start();
+            meter.removeCallbacks(readLevel);
+            meter.post(readLevel);
+        } else if (!listening && wasListening) {
+            views.chatTimer.stop();
+            meter.removeCallbacks(readLevel);
         }
     }
 
@@ -687,6 +958,11 @@ public final class ChatActivity extends AppCompatActivity {
     private static int whatToDoAbout(int notice) {
         if (notice == R.string.chat_unkind) return R.string.chat_unkind_more;
         if (notice == R.string.chat_other_language) return R.string.chat_other_language_more;
+        if (notice == R.string.chat_heard_nothing) return R.string.chat_heard_nothing_more;
+        if (notice == R.string.chat_heard_other_language) {
+            return R.string.chat_heard_other_language_more;
+        }
+        if (notice == R.string.chat_mic_failed) return R.string.chat_mic_failed_more;
         if (notice == R.string.chat_picture_refused) return R.string.chat_picture_refused_more;
         if (notice == R.string.chat_picture_unreadable) {
             return R.string.chat_picture_unreadable_more;
@@ -773,8 +1049,12 @@ public final class ChatActivity extends AppCompatActivity {
             item.chatBubblePicture.setVisibility(words ? View.GONE : View.VISIBLE);
             item.chatBubblePicture.setImageBitmap(message.picture);
             // A screen reader is told who it is from, also for the sender's own messages.
-            item.chatBubbleText.setContentDescription(
-                    getString(R.string.chat_said, name(message.sender), message.text));
+            // A small microphone marks words that were said out loud.
+            item.chatBubbleText.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                    message.spoken ? R.drawable.ic_kids_mic_small : 0, 0, 0, 0);
+            item.chatBubbleText.setContentDescription(getString(
+                    message.spoken ? R.string.chat_said_aloud : R.string.chat_said,
+                    name(message.sender), message.text));
             // What the picture model can see in a photo, under it and for a screen reader.
             boolean described = !words && !message.seen.isEmpty();
             String seen = described

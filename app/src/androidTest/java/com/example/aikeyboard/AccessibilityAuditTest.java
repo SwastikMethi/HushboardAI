@@ -40,7 +40,9 @@ import androidx.test.uiautomator.Until;
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
 import com.example.aikeyboard.ime.view.AiToggleView;
+import com.example.aikeyboard.media.AudioCaptureController;
 import com.example.aikeyboard.media.Vision.ImageFindings;
+import com.example.aikeyboard.media.Voice.AudioClip;
 import com.example.aikeyboard.models.ModelDescriptor;
 import com.example.aikeyboard.ui.chat.ChatActivity;
 import com.example.aikeyboard.ui.chat.ChatChecks;
@@ -221,6 +223,30 @@ public class AccessibilityAuditTest {
             });
             assertTrue(TestModels.await(() -> isShowing(chat, R.id.chat_people), 60_000));
             onView(isRoot()).perform(audit());
+
+            // A spoken message: the listening panel, and the card with the words that were
+            // heard. Known speech stands where the microphone would be.
+            onView(withId(R.id.chat_drop_photo)).perform(ViewActions.scrollTo(), click());
+            AudioClip speech = TestSpeech.english();
+            if (speech != null) {
+                TestModels.ensureInstalled("voz");
+                TestModels.allowMicrophone();
+                AudioCaptureController real = app.capture;
+                app.capture = new FakeCapture(speech);
+                try {
+                    // The button is a microphone only while nothing is typed.
+                    onView(withId(R.id.chat_input)).perform(ViewActions.replaceText(""));
+                    onView(withId(R.id.chat_send)).perform(click());
+                    assertTrue(TestModels.await(() -> isShowing(chat, R.id.chat_listen), 60_000));
+                    onView(isRoot()).perform(audit());
+                    onView(withId(R.id.chat_listen_done)).perform(click());
+                    assertTrue(TestModels.await(() -> isShowing(chat, R.id.chat_heard),
+                            3 * 60_000));
+                    onView(isRoot()).perform(audit());
+                } finally {
+                    app.capture = real;
+                }
+            }
         }
     }
 

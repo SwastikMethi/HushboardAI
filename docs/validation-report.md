@@ -459,6 +459,7 @@ Part 2 followed the owner's steps on the phone: they approved OnePlus's install 
 | The longest the main thread was held up | measured | PHONE | 13 ms while typing with AI on; 29 ms while the models were being loaded in the background. A model never ran on it |
 | How long each typing model takes (median / 95th percentile) | measured | PHONE | 57-character draft: Emo 9 / 11 ms, Redact 50 / 60, Toxic 53 / 65, Gist 25 / 30, Tongue 1 / 2. 944-character draft: Emo 11 / 13, Redact 512 / 552, Toxic 102 / 125, Gist 67 / 72, Tongue 2 / 5. 40 runs each |
 | Memory while typing with AI on | measured | PHONE | The app's total was about 550 MB, 673 MB at most, with the four typing models loaded |
+| Memory with the keyboard selected and nothing in use | measured | PHONE | 32 to 41 MB over 45 minutes with the phone left alone (620 samples); the same process throughout, the keyboard still selected at the end, nothing in the crash log |
 | Typing, shift, symbols, backspace over an emoji family, Enter actions, rotation | passed | PHONE | `KeyboardImeTest` 15 of 15 |
 | Emoji, privacy notice, review, mask and undo, tone notice, tag, AI off in password and no-learning fields | passed | PHONE | `KeyboardAiTest` 16 of 16; `EditorReadsTest` 2 of 3 (the third does not apply, below) |
 | The drawing panel, the keyboard's fixed footprint, the image tools screen | passed | PHONE | `DrawingTest` 8, `KeyboardFootprintTest` 3, `ImageToolsScreenTest` 8 |

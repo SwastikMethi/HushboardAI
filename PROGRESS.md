@@ -258,7 +258,7 @@ What is still open at the end of the emulator work, in one place. Items from ear
 
 **The phone session's automated part is done; the hands-on part needs the owner at the phone** (OnePlus CPH2423, serial `(serial omitted)`). Everything so far is in the validation report under "Phone session".
 
-First, when the owner says so: install the build that has the keyboard's picture panel (commit `18ad57e` or later) on the phone with `adb -s`. The owner approves OnePlus's prompt; a reinstall makes Android switch away from the keyboard, so it has to be selected again. Then they try the picture button in a chat field: button, picker, a picture, and the result in the keyboard.
+The phone has the build with the keyboard's picture panel and sending from it (commit `c62601f`, installed 18 Nov 2026, AI Keyboard still selected). The owner tries it in a chat field: picture button, picker, a picture, the result in the keyboard, then Insert or Share. To be noted: what the chat app does with an inserted picture (attach it or send it at once), and whether the keyboard comes back by itself after the picker.
 
 With the owner, who types and says what they see (their chat apps are not to be screenshotted or read):
 

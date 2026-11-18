@@ -681,6 +681,27 @@ Read with care: twelve messages written for this test. They show three things. F
 
 After the three additions: 182 unit tests, lint 0 errors and 40 warnings (unchanged), a 701.8 MB debug APK, and the whole suite on the emulator (EMU-37B, `-e clear true`) in one run: 223 run, 202 passed, 21 skipped by design (the 17 as before and the chat's four measurements), none failed.
 
+## Kids Chat: the photo helper (18 Nov 2026)
+
+The seventh model in Kids Chat: Eye looks at a photo that has passed the nudity check. A person or a face in it raises a card with three choices; otherwise the photo is sent with a short line of what the app can see. Built from a mockup the owner approved. Nothing here has been on the phone, and no photo of a real person was used.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| A person in a photo is noticed; a face alone counts; a pet does not; without the picture model nothing is seen and nobody is assumed | failed, then passed | unit | Four `ChatChecksTest` tests. Two failed before the look existed; the two that guard against seeing people where there are none passed throughout |
+| A photo is described in the three things the model is surest of; only things on the chat's own list are named; two labels for the same thing are said once | failed, then passed | unit | Three `ChatChecksTest` tests, seen failing in turn as the look and then the list were added |
+| The real picture model sees nobody in a drawing of a house | passed | EMU-37B | `KidsChatTest.thePictureModelSeesNobodyInADrawingOfAHouse`. Its surest labels were "sharp, screenshot, unusable", none of them a thing; with the list in place the line reads "drawing, grass" |
+| A photo that shows a person raises the card and nothing is sent; Send it anyway sends it; Don't send it drops it and gives the chat back | passed, and seen failing | EMU-37B | Three `KidsChatTest` tests with a stand-in for the picture model, told to see one person. All failed against a copy of the screen broken on purpose to drop such photos without a card |
+| A sent photo says what the app can see in it | passed, and seen failing | EMU-37B | `KidsChatTest.aSentPhotoSaysWhatTheAppCanSeeInIt`, with the stand-in told "beach, sea, boat"; failed against a copy that never showed the line |
+| A drawing from the pad is not looked at for people | passed, and seen failing | EMU-37B | `KidsChatTest.aDrawingFromThePadIsNotLookedAtForPeople`; failed against a copy that looked at drawings too |
+| The card passes the accessibility checks | passed | EMU-37B | One more state in `AccessibilityAuditTest.kidsChatPassesTheAccessibilityChecksInEachOfItsStates`, first run |
+| The card as it looks | seen | EMU-37B | `docs/evidence/screenshots/kids_chat_people_card.png`, saved by `KidsChatTest.aPictureOfThePeopleCardForTheRecord` (opt-in, `-e chatshots true`). The stand-in model was told to see a person; the picture in the card is the harmless test drawing |
+| By hand, with the real model: a drawn beach scene picked in Android's picker is sent with "I can see: water, sky, sand" | passed by hand | EMU-37B | `docs/evidence/screenshots/kids_chat_photo_seen.png` |
+| Eye on a real photo of a person | not run | — | The project holds none and the owner's photos are not looked at. Whether Eye notices real people reliably is unknown |
+| Pick another picture opening the picker | not run | — | The button drops the photo and calls the same picker launch as the picture button; no test follows it into the system's screen |
+| On the phone | not run | PHONE | Not installed there |
+
+After the photo helper: 189 unit tests, lint 0 errors and 41 warnings (one more, the same note about `accessibilityHeading`, for the new card's heading), a 701.8 MB debug APK, and the whole suite on the emulator (EMU-37B, `-e clear true`) in one run: 230 run, 208 passed, 22 skipped by design (the 17 as before, the chat's four measurements and its one screenshot), none failed.
+
 ## The handoff checklist, item by item
 
 Each line of `docs/BUILD_AND_TEST_CHECKLIST.md`, with where it stands. "Emulator" means it ran and passed on an emulator only; the phone rows above still apply.

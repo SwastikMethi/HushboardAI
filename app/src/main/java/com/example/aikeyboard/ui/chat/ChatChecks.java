@@ -1,5 +1,6 @@
 // What the kids' chat checks before anything is sent: unkind wording, a language it cannot
-// read, personal details and nudity. The rules are fixed here and do not follow the keyboard's settings, so they cannot
+// read, personal details and nudity. It also looks at a photo for people and for a few
+// words to say about it, which decides nothing by itself. The rules are fixed here and do not follow the keyboard's settings, so they cannot
 // be loosened from the Settings tab. No screen code.
 package com.example.aikeyboard.ui.chat;
 
@@ -14,7 +15,9 @@ import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
 import com.example.aikeyboard.ai.Suggestion.ToxicScores;
 import com.example.aikeyboard.ai.ToxicPolicy;
 import com.example.aikeyboard.data.AppSettings;
+import com.example.aikeyboard.media.Vision.ImageFindings;
 import com.example.aikeyboard.media.Vision.Sensitivity;
+import com.example.aikeyboard.media.Vision.Tag;
 import com.example.aikeyboard.models.ModelRegistry;
 
 import java.util.ArrayList;
@@ -44,6 +47,7 @@ public final class ChatChecks {
             "ids", "ID number", "names", "name", "addresses", "address", "online", "link");
     private static final String HIDDEN_OTHER = "hidden";
     private static final String ENGLISH = "en";
+    private static final int SEEN_WORDS = 3;
 
     /** What may happen to a typed message. */
     public enum Outcome {
@@ -74,28 +78,51 @@ public final class ChatChecks {
     private final ModelAdapter<String, List<SensitiveSpan>> redact;
     private final ModelAdapter<Bitmap, Sensitivity> moderator;
     private final ModelAdapter<String, LanguageHint> tongue;
+    private final ModelAdapter<Bitmap, ImageFindings> eye;
+    private final Map<String, String> namedThings;
     private final Set<String> blockedWords;
     private final AppSettings rules;
 
-    /** @param blockedWords lower-case words that are never sent, whatever the model says */
+    /**
+     * @param blockedWords lower-case words that are never sent, whatever the model says
+     * @param namedThings the things that may be named under a photo, by the model's label
+     */
     public ChatChecks(ModelAdapter<String, ToxicScores> toxic,
             ModelAdapter<String, List<SensitiveSpan>> redact,
             ModelAdapter<Bitmap, Sensitivity> moderator,
-            ModelAdapter<String, LanguageHint> tongue, Set<String> blockedWords,
-            AppSettings rules) {
+            ModelAdapter<String, LanguageHint> tongue,
+            ModelAdapter<Bitmap, ImageFindings> eye, Set<String> blockedWords,
+            Map<String, String> namedThings, AppSettings rules) {
         this.toxic = toxic;
         this.redact = redact;
         this.moderator = moderator;
         this.tongue = tongue;
+        this.eye = eye;
+        this.namedThings = namedThings;
         this.blockedWords = blockedWords;
         this.rules = rules;
     }
 
     /** The checks over the app's own models and its built-in word list. */
     public static ChatChecks with(AppContainer app, Context context, AppSettings rules) {
-        return new ChatChecks(app.toxic, app.redact, app.moderator, app.tongue,
+        return new ChatChecks(app.toxic, app.redact, app.moderator, app.tongue, app.eye,
                 new HashSet<>(Arrays.asList(context.getResources()
-                        .getStringArray(R.array.chat_blocked_words))), rules);
+                        .getStringArray(R.array.chat_blocked_words))),
+                namedThings(context), rules);
+    }
+
+    /**
+     * The things that may be named under a photo, by the picture model's label for each.
+     * An entry of the list is "label", or "label=word" where a child's word differs.
+     */
+    public static Map<String, String> namedThings(Context context) {
+        Map<String, String> things = new HashMap<>();
+        for (String entry : context.getResources().getStringArray(R.array.chat_seen_things)) {
+            int at = entry.indexOf('=');
+            String label = at < 0 ? entry : entry.substring(0, at);
+            things.put(label, at < 0 ? entry.replace('_', ' ') : entry.substring(at + 1));
+        }
+        return things;
     }
 
     /**
@@ -138,6 +165,40 @@ public final class ChatChecks {
         } catch (Exception e) {
             // A model that is missing, failed or timed out: what was not checked is not sent.
             return new TextVerdict(Outcome.UNCHECKED, null);
+        }
+    }
+
+    /** What the picture model sees in a photo: whether a person is in it, and a few words. */
+    public static final class Seen {
+        public final boolean person;
+        /** Up to three things in the photo, surest first, in plain words. */
+        public final List<String> words;
+
+        Seen(boolean person, List<String> words) {
+            this.person = person;
+            this.words = words;
+        }
+    }
+
+    /**
+     * Looks at a photo that has passed the nudity check. This is a helper, not a check: it
+     * never refuses anything, and without the picture model, or if it fails, nothing is seen
+     * and nobody is assumed to be in the photo. Blocking: called on the inference thread.
+     */
+    public Seen look(Bitmap photo) {
+        try {
+            ImageFindings found = eye.run(photo, rules);
+            List<String> words = new ArrayList<>();
+            // The model's labels come surest first. Most are not for a child to read or are
+            // not things at all, so only those on the chat's own list are named.
+            for (Tag tag : found.tags) {
+                if (words.size() == SEEN_WORDS) break;
+                String thing = namedThings.get(tag.name);
+                if (thing != null && !words.contains(thing)) words.add(thing);
+            }
+            return new Seen(found.people > 0 || found.faces > 0, words);
+        } catch (Exception e) {
+            return new Seen(false, List.of());
         }
     }
 

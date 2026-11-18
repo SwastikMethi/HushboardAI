@@ -52,6 +52,7 @@ import com.example.aikeyboard.media.ImageImport;
 import com.example.aikeyboard.media.Vision.RecognizedShape;
 import com.example.aikeyboard.models.ModelRepository.AssetState;
 import com.example.aikeyboard.ui.chat.ChatChecks.Outcome;
+import com.example.aikeyboard.ui.chat.ChatChecks.Seen;
 import com.example.aikeyboard.ui.chat.ChatChecks.TextVerdict;
 import com.example.aikeyboard.ui.tools.ShapeRecognizer;
 
@@ -67,9 +68,9 @@ public final class ChatActivity extends AppCompatActivity {
 
     // Every one of these must be installed before anything can be sent.
     private static final String[] SAFETY_MODELS = {"toxic", "redact", "moderator"};
-    // Small extras fetched along with them. Nothing waits for these: emoji ideas and tidy
-    // shapes simply appear once their model is on the phone.
-    private static final String[] EXTRA_MODELS = {"emo", "shapes"};
+    // Extras fetched along with them. Nothing waits for these: emoji ideas, tidy shapes and
+    // the look at a photo simply appear once their model is on the phone.
+    private static final String[] EXTRA_MODELS = {"emo", "shapes", "eye"};
     // How long after the last key emoji ideas are looked for.
     private static final long IDEAS_PAUSE_MS = 400;
     private static final int[] CRAYONS = {R.color.kids_mia, R.color.kids_leo, R.color.kids_sun,
@@ -86,11 +87,14 @@ public final class ChatActivity extends AppCompatActivity {
         final String text;
         /** The picture, or null for words. */
         final Bitmap picture;
+        /** For a photo: what the picture model can see in it, in a few words. Else empty. */
+        final List<String> seen;
 
-        Message(int sender, String text, Bitmap picture) {
+        Message(int sender, String text, Bitmap picture, List<String> seen) {
             this.sender = sender;
             this.text = text;
             this.picture = picture;
+            this.seen = seen;
         }
     }
 
@@ -110,9 +114,11 @@ public final class ChatActivity extends AppCompatActivity {
         final boolean clearInput;
         /** Emoji that fit what is in the field; empty when there is nothing to suggest. */
         final List<String> ideas;
+        /** While the sender decides about a photo that shows a person: that photo. */
+        final Bitmap pending;
 
         State(List<Message> messages, int typing, boolean checking, int notice, String typed,
-                String masked, boolean clearInput, List<String> ideas) {
+                String masked, boolean clearInput, List<String> ideas, Bitmap pending) {
             this.messages = messages;
             this.typing = typing;
             this.checking = checking;
@@ -121,6 +127,7 @@ public final class ChatActivity extends AppCompatActivity {
             this.masked = masked;
             this.clearInput = clearInput;
             this.ideas = ideas;
+            this.pending = pending;
         }
     }
 
@@ -146,6 +153,8 @@ public final class ChatActivity extends AppCompatActivity {
         private String masked;
         private boolean clearInput;
         private List<String> ideas = List.of();
+        private Bitmap pending;
+        private List<String> pendingSeen = List.of();
         // What the field held when ideas were last asked for, and the pause before asking.
         private String drafted = "";
         private ScheduledFuture<?> ideasDue;
@@ -215,10 +224,11 @@ public final class ChatActivity extends AppCompatActivity {
                     // smaller copies for the list.
                     picture = ImageImport.decode(getApplication(), uri, ImageImport.MAX_SIDE);
                 } catch (IOException e) {
-                    main.execute(() -> pictureChecked(null, R.string.chat_picture_unreadable));
+                    main.execute(
+                            () -> pictureChecked(null, null, R.string.chat_picture_unreadable));
                     return;
                 }
-                check(picture);
+                check(picture, true);
             });
         }
 
@@ -228,15 +238,32 @@ public final class ChatActivity extends AppCompatActivity {
             checking = true;
             notice = 0;
             publish();
-            check(drawing);
+            check(drawing, false);
         }
 
-        private void check(Bitmap picture) {
+        // A photo that passes the nudity check is also looked at for people and for a few
+        // words to say about it. A drawing from the pad is the child's own and is not.
+        private void check(Bitmap picture, boolean photo) {
             app.inference.execute(() -> {
                 boolean allowed = checks.pictureAllowed(picture);
-                main.execute(() -> pictureChecked(allowed ? picture : null,
+                Seen seen = allowed && photo ? checks.look(picture) : null;
+                main.execute(() -> pictureChecked(allowed ? picture : null, seen,
                         R.string.chat_picture_refused));
             });
+        }
+
+        /** The sender's answer to the card about people in a photo: send it after all. */
+        void sendPhotoAnyway() {
+            if (pending == null) return;
+            messages.add(new Message(typing, null, pending, pendingSeen));
+            dropPhoto();
+        }
+
+        /** The sender's answer to that card: this photo is not sent. */
+        void dropPhoto() {
+            pending = null;
+            pendingSeen = List.of();
+            publish();
         }
 
         /**
@@ -273,12 +300,20 @@ public final class ChatActivity extends AppCompatActivity {
             }), IDEAS_PAUSE_MS, TimeUnit.MILLISECONDS);
         }
 
-        // How a picture's check ends: it joins the conversation, or the sender is told why not.
-        private void pictureChecked(Bitmap allowed, int refusal) {
+        // How a picture's check ends: the sender is told why it cannot go, or is asked about
+        // the person in it, or it joins the conversation.
+        private void pictureChecked(Bitmap allowed, Seen seen, int refusal) {
             if (left) return;
             checking = false;
-            if (allowed != null) messages.add(new Message(typing, null, allowed));
-            else notice = refusal;
+            if (allowed == null) {
+                notice = refusal;
+            } else if (seen != null && seen.person) {
+                pending = allowed;
+                pendingSeen = seen.words;
+            } else {
+                messages.add(new Message(typing, null, allowed,
+                        seen == null ? List.of() : seen.words));
+            }
             publish();
         }
 
@@ -310,17 +345,17 @@ public final class ChatActivity extends AppCompatActivity {
         }
 
         private void add(String text) {
-            messages.add(new Message(typing, text, null));
+            messages.add(new Message(typing, text, null, List.of()));
             clearInput = true;
         }
 
         private boolean busy() {
-            return checking || typed != null;
+            return checking || typed != null || pending != null;
         }
 
         private void publish() {
             state.setValue(new State(List.copyOf(messages), typing, checking, notice, typed,
-                    masked, clearInput, ideas));
+                    masked, clearInput, ideas, pending));
         }
 
         @Override
@@ -385,15 +420,20 @@ public final class ChatActivity extends AppCompatActivity {
         views.chatSendMasked.setOnClickListener(v -> session.sendMasked());
         views.chatChange.setOnClickListener(v -> session.changeIt());
         views.chatSendWritten.setOnClickListener(v -> session.sendAsWritten());
+        views.chatPickAnother.setOnClickListener(v -> {
+            session.dropPhoto();
+            choosePicture();
+        });
+        views.chatDropPhoto.setOnClickListener(v -> session.dropPhoto());
+        views.chatSendPhoto.setOnClickListener(v -> session.sendPhotoAnyway());
+        views.chatPeoplePhoto.setClipToOutline(true);
         views.chatDownload.setOnClickListener(v -> downloadMissingModels());
         // Why a download is waiting or failed, and the way to stop or retry it, are on the
         // Models screen; Back returns here.
         views.chatModels.setOnClickListener(v -> startActivity(
                 new Intent(this, MainActivity.class)
                         .putExtra(MainActivity.EXTRA_TAB, MainActivity.TAB_MODELS)));
-        views.chatPicture.setOnClickListener(v -> pickPicture.launch(
-                new PickVisualMediaRequest.Builder().setMediaType(
-                        ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build()));
+        views.chatPicture.setOnClickListener(v -> choosePicture());
 
         ideas = new TextView[] {views.chatIdeaOne, views.chatIdeaTwo, views.chatIdeaThree,
                 views.chatIdeaFour};
@@ -503,6 +543,11 @@ public final class ChatActivity extends AppCompatActivity {
         showPad(false);
     }
 
+    private void choosePicture() {
+        pickPicture.launch(new PickVisualMediaRequest.Builder().setMediaType(
+                ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE).build());
+    }
+
     /** What the picker reports: the chosen picture, or null when it was closed without one. */
     public void onPicturePicked(@Nullable Uri uri) {
         if (uri != null) session.sendPicture(uri);
@@ -529,7 +574,9 @@ public final class ChatActivity extends AppCompatActivity {
             ready &= app.models.isReady(id);
             fetching |= model == AssetState.QUEUED || model == AssetState.DOWNLOADING;
         }
-        boolean deciding = state.typed != null;
+        // A card is up and waits for the child's answer: about private details in a message,
+        // or about a person in a photo.
+        boolean deciding = state.typed != null || state.pending != null;
 
         // What cannot be checked cannot be sent, so without the models there is no chat:
         // the getting-ready screen stands in for all of it.
@@ -573,16 +620,21 @@ public final class ChatActivity extends AppCompatActivity {
             views.chatNoticeMore.setText(whatToDoAbout(state.notice));
         }
 
-        if (deciding && views.chatPersonal.getVisibility() != View.VISIBLE) {
+        boolean cardWasUp = views.chatPersonal.getVisibility() == View.VISIBLE
+                || views.chatPeople.getVisibility() == View.VISIBLE;
+        if (deciding && !cardWasUp) {
             // The card needs the room, and the field is closed until a choice is made.
             getSystemService(InputMethodManager.class)
                     .hideSoftInputFromWindow(views.chatInput.getWindowToken(), 0);
             views.chatPersonal.scrollTo(0, 0);
+            views.chatPeople.scrollTo(0, 0);
         }
-        views.chatPersonal.setVisibility(deciding ? View.VISIBLE : View.GONE);
+        views.chatPeople.setVisibility(state.pending != null ? View.VISIBLE : View.GONE);
+        views.chatPeoplePhoto.setImageBitmap(state.pending);
+        views.chatPersonal.setVisibility(state.typed != null ? View.VISIBLE : View.GONE);
         // The safer message as it will look in the chat: the sender's colour, lock chips.
         views.chatPersonalMasked.setText(
-                deciding ? LockChipSpan.decorate(this, state.masked) : null);
+                state.typed != null ? LockChipSpan.decorate(this, state.masked) : null);
         views.chatPersonalMasked.setBackgroundTintList(
                 ColorStateList.valueOf(getColor(soft(state.typing))));
 
@@ -723,8 +775,14 @@ public final class ChatActivity extends AppCompatActivity {
             // A screen reader is told who it is from, also for the sender's own messages.
             item.chatBubbleText.setContentDescription(
                     getString(R.string.chat_said, name(message.sender), message.text));
-            item.chatBubblePicture.setContentDescription(
-                    getString(R.string.chat_picture_from, name(message.sender)));
+            // What the picture model can see in a photo, under it and for a screen reader.
+            boolean described = !words && !message.seen.isEmpty();
+            String seen = described
+                    ? getString(R.string.chat_seen, String.join(", ", message.seen)) : null;
+            item.chatBubbleSeen.setVisibility(described ? View.VISIBLE : View.GONE);
+            item.chatBubbleSeen.setText(seen);
+            String from = getString(R.string.chat_picture_from, name(message.sender));
+            item.chatBubblePicture.setContentDescription(described ? from + ". " + seen : from);
         }
 
         @Override

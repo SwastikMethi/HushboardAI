@@ -14,12 +14,15 @@ import com.example.aikeyboard.ai.Suggestion.LanguageHint;
 import com.example.aikeyboard.ai.Suggestion.SensitiveSpan;
 import com.example.aikeyboard.ai.Suggestion.ToxicScores;
 import com.example.aikeyboard.data.AppSettings;
+import com.example.aikeyboard.media.Vision.ImageFindings;
 import com.example.aikeyboard.media.Vision.Sensitivity;
+import com.example.aikeyboard.media.Vision.Tag;
 import com.example.aikeyboard.ui.chat.ChatChecks.Outcome;
 import com.example.aikeyboard.ui.chat.ChatChecks.TextVerdict;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,8 +37,60 @@ public class ChatChecksTest {
             new Stub<>("moderator", new Sensitivity(0.02, false));
     private final Stub<String, LanguageHint> tongue =
             new Stub<>("tongue", new LanguageHint("en", true));
-    private final ChatChecks checks = new ChatChecks(toxic, redact, moderator, tongue,
-            Set.of("darn"), ChatChecks.kidRules());
+    private final Stub<Bitmap, ImageFindings> eye = new Stub<>("eye", seeing(0, 0, 0));
+    private final ChatChecks checks = new ChatChecks(toxic, redact, moderator, tongue, eye,
+            Set.of("darn"), Map.of("beach", "beach", "sea", "sea", "palm_tree", "palm tree",
+                    "sky", "sky", "cat", "cat", "black_cat", "cat"), ChatChecks.kidRules());
+
+    @Test
+    public void aPersonInAPhotoIsNoticed() {
+        eye.result = seeing(1, 0, 0);
+
+        assertTrue(checks.look(null).person);
+    }
+
+    @Test
+    public void aFaceAloneCountsAsAPerson() {
+        eye.result = seeing(0, 0, 1);
+
+        assertTrue(checks.look(null).person);
+    }
+
+    @Test
+    public void aPetIsNotAPerson() {
+        eye.result = seeing(0, 2, 0);
+
+        assertFalse(checks.look(null).person);
+    }
+
+    @Test
+    public void aPhotoIsDescribedInTheThreeThingsTheModelIsSurestOf() {
+        eye.result = seeing(0, 0, 0, "beach", "sea", "palm_tree", "sky");
+
+        assertEquals(List.of("beach", "sea", "palm tree"), checks.look(null).words);
+    }
+
+    @Test
+    public void onlyThingsOnTheChatsOwnListAreNamed() {
+        eye.result = seeing(0, 0, 0, "sharp", "beach", "screenshot", "alcoholic_beverage", "sea");
+
+        assertEquals(List.of("beach", "sea"), checks.look(null).words);
+    }
+
+    @Test
+    public void twoLabelsForTheSameThingAreSaidOnce() {
+        eye.result = seeing(0, 0, 0, "black_cat", "cat", "sky");
+
+        assertEquals(List.of("cat", "sky"), checks.look(null).words);
+    }
+
+    @Test
+    public void withoutThePictureModelNothingIsSeenAndNobodyIsAssumed() {
+        eye.fail = true;
+
+        assertFalse(checks.look(null).person);
+        assertEquals(List.of(), checks.look(null).words);
+    }
 
     @Test
     public void aMessageThatIsSurelyNotEnglishIsNotSent() {
@@ -190,6 +245,13 @@ public class ChatChecksTest {
     private static ToxicScores tone(double abusive) {
         return new ToxicScores(Map.of("hateful", 0.01, "abusive", abusive, "threat", 0.01),
                 Map.of("hateful", 0.5, "abusive", 0.5, "threat", 0.5));
+    }
+
+    /** What the picture model reports, with its tags surest first. */
+    private static ImageFindings seeing(int people, int pets, int faces, String... tags) {
+        List<Tag> surestFirst = new ArrayList<>();
+        for (int i = 0; i < tags.length; i++) surestFirst.add(new Tag(tags[i], 0.9 - 0.1 * i));
+        return new ImageFindings("photo", surestFirst, 0.5, people, pets, faces);
     }
 
     private static SensitiveSpan emailSpan() {

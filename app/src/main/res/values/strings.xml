@@ -430,6 +430,13 @@
     <string name="chat_crayon_yellow">Yellow crayon</string>
     <string name="chat_crayon_green">Green crayon</string>
     <string name="chat_crayon_blue">Dark blue crayon</string>
+    <string name="chat_people_title">This photo shows a person</string>
+    <string name="chat_people_more">Ask a grown-up before you send photos of people.</string>
+    <string name="chat_people_photo">The photo you picked</string>
+    <string name="chat_pick_another">Pick another picture</string>
+    <string name="chat_drop_photo">Don\'t send it</string>
+    <string name="chat_send_photo">Send it anyway</string>
+    <string name="chat_seen">I can see: %1$s</string>
     <string name="chat_picture">Send a picture</string>
     <string name="chat_picture_refused">This picture can\'t be sent</string>
     <string name="chat_picture_refused_more">Try a different picture.</string>

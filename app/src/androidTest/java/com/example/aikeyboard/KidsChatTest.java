@@ -37,13 +37,16 @@ import androidx.test.core.app.ActivityScenario;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.platform.app.InstrumentationRegistry;
+import androidx.test.uiautomator.UiDevice;
 
 import com.example.aikeyboard.ai.ModelAdapter;
 import com.example.aikeyboard.ai.Suggestion.LanguageHint;
 import com.example.aikeyboard.ai.Suggestion.ToxicScores;
 import com.example.aikeyboard.ai.ToxicPolicy;
 import com.example.aikeyboard.data.AppSettings;
+import com.example.aikeyboard.media.Vision.ImageFindings;
 import com.example.aikeyboard.media.Vision.Sensitivity;
+import com.example.aikeyboard.media.Vision.Tag;
 import com.example.aikeyboard.models.ModelRegistry;
 import com.example.aikeyboard.models.ModelRepository.AssetState;
 import com.example.aikeyboard.ui.chat.ChatActivity;
@@ -62,6 +65,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -170,6 +174,17 @@ public class KidsChatTest {
     @Test
     public void aMessageInHindiIsToldApartAndNotSent() throws Exception {
         assertEquals(Outcome.OTHER_LANGUAGE, check(IN_HINDI).outcome);
+    }
+
+    @Test
+    public void thePictureModelSeesNobodyInADrawingOfAHouse() throws Exception {
+        TestModels.ensureInstalled("eye");
+        Bitmap picture = VisionModelsTest.harmlessPicture();
+
+        ChatChecks.Seen seen = onInferenceThread(() -> checks.look(picture));
+
+        Log.i(TAG, "eye on the drawn house: person=" + seen.person + " words=" + seen.words);
+        assertFalse("a drawing of a house was taken for a photo of a person", seen.person);
     }
 
     // ---- The screen ----
@@ -394,8 +409,8 @@ public class KidsChatTest {
         openChat();
         Stub<String, ToxicScores> toxic = new Stub<>("toxic", null);
         toxic.fail = true;
-        use(new ChatChecks(toxic, app.redact, app.moderator, app.tongue, Set.of(),
-                ChatChecks.kidRules()));
+        use(new ChatChecks(toxic, app.redact, app.moderator, app.tongue, app.eye, Set.of(),
+                ChatChecks.namedThings(context), ChatChecks.kidRules()));
 
         say("See you tomorrow");
 
@@ -411,8 +426,8 @@ public class KidsChatTest {
         openChat();
         Stub<Bitmap, Sensitivity> moderator = new Stub<>("moderator", null);
         moderator.fail = true;
-        use(new ChatChecks(app.toxic, app.redact, moderator, app.tongue, Set.of(),
-                ChatChecks.kidRules()));
+        use(new ChatChecks(app.toxic, app.redact, moderator, app.tongue, app.eye, Set.of(),
+                ChatChecks.namedThings(context), ChatChecks.kidRules()));
 
         pick(Uri.fromFile(harmless()));
 
@@ -429,8 +444,8 @@ public class KidsChatTest {
                 Map.of("hateful", 0.0, "abusive", 0.0, "threat", 0.0),
                 Map.of("hateful", 0.5, "abusive", 0.5, "threat", 0.5)));
         toxic.hold = new CountDownLatch(1);
-        use(new ChatChecks(toxic, app.redact, app.moderator, app.tongue, Set.of(),
-                ChatChecks.kidRules()));
+        use(new ChatChecks(toxic, app.redact, app.moderator, app.tongue, app.eye, Set.of(),
+                ChatChecks.namedThings(context), ChatChecks.kidRules()));
 
         say("See you tomorrow");
         // The check is still running: the field is open and something else is typed.
@@ -568,6 +583,94 @@ public class KidsChatTest {
         }
     }
 
+    @Test
+    public void aPhotoThatShowsAPersonRaisesACardAndNothingIsSent() throws Exception {
+        openChat();
+        use(seeing(findings(1)));
+
+        pick(Uri.fromFile(harmless()));
+
+        assertTrue("no card; notice: " + shown(R.id.chat_notice),
+                TestModels.await(() -> isShown(R.id.chat_people), RUN_MS));
+        assertEquals(0, sent());
+        onView(withId(R.id.chat_send)).check(matches(not(isEnabled())));
+    }
+
+    @Test
+    public void sendItAnywaySendsThePhotoThatShowsAPerson() throws Exception {
+        openChat();
+        use(seeing(findings(1)));
+        pick(Uri.fromFile(harmless()));
+        assertTrue(TestModels.await(() -> isShown(R.id.chat_people), RUN_MS));
+
+        onView(withId(R.id.chat_send_photo)).perform(scrollTo(), click());
+
+        assertTrue(TestModels.await(() -> sent() == 1, RUN_MS));
+        assertTrue(showsPicture(0));
+        assertFalse(isShown(R.id.chat_people));
+    }
+
+    @Test
+    public void dontSendItDropsThePhotoAndGivesTheChatBack() throws Exception {
+        openChat();
+        use(seeing(findings(1)));
+        pick(Uri.fromFile(harmless()));
+        assertTrue(TestModels.await(() -> isShown(R.id.chat_people), RUN_MS));
+
+        onView(withId(R.id.chat_drop_photo)).perform(scrollTo(), click());
+
+        assertFalse(isShown(R.id.chat_people));
+        assertEquals(0, sent());
+        onView(withId(R.id.chat_input)).check(matches(isEnabled()));
+    }
+
+    @Test
+    public void aSentPhotoSaysWhatTheAppCanSeeInIt() throws Exception {
+        openChat();
+        use(seeing(findings(0, "beach", "sea", "boat")));
+
+        pick(Uri.fromFile(harmless()));
+
+        assertTrue(TestModels.await(() -> sent() == 1, RUN_MS));
+        String[] seen = {""};
+        chat.onActivity(activity -> seen[0] = ((TextView) row(activity, 0)
+                .findViewById(R.id.chat_bubble_seen)).getText().toString());
+        assertEquals("I can see: beach, sea, boat", seen[0]);
+    }
+
+    @Test
+    public void aDrawingFromThePadIsNotLookedAtForPeople() throws Exception {
+        openChat();
+        use(seeing(findings(1)));
+        onView(withId(R.id.chat_draw)).perform(click());
+        drawALine(0.5f);
+
+        onView(withId(R.id.chat_send_drawing)).perform(click());
+
+        assertTrue("the drawing was held back; card up: " + isShown(R.id.chat_people),
+                TestModels.await(() -> sent() == 1, RUN_MS));
+    }
+
+    // Not a check: saves a picture of the card for a photo that shows a person, which cannot
+    // be reached by hand without such a photo. Run with -e chatshots true.
+    @Test
+    public void aPictureOfThePeopleCardForTheRecord() throws Exception {
+        assumeTrue("opt-in: pass -e chatshots true", "true".equals(
+                InstrumentationRegistry.getArguments().getString("chatshots")));
+        openChat();
+        say("Show me your new bike!");
+        assertTrue(TestModels.await(() -> sent() == 1, RUN_MS));
+        onView(withId(R.id.chat_user_two)).perform(click());
+        use(seeing(findings(1)));
+        pick(Uri.fromFile(harmless()));
+        assertTrue(TestModels.await(() -> isShown(R.id.chat_people), RUN_MS));
+        Thread.sleep(700);
+        File dir = new File(context.getExternalFilesDir(null), "tour");
+        dir.mkdirs();
+        assertTrue(UiDevice.getInstance(getInstrumentation())
+                .takeScreenshot(new File(dir, "kids_chat_people_card.png")));
+    }
+
     private void openChat() {
         chat = ActivityScenario.launch(ChatActivity.class);
         getInstrumentation().waitForIdleSync();
@@ -687,6 +790,25 @@ public class KidsChatTest {
         return right[0];
     }
 
+    /** The chat's real checks, with a picture model that reports what it is told to. */
+    private ChatChecks seeing(ImageFindings told) {
+        return new ChatChecks(app.toxic, app.redact, app.moderator, app.tongue,
+                new Stub<>("eye", told), Set.of(), ChatChecks.namedThings(context),
+                ChatChecks.kidRules());
+    }
+
+    private static ImageFindings findings(int people, String... tags) {
+        List<Tag> surestFirst = new ArrayList<>();
+        for (int i = 0; i < tags.length; i++) surestFirst.add(new Tag(tags[i], 0.9 - 0.1 * i));
+        return new ImageFindings("photo", surestFirst, 0.5, people, 0, 0);
+    }
+
+    private boolean isShown(int viewId) {
+        boolean[] shown = {false};
+        chat.onActivity(activity -> shown[0] = activity.findViewById(viewId).isShown());
+        return shown[0];
+    }
+
     /** Puts other checks behind the open chat screen, as the app itself never does. */
     private void use(ChatChecks other) {
         chat.onActivity(activity -> new ViewModelProvider(activity)
@@ -694,7 +816,7 @@ public class KidsChatTest {
     }
 
     /** A model that answers as told, fails, or waits until it is let go. */
-    private static final class Stub<I, O> implements ModelAdapter<I, O> {
+    static final class Stub<I, O> implements ModelAdapter<I, O> {
         private final String id;
         private final O result;
         boolean fail;

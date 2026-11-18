@@ -18,9 +18,13 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Rect;
+import android.net.Uri;
 import android.view.View;
+
+import androidx.lifecycle.ViewModelProvider;
 
 import androidx.test.core.app.ActivityScenario;
 import androidx.test.espresso.UiController;
@@ -36,8 +40,10 @@ import androidx.test.uiautomator.Until;
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
 import com.example.aikeyboard.ime.view.AiToggleView;
+import com.example.aikeyboard.media.Vision.ImageFindings;
 import com.example.aikeyboard.models.ModelDescriptor;
 import com.example.aikeyboard.ui.chat.ChatActivity;
+import com.example.aikeyboard.ui.chat.ChatChecks;
 
 import org.hamcrest.Matcher;
 import org.junit.After;
@@ -46,8 +52,11 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @RunWith(AndroidJUnit4.class)
 public class AccessibilityAuditTest {
@@ -192,6 +201,25 @@ public class AccessibilityAuditTest {
             onView(isRoot()).perform(audit());
             onView(withId(R.id.chat_draw)).perform(click());
             assertTrue(TestModels.await(() -> isShowing(chat, R.id.chat_pad), 60_000));
+            onView(isRoot()).perform(audit());
+
+            // The card for a photo that shows a person. The picture model is stood in for,
+            // and told to see one, because the project holds no photo of a person.
+            onView(withId(R.id.chat_pad_close)).perform(click());
+            AppContainer app = TestModels.container();
+            ImageFindings aPerson = new ImageFindings("photo", List.of(), 0.5, 1, 0, 0);
+            File house = new File(context.getCacheDir(), "audit-house.png");
+            try (FileOutputStream out = new FileOutputStream(house)) {
+                VisionModelsTest.harmlessPicture().compress(Bitmap.CompressFormat.PNG, 90, out);
+            }
+            chat.onActivity(activity -> {
+                new ViewModelProvider(activity).get(ChatActivity.Session.class).checks =
+                        new ChatChecks(app.toxic, app.redact, app.moderator, app.tongue,
+                                new KidsChatTest.Stub<>("eye", aPerson), Set.of(),
+                                ChatChecks.namedThings(context), ChatChecks.kidRules());
+                activity.onPicturePicked(Uri.fromFile(house));
+            });
+            assertTrue(TestModels.await(() -> isShowing(chat, R.id.chat_people), 60_000));
             onView(isRoot()).perform(audit());
         }
     }

@@ -43,6 +43,17 @@
             android:maxHeight="220dp"
             android:scaleType="fitCenter"
             android:visibility="gone" />
+
+        <!-- What the picture model can see in a photo, in a few words. -->
+        <TextView
+            android:id="@+id/chat_bubble_seen"
+            style="@style/KidsText.Small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="220dp"
+            android:paddingHorizontal="4dp"
+            android:paddingTop="4dp"
+            android:visibility="gone" />
     </LinearLayout>
 
     <ImageView

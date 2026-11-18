@@ -285,6 +285,102 @@
                     android:textSize="15sp" />
             </LinearLayout>
         </ScrollView>
+
+        <!-- The card for a photo that shows a person. It scrolls for the same reason as the
+             card above: its buttons must stay within reach. -->
+        <ScrollView
+            android:id="@+id/chat_people"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="10dp"
+            android:layout_marginBottom="10dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_kids_card"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:layout_marginEnd="10dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_helper_sun" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/KidsDisplay"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:accessibilityHeading="true"
+                            android:text="@string/chat_people_title" />
+
+                        <TextView
+                            style="@style/KidsText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/chat_people_more"
+                            android:textSize="15sp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/chat_people_photo"
+                    android:layout_width="wrap_content"
+                    android:layout_height="120dp"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="12dp"
+                    android:adjustViewBounds="true"
+                    android:background="@drawable/bg_kids_canvas"
+                    android:contentDescription="@string/chat_people_photo"
+                    android:scaleType="fitCenter" />
+
+                <Button
+                    android:id="@+id/chat_pick_another"
+                    style="@style/KidsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/chat_pick_another"
+                    android:textColor="@color/kids_card"
+                    app:backgroundTint="@color/kids_leaf"
+                    app:icon="@drawable/ic_kids_picture"
+                    app:iconTint="@color/kids_card" />
+
+                <Button
+                    android:id="@+id/chat_drop_photo"
+                    style="@style/KidsButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/chat_drop_photo"
+                    app:backgroundTint="@color/kids_sky"
+                    app:icon="@drawable/ic_kids_close" />
+
+                <Button
+                    android:id="@+id/chat_send_photo"
+                    style="?attr/borderlessButtonStyle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/andika_regular"
+                    android:text="@string/chat_send_photo"
+                    android:textColor="@color/kids_ink_soft"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </ScrollView>
     </LinearLayout>
 
     <!-- A tip from the helper when something could not be sent. Never a telling-off. -->

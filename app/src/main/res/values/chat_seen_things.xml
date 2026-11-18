@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The things Kids Chat may name under a photo ("I can see: beach, sea, boat"). The picture
+     model has about 600 labels, and most are not for a child's eyes or are not things at all:
+     remarks on the photo ("sharp", "unusable"), kinds of picture ("screenshot"), words about
+     people, and subjects such as weapons or alcohol. Only labels listed here are ever shown.
+     An entry is the model's label, or label=word where a child's word differs. -->
+<resources>
+    <string-array name="chat_seen_things" translatable="false">
+        <item>animal</item>
+        <item>antelope</item>
+        <item>bear</item>
+        <item>bee</item>
+        <item>beetle</item>
+        <item>bird</item>
+        <item>bull</item>
+        <item>butterfly</item>
+        <item>cat</item>
+        <item>cattle=cow</item>
+        <item>chicken</item>
+        <item>crab</item>
+        <item>deer</item>
+        <item>dinosaur</item>
+        <item>dog</item>
+        <item>dolphin</item>
+        <item>dragonfly</item>
+        <item>duck</item>
+        <item>eagle</item>
+        <item>elephant</item>
+        <item>falcon</item>
+        <item>fish</item>
+        <item>frog</item>
+        <item>giraffe</item>
+        <item>goat</item>
+        <item>goose</item>
+        <item>horse</item>
+        <item>insect</item>
+        <item>lion</item>
+        <item>lizard</item>
+        <item>monkey</item>
+        <item>owl</item>
+        <item>parrot</item>
+        <item>penguin</item>
+        <item>pet</item>
+        <item>pig</item>
+        <item>rabbit</item>
+        <item>sheep</item>
+        <item>snake</item>
+        <item>sparrow</item>
+        <item>spider</item>
+        <item>squirrel</item>
+        <item>swan</item>
+        <item>tiger</item>
+        <item>tortoise</item>
+        <item>turtle</item>
+        <item>harbor_seal=seal</item>
+        <item>sea_lion=sea lion</item>
+        <item>black_cat=cat</item>
+        <item>moths_and_butterflies=butterfly</item>
+        <item>apple</item>
+        <item>banana</item>
+        <item>berry</item>
+        <item>bread</item>
+        <item>cake</item>
+        <item>birthday_cake=birthday cake</item>
+        <item>candy</item>
+        <item>carrot</item>
+        <item>chocolate</item>
+        <item>cookie</item>
+        <item>cupcake</item>
+        <item>dessert</item>
+        <item>egg</item>
+        <item>food</item>
+        <item>french_fries=fries</item>
+        <item>fruit</item>
+        <item>grape</item>
+        <item>hamburger=burger</item>
+        <item>ice_cream=ice cream</item>
+        <item>juice</item>
+        <item>muffin</item>
+        <item>mushroom</item>
+        <item>orange_fruit=orange</item>
+        <item>pasta</item>
+        <item>pastry</item>
+        <item>pizza</item>
+        <item>pumpkin</item>
+        <item>salad</item>
+        <item>sandwich</item>
+        <item>strawberry</item>
+        <item>tomato</item>
+        <item>vegetable</item>
+        <item>airplane</item>
+        <item>bicycle</item>
+        <item>boat</item>
+        <item>bus</item>
+        <item>car</item>
+        <item>canoe</item>
+        <item>helicopter</item>
+        <item>hot_air_balloon=hot air balloon</item>
+        <item>motorcycle</item>
+        <item>sailboat</item>
+        <item>scooter</item>
+        <item>ship</item>
+        <item>skateboard</item>
+        <item>taxi</item>
+        <item>tractor</item>
+        <item>train</item>
+        <item>truck</item>
+        <item>van</item>
+        <item>race_car=race car</item>
+        <item>beach</item>
+        <item>blossom</item>
+        <item>cloud</item>
+        <item>coast</item>
+        <item>flower</item>
+        <item>forest</item>
+        <item>garden_roses=roses</item>
+        <item>grass</item>
+        <item>hill</item>
+        <item>lake</item>
+        <item>leaf</item>
+        <item>moon</item>
+        <item>mountain</item>
+        <item>ocean</item>
+        <item>palm_tree=palm tree</item>
+        <item>plant</item>
+        <item>pond</item>
+        <item>rainbow</item>
+        <item>river</item>
+        <item>rock</item>
+        <item>rose</item>
+        <item>sand</item>
+        <item>sea</item>
+        <item>sky</item>
+        <item>snow</item>
+        <item>sun</item>
+        <item>sunset</item>
+        <item>tree</item>
+        <item>water</item>
+        <item>waterfall</item>
+        <item>wave_noun=wave</item>
+        <item>common_sunflower=sunflower</item>
+        <item>lily</item>
+        <item>reef</item>
+        <item>lightning</item>
+        <item>fireworks</item>
+        <item>bridge_structure=bridge</item>
+        <item>building</item>
+        <item>castle</item>
+        <item>house</item>
+        <item>hut</item>
+        <item>lighthouse</item>
+        <item>playground</item>
+        <item>swimming_pool=swimming pool</item>
+        <item>tent</item>
+        <item>tower</item>
+        <item>windmill</item>
+        <item>zoo</item>
+        <item>stadium</item>
+        <item>fountain</item>
+        <item>balloon</item>
+        <item>ball_object=ball</item>
+        <item>book</item>
+        <item>backpack</item>
+        <item>camera</item>
+        <item>candle</item>
+        <item>chair</item>
+        <item>clock</item>
+        <item>computer</item>
+        <item>crown</item>
+        <item>cup</item>
+        <item>doll</item>
+        <item>drum</item>
+        <item>flag</item>
+        <item>guitar</item>
+        <item>hat</item>
+        <item>lamp</item>
+        <item>lantern</item>
+        <item>lego</item>
+        <item>piano</item>
+        <item>stuffed_toy=soft toy</item>
+        <item>teddy_bear=teddy bear</item>
+        <item>toy</item>
+        <item>umbrella</item>
+        <item>violin</item>
+        <item>trumpet</item>
+        <item>action_figure=toy figure</item>
+        <item>christmas_tree=Christmas tree</item>
+        <item>football</item>
+        <item>soccer</item>
+        <item>baseball_sport=baseball</item>
+        <item>basketball_sport=basketball</item>
+        <item>tennis</item>
+        <item>swimming</item>
+        <item>skiing</item>
+        <item>surfing</item>
+        <item>cycle_sport=cycling</item>
+        <item>dance</item>
+        <item>running</item>
+        <item>hiking</item>
+        <item>golf</item>
+        <item>hockey</item>
+        <item>bowling</item>
+        <item>chess</item>
+        <item>volleyball_sport=volleyball</item>
+        <item>ice_skating=ice skating</item>
+        <item>birthday</item>
+        <item>christmas=Christmas</item>
+        <item>halloween=Halloween</item>
+        <item>drawing</item>
+        <item>painting</item>
+        <item>child_art=drawing</item>
+        <item>cartoon</item>
+    </string-array>
+</resources>

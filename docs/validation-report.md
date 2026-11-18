@@ -57,6 +57,10 @@ adb shell am instrument -w -e micDenied true -e class com.example.aikeyboard.Mic
 # as INSTRUMENTATION_STATUS lines (add -r).
 adb shell am instrument -w -r -e latency true -e class com.example.aikeyboard.LatencyProbeTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 
+# The keyboard's picture button through Android's real picker. EMULATOR ONLY: the picker shows
+# the device's own pictures. Put one in the emulator's gallery first.
+adb shell am instrument -w -e picker true -e class 'com.example.aikeyboard.KeyboardImageTest#theSystemsPickerHandsAChosenPictureBackToTheKeyboard' com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
+
 # Screenshots: written to /sdcard/Android/data/com.example.aikeyboard/files/tour
 adb shell am instrument -w -e screenshots true -e class com.example.aikeyboard.ScreenshotTourTest com.example.aikeyboard.test/androidx.test.runner.AndroidJUnitRunner
 ```
@@ -481,6 +485,25 @@ Part 2 followed the owner's steps on the phone: they approved OnePlus's install 
 Totals for the suite on the phone (`-e clear true -e stockApps true`, three tests left out): 171 run, 132 passed, 15 skipped, 24 failed. 22 of the 24 are the microphone-grant fault in the tests.
 
 The test changes made during the phone session were then run as the whole suite on the emulator (EMU-37B, `-e clear true`): 174 run, 158 passed, 16 skipped by design (13 opt-in probes and the three latency measurements), none failed.
+
+## Picture panel in the keyboard (added 18 Nov 2026)
+
+Asked for by the owner during the phone session: a picture button on the keyboard while the image models are on, with the result shown in the keyboard. Android's picker is a full-screen system screen, so the keyboard steps aside while a picture is chosen and comes back with the result. The panel shows what Eye and Moderator found; it does not insert or share the picture.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| The picture button shows only while Eye or Moderator is on and installed | failed, then passed | EMU-37B | `KeyboardImageTest.thePictureButtonIsOfferedOnlyWhileAnImageModelCanRun` |
+| It is not offered in a password field | passed | EMU-37B | `KeyboardImageTest.thePictureButtonIsNotOfferedInAPasswordField`. Passed before the button existed too; it guards the rule from here on |
+| Tapping it opens the picker through the app's own screen; closing the picker changes nothing | failed, then passed | EMU-37B | `KeyboardImageTest.tappingTheButtonOpensThePickerScreenAndClosingItChangesNothing` |
+| A chosen picture is described and checked in the keyboard; the draft is untouched; Back returns to the keys | failed, then passed | EMU-37B | `KeyboardImageTest.aChosenPictureIsDescribedAndCheckedInTheKeyboard` |
+| A picture chosen while the keyboard is away is shown when it returns | failed, then passed | EMU-37B | `KeyboardImageTest.aPictureChosenWhileTheKeyboardIsAwayIsShownWhenItReturns`. The first two versions of the feature failed this: Android starts a field's input twice within milliseconds on the way back, and a window with nothing to type into can hold the keyboard for a moment. A picture is now tied to the field the picker was opened from |
+| Moving to another field closes the panel and forgets the picture | failed, then passed | EMU-37B | `KeyboardImageTest.movingToAnotherFieldClosesThePanelAndForgetsThePicture` |
+| The whole trip through Android's real picker | passed | EMU-37B | `KeyboardImageTest.theSystemsPickerHandsAChosenPictureBackToTheKeyboard`, opt-in with `-e picker true`, three runs. Emulator only: the picker shows the device's own pictures, so it must not be run on a phone |
+| From another app's field: the picker returns to that app, not to AI Keyboard, and the keyboard comes back by itself with the result | passed by hand | EMU-37B | Settings search, driven over adb: picture button, picker, a picture, Done. Focus returned to Settings search; the panel read "Looks like: screenshot" and "Sensitive-content check: nothing flagged." `docs/evidence/screenshots/picture_panel_keyboard.png` |
+| On the phone | not run | PHONE | The build with this feature has not been installed on the phone yet |
+| A file that cannot be read as a picture; the screen turned while the picker is open | not run | — | The code is there (a message is shown; the picker is not opened twice); no test drives either |
+
+After the feature: 161 unit tests, lint 0 errors and 37 warnings, and the whole suite on the emulator (EMU-37B, `-e clear true`): 181 run, 164 passed, 17 skipped by design (13 opt-in probes, the three latency measurements and the real-picker test), none failed.
 
 ## The handoff checklist, item by item
 

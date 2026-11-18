@@ -33,9 +33,15 @@
                 android:src="@drawable/ic_draw"
                 android:visibility="invisible" />
 
-            <Space
+            <ImageButton
+                android:id="@+id/tool_image"
                 android:layout_width="48dp"
-                android:layout_height="match_parent" />
+                android:layout_height="match_parent"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/picture_button"
+                android:focusable="false"
+                android:src="@drawable/ic_picture"
+                android:visibility="invisible" />
 
             <Space
                 android:layout_width="0dp"
@@ -155,6 +161,13 @@
     <include
         android:id="@+id/draw_panel"
         layout="@layout/view_draw_panel"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <include
+        android:id="@+id/picture_panel"
+        layout="@layout/view_picture_panel"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />

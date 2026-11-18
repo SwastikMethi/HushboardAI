@@ -22,6 +22,7 @@ import com.example.aikeyboard.R;
 import com.example.aikeyboard.data.AppSettings;
 import com.example.aikeyboard.data.SettingsRepository;
 import com.example.aikeyboard.databinding.KeyboardViewBinding;
+import com.example.aikeyboard.ui.tools.ImagePickActivity;
 import com.example.aikeyboard.ui.tools.MicPermissionActivity;
 
 import java.io.IOException;
@@ -47,6 +48,8 @@ public class AiInputMethodService extends InputMethodService {
         settings = repository.latest();
         EditorBridge editor = new EditorBridge(this::getCurrentInputConnection);
         controller = new KeyboardController(this, editor, loadWordList(), app);
+        // A picture chosen in the picker screen is handed to this keyboard while it lives.
+        app.picturePicked = controller::onPicturePicked;
         // The service owns this subscription and ends it in onDestroy. Changes made in the
         // companion app arrive here while the keyboard is open.
         settingsSubscription = repository.observe()
@@ -62,6 +65,7 @@ public class AiInputMethodService extends InputMethodService {
 
     @Override
     public void onDestroy() {
+        AppContainer.from(this).picturePicked = picture -> { };
         settingsSubscription.dispose();
         super.onDestroy();
     }
@@ -156,6 +160,12 @@ public class AiInputMethodService extends InputMethodService {
     /** Opens the app's microphone request; a service cannot show the system prompt itself. */
     void askForMicrophone() {
         startActivity(new Intent(this, MicPermissionActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+    }
+
+    /** Opens the system's picture picker through a screen of the app; a service cannot. */
+    void pickPicture() {
+        startActivity(new Intent(this, ImagePickActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
     }
 

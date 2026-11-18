@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
@@ -51,10 +52,10 @@ public final class ImageToolsFragment extends Fragment {
     private static final int TAGS_SHOWN = 6;
 
     /** What the screen shows. Replaced as a whole, on the main thread only. */
-    static final class State {
-        final boolean working;
+    public static final class State {
+        public final boolean working;
         /** The picked picture, scaled to fit memory; null until one is picked. */
-        final Bitmap picture;
+        public final Bitmap picture;
         final ImageFindings findings;
         final Sensitivity sensitivity;
         /** Ids of the models that were tried on this picture and failed. */
@@ -72,12 +73,15 @@ public final class ImageToolsFragment extends Fragment {
             this.message = message;
         }
 
-        boolean analysed() {
+        public boolean analysed() {
             return picture != null && !working;
         }
     }
 
-    /** The work behind the screen; outlives rotation and ends when the screen is left. */
+    /**
+     * The work behind the screen; outlives rotation and ends when the screen is left. The
+     * keyboard's picture panel uses one too, as a plain object it lets go of with forget().
+     */
     public static final class Session extends AndroidViewModel {
 
         private final AppContainer app;
@@ -93,8 +97,22 @@ public final class ImageToolsFragment extends Fragment {
             main = ContextCompat.getMainExecutor(application);
         }
 
-        LiveData<State> state() {
+        public LiveData<State> state() {
             return state;
+        }
+
+        /** A picture that has already been read, as the keyboard's picker screen hands over. */
+        public void open(Bitmap picture) {
+            abandoned.set(true);
+            AtomicBoolean run = new AtomicBoolean();
+            abandoned = run;
+            analyse(picture, run);
+        }
+
+        /** Lets go of the picture and of anything still being worked out about it. */
+        public void forget() {
+            abandoned.set(true);
+            state.setValue(new State(false, null, null, null, List.of(), 0));
         }
 
         void open(Uri uri) {
@@ -171,7 +189,7 @@ public final class ImageToolsFragment extends Fragment {
         }
     }
 
-    static boolean usable(AppContainer app, AppSettings settings, String modelId) {
+    public static boolean usable(AppContainer app, AppSettings settings, String modelId) {
         return settings.modelActive(modelId) && app.models.isReady(modelId);
     }
 
@@ -245,44 +263,57 @@ public final class ImageToolsFragment extends Fragment {
         views.imagePreview.setVisibility(state.picture == null ? View.GONE : View.VISIBLE);
         views.imagePreview.setImageBitmap(state.picture);
         views.imageResult.setVisibility(state.analysed() ? View.VISIBLE : View.GONE);
-        if (state.analysed()) renderResult(state);
+        if (state.analysed()) {
+            showResult(state, views.imageKind, views.imageTags, views.imageDetails,
+                    views.imageSensitivity, views.imageNotes, R.string.image_note);
+        }
     }
 
-    private void renderResult(State state) {
+    /**
+     * Writes what the image models found into five lines of text. The keyboard's picture
+     * panel shows the same result in its own layout, so it comes through here too.
+     *
+     * @param closingNote the caution that ends the notes
+     */
+    public static void showResult(State state, TextView kind, TextView tagLine,
+            TextView details, TextView check, TextView noteLines, int closingNote) {
+        Context context = kind.getContext();
         ImageFindings findings = state.findings;
         int eyeRows = findings == null ? View.GONE : View.VISIBLE;
-        views.imageKind.setVisibility(eyeRows);
-        views.imageTags.setVisibility(eyeRows);
-        views.imageDetails.setVisibility(eyeRows);
+        kind.setVisibility(eyeRows);
+        tagLine.setVisibility(eyeRows);
+        details.setVisibility(eyeRows);
         if (findings != null) {
-            views.imageKind.setText(getString(R.string.image_kind, readable(findings.kind)));
+            kind.setText(context.getString(R.string.image_kind, readable(findings.kind)));
             List<String> tags = new ArrayList<>();
             for (Tag tag : findings.tags) {
                 if (tags.size() == TAGS_SHOWN) break;
-                tags.add(getString(R.string.image_tag, readable(tag.name),
+                tags.add(context.getString(R.string.image_tag, readable(tag.name),
                         Math.round(tag.confidence * 100)));
             }
-            views.imageTags.setText(tags.isEmpty() ? getString(R.string.image_no_tags)
-                    : getString(R.string.image_tags, String.join(", ", tags)));
-            views.imageDetails.setText(getString(R.string.image_details, findings.people,
+            tagLine.setText(tags.isEmpty() ? context.getString(R.string.image_no_tags)
+                    : context.getString(R.string.image_tags, String.join(", ", tags)));
+            details.setText(context.getString(R.string.image_details, findings.people,
                     findings.pets, findings.faces, Math.round(findings.aesthetic * 100)));
         }
 
         Sensitivity sensitivity = state.sensitivity;
-        views.imageSensitivity.setVisibility(sensitivity == null ? View.GONE : View.VISIBLE);
+        check.setVisibility(sensitivity == null ? View.GONE : View.VISIBLE);
         if (sensitivity != null) {
-            views.imageSensitivity.setText(sensitivity.flagged
-                    ? getString(R.string.image_flagged, Math.round(sensitivity.score * 100))
-                    : getString(R.string.image_not_flagged));
+            check.setText(sensitivity.flagged
+                    ? context.getString(R.string.image_flagged,
+                            Math.round(sensitivity.score * 100))
+                    : context.getString(R.string.image_not_flagged));
         }
 
         List<String> notes = new ArrayList<>();
         for (String id : state.failed) {
-            notes.add(getString(R.string.voice_step_failed, getString("eye".equals(id)
-                    ? R.string.image_step_eye : R.string.image_step_moderator)));
+            notes.add(context.getString(R.string.voice_step_failed, context.getString(
+                    "eye".equals(id) ? R.string.image_step_eye
+                            : R.string.image_step_moderator)));
         }
-        notes.add(getString(R.string.image_note));
-        views.imageNotes.setText(String.join("\n", notes));
+        notes.add(context.getString(closingNote));
+        noteLines.setText(String.join("\n", notes));
     }
 
     // The models' own words use underscores: "black_and_white" reads better with spaces.

@@ -5,6 +5,7 @@ package com.example.aikeyboard;
 
 import android.app.ActivityManager;
 import android.content.Context;
+import android.graphics.Bitmap;
 
 import com.example.aikeyboard.ai.CrashBreaker;
 import com.example.aikeyboard.ai.adapters.ClearAdapter;
@@ -39,6 +40,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
 
 public final class AppContainer {
 
@@ -71,6 +73,12 @@ public final class AppContainer {
      * would be; the app itself never replaces it.
      */
     public AudioCaptureController capture;
+    /**
+     * Where a picture chosen for the keyboard is handed over, on the main thread. A keyboard
+     * cannot show the system's picker itself, so a small screen of the app does, reads the
+     * chosen picture and passes it here; the keyboard service listens while it is alive.
+     */
+    public Consumer<Bitmap> picturePicked = picture -> { };
     private ScheduledFuture<?> toolsIdle;
     /** The voice tools' chain: cleanup, language, transcript, fillers, speakers. */
     public final AudioPipeline voice;

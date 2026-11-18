@@ -35,6 +35,16 @@
             android:exported="false"
             android:theme="@style/Theme.AiKeyboard.Dialog" />
 
+        <!-- Opens the system's picture picker for the keyboard, which cannot open it itself.
+             Shows nothing of its own, and has no task affinity so that closing it returns to
+             the app being typed into, not to this app's own screens. -->
+        <activity
+            android:name=".ui.tools.ImagePickActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <!-- Lets a result the user chose to share be read by the app it is shared with. -->
         <provider
             android:name="androidx.core.content.FileProvider"

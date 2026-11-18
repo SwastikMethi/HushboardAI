@@ -5,12 +5,14 @@
 package com.example.aikeyboard.ime;
 
 import android.Manifest;
+import android.app.Application;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.SystemClock;
+import android.text.InputType;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -46,6 +48,7 @@ import com.example.aikeyboard.media.Voice.AudioClip;
 import com.example.aikeyboard.models.ModelDescriptor;
 import com.example.aikeyboard.models.ModelRegistry;
 import com.example.aikeyboard.ui.models.ModelIcons;
+import com.example.aikeyboard.ui.tools.ImageToolsFragment;
 import com.example.aikeyboard.ui.tools.ShapeRecognizer;
 
 import java.io.IOException;
@@ -131,6 +134,22 @@ public final class KeyboardController implements KeyGridView.Listener,
     // The focused field as the system described it: what it accepts, for inserting a picture.
     private EditorInfo editorInfo;
 
+    // The picture panel. The chosen picture and what was found in it are held by this
+    // object, in memory only, until the panel is closed or another field takes the keyboard.
+    // It is the Image tools screen's own worker, used here as a plain object.
+    private final ImageToolsFragment.Session pictures;
+    private boolean pictureShown;
+    // Which field a held picture belongs to, or null when none is held. A picture is chosen
+    // in the system's picker, which covers the app, so it arrives while no field has the
+    // keyboard: it belongs to the field the picker was opened from, and is shown whenever
+    // that field has the keyboard again. Android often starts a field's input twice in a
+    // row on the way back, which is why this is tied to the field and not to one start.
+    private String pictureFor;
+    // The field the picker was opened from, until its picture arrives; and the last real
+    // field to have the keyboard, which stands in when a picture arrives unasked.
+    private String pickerOpenedFrom;
+    private String lastField;
+
     KeyboardController(AiInputMethodService service, EditorBridge editor,
             LocalWordSuggester suggester, AppContainer app) {
         this.service = service;
@@ -139,6 +158,12 @@ public final class KeyboardController implements KeyGridView.Listener,
         this.app = app;
         this.settings = app.settings.latest();
         recognizer = new ShapeRecognizer(service);
+        pictures = new ImageToolsFragment.Session(
+                (Application) service.getApplicationContext());
+        // Lives as long as the keyboard service, which is as long as this object.
+        pictures.state().observeForever(state -> {
+            if (views != null && pictureShown) renderPicturePanel();
+        });
         coordinator = new AiCoordinator(new InferenceScheduler(app.timer, app.inference),
                 ContextCompat.getMainExecutor(service), app.emo, app.redact, app.toxic,
                 app.tongue, app.gist, app.models::isReady, this);
@@ -155,6 +180,15 @@ public final class KeyboardController implements KeyGridView.Listener,
                 v -> service.openCompanionApp(MainActivity.TAB_SETTINGS));
         views.toolMic.setOnClickListener(v -> startDictation());
         views.toolDraw.setOnClickListener(v -> showDrawPanel(true));
+        views.toolImage.setOnClickListener(v -> {
+            if (!canPickPicture()) return;
+            pickerOpenedFrom = lastField;
+            service.pickPicture();
+        });
+        views.picturePanel.pictureBack.setOnClickListener(v -> {
+            closePicture();
+            render();
+        });
         views.drawPanel.drawBack.setOnClickListener(v -> showDrawPanel(false));
         views.drawPanel.drawClear.setOnClickListener(v -> clearDrawing());
         views.drawPanel.drawInsert.setOnClickListener(v -> insertDrawing());
@@ -224,6 +258,10 @@ public final class KeyboardController implements KeyGridView.Listener,
         // Dictation switched off (or AI paused) mid-recording: the microphone closes now.
         if (dictation != Dictation.OFF && !canDictate()) cancelDictation();
         if (drawShown && !canDraw()) closeDrawing();
+        // While a picture is on its way back no field has the keyboard: only the models count.
+        if (pictureFor != null && !(pictureShown ? canPickPicture() : imageModelUsable())) {
+            closePicture();
+        }
         render();
         if (justTurnedOn && views != null) views.aiToggle.playEnableSweep();
     }
@@ -255,6 +293,16 @@ public final class KeyboardController implements KeyGridView.Listener,
             rememberApp(session.editorPackage);
         }
         readEditor();
+        // A window with nothing to type into can have the keyboard for a moment while
+        // screens change. It is not a field, and decides nothing about a picture.
+        if (info.inputType != InputType.TYPE_NULL) {
+            lastField = fieldKey(info);
+            if (pictureFor != null) {
+                // A held picture stays with its own field and never follows into another.
+                if (pictureFor.equals(lastField) && canPickPicture()) pictureShown = true;
+                else closePicture();
+            }
+        }
         render();
     }
 
@@ -383,8 +431,9 @@ public final class KeyboardController implements KeyGridView.Listener,
         // INVISIBLE, not GONE: it keeps the AI control centred.
         views.toolMic.setVisibility(canDictate() ? View.VISIBLE : View.INVISIBLE);
         views.toolDraw.setVisibility(canDraw() ? View.VISIBLE : View.INVISIBLE);
+        views.toolImage.setVisibility(canPickPicture() ? View.VISIBLE : View.INVISIBLE);
         boolean reviewShown = reviewing != null || topics != null || dictated != null;
-        boolean overlay = aiPanelShown || reviewShown || drawShown;
+        boolean overlay = aiPanelShown || reviewShown || drawShown || pictureShown;
         // Likewise INVISIBLE: the typing area keeps giving the panels their height.
         views.typingArea.setVisibility(overlay ? View.INVISIBLE : View.VISIBLE);
         views.aiPanel.getRoot().setVisibility(
@@ -394,7 +443,11 @@ public final class KeyboardController implements KeyGridView.Listener,
                 drawShown && !reviewShown && !aiPanelShown ? View.VISIBLE : View.GONE);
         if (aiPanelShown) renderAiPanel();
         if (reviewShown) renderReview();
+        views.picturePanel.getRoot().setVisibility(
+                pictureShown && !reviewShown && !aiPanelShown && !drawShown
+                        ? View.VISIBLE : View.GONE);
         if (drawShown) renderDrawPanel();
+        if (pictureShown) renderPicturePanel();
     }
 
     // An undo offer or a notice outranks everything: they only appear once typing has
@@ -582,6 +635,62 @@ public final class KeyboardController implements KeyGridView.Listener,
         dictation = Dictation.OFF;
         dictationRun++;
         dictated = null;
+    }
+
+    // ---- Pictures ----
+
+    // Offered only where AI may run and an image model really can.
+    private boolean canPickPicture() {
+        return verdict == Verdict.ALLOWED && imageModelUsable();
+    }
+
+    private boolean imageModelUsable() {
+        return ImageToolsFragment.usable(app, settings, "eye")
+                || ImageToolsFragment.usable(app, settings, "moderator");
+    }
+
+    /** The picker screen's result: the one picture the user chose, already read. */
+    void onPicturePicked(Bitmap picture) {
+        String field = pickerOpenedFrom != null ? pickerOpenedFrom : lastField;
+        pickerOpenedFrom = null;
+        // No field to show it in, or the image models went away meanwhile: not kept.
+        if (field == null || !imageModelUsable()) return;
+        pictureFor = field;
+        pictures.open(picture);
+        // Usually the picker is still covering the app, and the picture is shown when its
+        // field has the keyboard again (onStartInput). If the keyboard is up now, show it.
+        if (service.isInputViewShown()) {
+            if (field.equals(lastField) && canPickPicture()) pictureShown = true;
+            else closePicture();
+            render();
+        }
+    }
+
+    // Leaves the panel and lets go of the picture; a result still on its way is dropped.
+    private void closePicture() {
+        pictureShown = false;
+        pictureFor = null;
+        pictures.forget();
+    }
+
+    private static String fieldKey(EditorInfo info) {
+        return info.packageName + "/" + info.fieldId;
+    }
+
+    private void renderPicturePanel() {
+        ImageToolsFragment.State state = pictures.state().getValue();
+        views.picturePanel.pictureStatus.setText(
+                state.working ? R.string.image_working : R.string.picture_title);
+        views.picturePanel.picturePreview.setImageBitmap(state.picture);
+        // INVISIBLE, not GONE: the picture keeps its share of the width while it is looked at.
+        views.picturePanel.pictureResult.setVisibility(
+                state.analysed() ? View.VISIBLE : View.INVISIBLE);
+        if (state.analysed()) {
+            ImageToolsFragment.showResult(state, views.picturePanel.pictureKind,
+                    views.picturePanel.pictureTags, views.picturePanel.pictureDetails,
+                    views.picturePanel.pictureSensitivity, views.picturePanel.pictureNotes,
+                    R.string.picture_note);
+        }
     }
 
     // ---- Drawing ----

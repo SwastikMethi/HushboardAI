@@ -545,7 +545,7 @@ After the fix: 161 unit tests, lint 0 errors and 37 warnings, and the whole suit
 
 ## Kids Chat demo (18 Nov 2026)
 
-Asked for by the owner after the keyboard was finished: a first demo of a chat for children, built on the same models. Their decisions: one phone with two pretend users, no parent side, unkind wording and nude pictures cannot be sent, and personal details are shown masked with the choice to send masked, change the message or send it as written. It is a screen of this app with its own home-screen icon. None of this has been on a phone.
+Asked for by the owner after the keyboard was finished: a first demo of a chat for children, built on the same models. Their decisions: one phone with two pretend users, no parent side, unkind wording and nude pictures cannot be sent, and personal details are shown masked with the choice to send masked, change the message or send it as written. It is a screen of this app with its own home-screen icon. It was installed on the owner's phone on the evening of 18 Nov 2026; what it does there has not been reported yet.
 
 | Check | Result | Target | Evidence |
 |---|---|---|---|
@@ -569,7 +569,8 @@ Asked for by the owner after the keyboard was finished: a first demo of a chat f
 | By hand: two users exchange messages, an insult is refused, an email raises the card | passed by hand | EMU-37B | Driven over adb. `docs/evidence/screenshots/kids_chat_warning.png`, `kids_chat_personal_card.png` |
 | By hand: a picture through Android's real picker | passed by hand | EMU-37B | Picture button, the picker, a drawn beach scene from the emulator's gallery, Done. It appeared in the chat. `docs/evidence/screenshots/kids_chat_picture.png` |
 | This project's keyboard stays quiet in the chat's field | not run | — | The field carries the "no personalised learning" mark, which `InputEligibilityTest` shows the keyboard obeys. No test types in the chat with the keyboard's AI on |
-| On a phone | not run | PHONE | Not installed there yet |
+| On the phone: installed | passed | PHONE | Installed at 20:50 on 18 Nov 2026 at the owner's request (commit `882b9cf`, the build the emulator suite ran on). The phone lists both icons, AI Keyboard and Kids Chat; the three models the chat needs are on it with the sizes the registry expects; the keyboard stayed selected; no crash was logged |
+| On the phone: using the chat | not reported yet | PHONE | The hands-on try is the owner's. Nothing on the phone's screen was read or captured |
 | Moderator on a picture it should flag | not run | — | Never shown one, here or anywhere in this project (ruling 55). That it flags real nudity is the vendor's claim |
 | Large text, landscape, a long conversation, many pictures, TalkBack by ear, a keyboard other than this project's | not run | — | |
 

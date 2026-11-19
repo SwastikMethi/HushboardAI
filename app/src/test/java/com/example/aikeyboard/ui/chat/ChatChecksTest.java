@@ -96,7 +96,22 @@ public class ChatChecksTest {
     public void aMessageThatIsSurelyNotEnglishIsNotSent() {
         tongue.result = new LanguageHint("hi", true);
 
-        assertEquals(Outcome.OTHER_LANGUAGE, checks.text("bahut sundar ghar hai").outcome);
+        assertEquals(Outcome.OTHER_LANGUAGE, checks.text("बहुत सुंदर घर है").outcome);
+    }
+
+    @Test
+    public void englishTheLanguageModelIsSureIsAnotherLanguageIsStillSent() {
+        // What the real model says of this message: Catalan, and sure of it.
+        tongue.result = new LanguageHint("ca", true);
+
+        assertEquals(Outcome.CLEAR, checks.text("Yes! I love football ⚽").outcome);
+    }
+
+    @Test
+    public void oneWordInAnotherScriptLeavesTheLanguageModelItsSay() {
+        tongue.result = new LanguageHint("hi", true);
+
+        assertEquals(Outcome.OTHER_LANGUAGE, checks.text("I love नमस्ते").outcome);
     }
 
     @Test

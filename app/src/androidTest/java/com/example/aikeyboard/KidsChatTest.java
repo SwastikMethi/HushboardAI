@@ -184,6 +184,27 @@ public class KidsChatTest {
         assertEquals(Outcome.OTHER_LANGUAGE, check(IN_HINDI).outcome);
     }
 
+    // English that the language model is sure is Catalan, Indonesian, Tagalog, Albanian,
+    // Afrikaans or Swahili: each of these was turned away with "I can only read English".
+    @Test
+    public void englishTheLanguageModelMistakesIsNotTurnedAwayForItsLanguage() throws Exception {
+        String[] mistaken = {
+                "Yes! I love football",
+                "No! I love football",
+                "Yes! I love dinosaurs",
+                "Woah! Thanks Kabir",
+                "Hooray, happy Diwali!",
+                "Hi Aarav and hello. I love dinosaurs",
+                "Uh oh! Sara! I am here",
+                "Omg!! I lost my helmet",
+                "Kabir!! lets do rock paper scissors haha",
+                "Ayy mia n leo r here bro",
+        };
+        for (String message : mistaken) {
+            assertFalse(message, check(message).outcome == Outcome.OTHER_LANGUAGE);
+        }
+    }
+
     @Test
     public void thePictureModelSeesNobodyInADrawingOfAHouse() throws Exception {
         TestModels.ensureInstalled("eye");

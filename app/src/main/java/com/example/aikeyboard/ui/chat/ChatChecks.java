@@ -58,7 +58,7 @@ public final class ChatChecks {
         UNKIND,
         /** Personal details found: the sender is shown the masked version first. */
         PERSONAL,
-        /** Surely not English, the only language the checks were tried on: it is not sent. */
+        /** In another script and surely not English, the only language tried: it is not sent. */
         OTHER_LANGUAGE,
         /** A check could not run: it is not sent. */
         UNCHECKED
@@ -151,9 +151,13 @@ public final class ChatChecks {
         try {
             // The word list and the models were only tried on English. A message the
             // language model is sure is in another language cannot be vouched for; a mere
-            // guess, as on short or mixed text, changes nothing.
+            // guess, as on short or mixed text, changes nothing. In Latin letters its word
+            // is not taken: there it is sure of a wrong language for about one ordinary
+            // English message in seventy and one slangy one in six ("Yes! I love football"
+            // is Catalan to it), and nothing in its answer tells those from real ones.
             LanguageHint language = tongue.run(text, rules);
-            if (language.reliable && !ENGLISH.equals(language.language)) {
+            if (language.reliable && !ENGLISH.equals(language.language)
+                    && !inLatinLetters(text)) {
                 return new TextVerdict(Outcome.OTHER_LANGUAGE, null);
             }
             ToxicScores tone = toxic.run(text, rules);
@@ -230,6 +234,13 @@ public final class ChatChecks {
             last = word;
         }
         return safe.append(text.substring(done)).toString();
+    }
+
+    // Whether every letter of the message is a Latin one, as English is written. Emoji,
+    // digits and punctuation are not letters.
+    private static boolean inLatinLetters(String text) {
+        return text.codePoints().filter(Character::isLetter)
+                .allMatch(c -> Character.UnicodeScript.of(c) == Character.UnicodeScript.LATIN);
     }
 
     /** Whether a picture may be sent. Blocking: called on the inference thread. */

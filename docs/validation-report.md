@@ -733,6 +733,25 @@ Five more models in Kids Chat, twelve in all: a child says a message, Clear, Ear
 
 After voice messages: 199 unit tests, lint 0 errors and 43 warnings (two more: the note about `accessibilityHeading` for the new card's heading, and a note that the chat's one layout file now holds more than 80 views), a 701.8 MB debug APK, and the whole suite on the emulator (EMU-37B, `-e clear true`) in one run: 236 run, 213 passed, 23 skipped by design (the 17 as before, the chat's four measurements and its two sets of screenshots), none failed.
 
+## Kids Chat: the language rule no longer refuses English (19 Nov 2026)
+
+Kids Chat turned ordinary English away with "I can only read English" ("Yes! I love football"). The cause was measured first, and the rule was then changed so that a message written in Latin letters is never refused for its language (ruling 156). Nothing here has been on the phone, and every message used was made up.
+
+| Check | Result | Target | Evidence |
+|---|---|---|---|
+| How often the language model is sure that English is another language | measured | host | Tongue 4.3.0 run on the Mac over messages built from templates. Ordinary English: 258 of 18,046 (1.4%), mostly called Catalan or Afrikaans; about 3% at three to five words, 1% at six to eight, 0.2% at nine to eleven, none of 2,410 at twelve or more. Slangy or misspelled English: 665 of 4,000 (16.6%). The scripts and lists were scratch files and are not in the repository |
+| Stricter rules tried in place of the one chosen | measured, dropped | host | Refusing only at seven words or more: 27 ordinary and 131 slangy messages still refused. Seven words or more, English given under 2% by the model, and at most a third of the words on the keyboard's word list: 0 ordinary, 71 slangy (1.8%). Twelve words or more: none, but children rarely write that much |
+| English the model is sure is another language is still sent | failed, then passed | unit | `ChatChecksTest.englishTheLanguageModelIsSureIsAnotherLanguageIsStillSent`; before the change, `expected:<CLEAR> but was:<OTHER_LANGUAGE>` |
+| One word in another script leaves the model its say | passed, and seen failing | unit | `ChatChecksTest.oneWordInAnotherScriptLeavesTheLanguageModelItsSay`; failed against a copy that let a single Latin letter excuse the whole message |
+| Ten English messages the real model mistakes are not turned away for their language | failed, then passed | EMU-37B | `KidsChatTest.englishTheLanguageModelMistakesIsNotTurnedAwayForItsLanguage`; before the change it failed on the first, "Yes! I love football" |
+| Hindi in its own script is still refused, by the check and on the screen | passed | EMU-37B | `KidsChatTest.aMessageInHindiIsToldApartAndNotSent`, `aMessageInAnotherLanguageIsNotSentAndTheHelperSaysWhy` |
+| Other languages in Latin letters | no longer refused, by design | host | Of 143 made-up messages in French, Spanish, German, Italian, Dutch, Portuguese and Hinglish, and in Hindi, Japanese, Korean, Arabic and Russian in their own scripts, the old rule refused 95 and the new one refuses 5, all of them in other scripts. The rest go to checks that only read English |
+| Messages children really write | not run | — | Templates stand in for them |
+| The same wrong answers in the keyboard, which skips its privacy check on them | not run | — | Worked out from the code and the measurements (`PROGRESS.md`, "Open items"); the keyboard was not changed |
+| On the phone | not run | — | The fixed build is not installed there |
+
+After the fix: 201 unit tests (two more), lint 0 errors and 43 warnings as before, a 701.8 MB debug APK (sha256 `10ac8cc34ca9b6d0…`), and the whole suite on the emulator (EMU-37B, `-e clear true`) in one run of 14 minutes: 237 run, 214 passed, 23 skipped by design as before, none failed.
+
 ## The handoff checklist, item by item
 
 Each line of `docs/BUILD_AND_TEST_CHECKLIST.md`, with where it stands. "Emulator" means it ran and passed on an emulator only; the phone rows above still apply.
